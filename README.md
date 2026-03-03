@@ -8,7 +8,6 @@
 - Desenhar DER da Base de Dados (DB)
 - Configurar ligação da DB ao projeto
 - Instalar e configurar Entity Framework Core  
-  *(pode auxiliar na gestão de roles e na segurança de passwords)*
 - Criar tabelas restantes
 
 ## Autenticação e Autorização
