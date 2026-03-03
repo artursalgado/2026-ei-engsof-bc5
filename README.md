@@ -13,7 +13,7 @@ O projeto é desenvolvido seguindo a metodologia **Scrum**, com rotação do pap
 
 | Sprint | Scrum Master | Product Owner | Estado |
 | :--- | :--- | :--- | :--- |
-| **Sprint 1** | Cristiano|  Miguel  | 🏗️ Em curso |
+| **Sprint 1** | Cristiano|  Artur  | 🏗️ Em curso |
 | **Sprint 2** | Carlos|  Ricardo  | 📅 Agendado |
 | **Sprint 3** | Maria |  ?  | 📅 Agendado |
 | **Sprint 4** | Ricardo |  ?  | 📅 Agendado |
