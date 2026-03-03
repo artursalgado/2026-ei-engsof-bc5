@@ -11,13 +11,13 @@ Esta plataforma é uma solução moderna para a gestão de talentos de TI e prop
 
 O projeto é desenvolvido seguindo a metodologia **Scrum**, com rotação do papel de **Scrum Master** a cada Sprint.
 
-| Sprint | Scrum Master | Estado |
-| :--- | :--- | :--- |
-| **Sprint 1** | Cristiano| 🏗️ Em curso |
-| **Sprint 2** | Carlos| 📅 Agendado |
-| **Sprint 3** | Maria | 📅 Agendado |
-| **Sprint 4** | Ricardo | 📅 Agendado |
-| **Sprint 5** | Artur | 📅 Agendado |
+| Sprint | Scrum Master | Product Owner | Estado |
+| :--- | :--- | :--- | :--- |
+| **Sprint 1** | Cristiano|  ?  | 🏗️ Em curso |
+| **Sprint 2** | Carlos|  ?  | 📅 Agendado |
+| **Sprint 3** | Maria |  ?  | 📅 Agendado |
+| **Sprint 4** | Ricardo |  ?  | 📅 Agendado |
+| **Sprint 5** | Artur |  ?  | 📅 Agendado |
 
 📌 *Consultar o ficheiro [SPRINTS.md](./SPRINTS.md) para o cronograma detalhado.*
 
