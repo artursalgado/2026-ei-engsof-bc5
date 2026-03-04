@@ -57,21 +57,6 @@ Conforme o enunciado, o sistema possui três níveis de acesso:
 * .NET SDK (v8.0+)
 * PostgreSQL
 
-### Passos para Execução
-1.  **Clonar o repositório:**
-    ```bash
-    git clone [https://github.com/artursalgado/2026-ei-engsof-bc5.git](https://github.com/artursalgado/2026-ei-engsof-bc5.git)
-    ```
-2.  **Configurar a Base de Dados:**
-    Atualize a `ConnectionString` no ficheiro `appsettings.json`.
-3.  **Aplicar Migrations:**
-    ```bash
-    dotnet ef database update
-    ```
-4.  **Executar a aplicação:**
-    ```bash
-    dotnet run
-    ```
 
 ---
 
