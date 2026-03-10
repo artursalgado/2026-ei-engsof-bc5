@@ -185,7 +185,7 @@ Usamos DTOs em `GestaoTalentos.API/AuthDtos.cs` para evitar expor informações 
 - Logs estruturados e tratamento global de exceções
 - Suporte a refresh tokens e política de bloqueio de login (security hardening)
 
-## 7. Observações pedagógicas e explicativas
+## 7. Observações explicativas
 
 - `Domain` existe para definir "o que temos" (entidades e regras).
 - `Infrastructure` existe para guardar as coisas (base de dados). O professor deve ver aqui a camada com código SQL/EF.
