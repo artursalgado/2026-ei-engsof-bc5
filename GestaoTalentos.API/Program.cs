@@ -1,13 +1,50 @@
+using GestaoTalentos.API;
+using GestaoTalentos.Domain;
+using GestaoTalentos.Infrastructure;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.Security.Claims;
+using System.Text;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection") ?? "Host=localhost;Port=5432;Database=gestaotalentos;Username=postgres;Password=postgres"));
+
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IRecordRepository, RecordRepository>();
+
+var jwtKey = builder.Configuration["Jwt:Key"] ?? "MudaIstoParaSegredoMuitoForte#2026";
+var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "GestaoTalentosApi";
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtIssuer,
+            ValidAudience = jwtIssuer,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+        };
+    });
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("UserPolicy", policy => policy.RequireRole(UserRole.User.ToString(), UserRole.UserManager.ToString(), UserRole.Admin.ToString()));
+    options.AddPolicy("UserManagerPolicy", policy => policy.RequireRole(UserRole.UserManager.ToString(), UserRole.Admin.ToString()));
+    options.AddPolicy("AdminPolicy", policy => policy.RequireRole(UserRole.Admin.ToString()));
+});
+
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -15,51 +52,178 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseAuthentication();
+app.UseAuthorization();
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast")
-.WithOpenApi();
-
-// USER ADMIN AUTOMATICO AO CORRER 
-using (var scope = app.Services.CreateScope())
+await using (var scope = app.Services.CreateAsyncScope())
 {
     var services = scope.ServiceProvider;
     var context = services.GetRequiredService<AppDbContext>();
-    
-    // Garante que a BD e as tabelas são criadas 
-    context.Database.EnsureCreated();
+    await context.Database.EnsureCreatedAsync();
 
-    if (!context.Users.Any())
+    var userRepository = services.GetRequiredService<IUserRepository>();
+    if (!await userRepository.AnyAsync())
     {
-        context.Users.Add(new User 
-        { 
-            Username = "admin", 
-            Password = "admin", // Requisito: credenciais conhecidas 
-            Role = UserRole.Admin  // Requisito: nível Admin 
-        });
-        context.SaveChanges();
+        var admin = new User
+        {
+            Username = "admin",
+            Password = BCrypt.Net.BCrypt.HashPassword("admin123"),
+            Role = UserRole.Admin
+        };
+        await userRepository.AddAsync(admin);
     }
 }
 
-app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
+app.MapPost("/register", async (UserRegisterDto request, IUserRepository repo) =>
 {
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
+    if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
+        return Results.BadRequest("Username e password são obrigatórios.");
+
+    if (await repo.GetByUsernameAsync(request.Username) != null)
+        return Results.Conflict("Username já existe.");
+
+    var user = new User
+    {
+        Username = request.Username.Trim(),
+        Password = BCrypt.Net.BCrypt.HashPassword(request.Password),
+        Role = UserRole.User
+    };
+
+    await repo.AddAsync(user);
+    return Results.Created($"/users/{user.Id}", new { user.Id, user.Username, user.Role });
+});
+
+app.MapPost("/login", async (UserLoginDto request, IUserRepository repo) =>
+{
+    var user = await repo.GetByUsernameAsync(request.Username);
+    if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.Password))
+        return Results.Unauthorized();
+
+    var token = JwtTokenHelper.GenerateToken(user, jwtKey, jwtIssuer);
+    return Results.Ok(new { token });
+});
+
+app.MapGet("/users/me", async (ClaimsPrincipal user, IUserRepository repo) =>
+{
+    var userId = int.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : 0;
+    var current = await repo.GetByIdAsync(userId);
+    return current is null ? Results.NotFound() : Results.Ok(new { current.Id, current.Username, current.Role });
+}).RequireAuthorization();
+
+app.MapGet("/users", async (IUserRepository repo) =>
+    Results.Ok(await repo.GetAllAsync())).RequireAuthorization("UserManagerPolicy");
+
+app.MapPut("/users/{id}/role", async (int id, UserRoleUpdateDto request, IUserRepository repo) =>
+{
+    if (!Enum.TryParse<UserRole>(request.Role, true, out var role))
+        return Results.BadRequest("Role inválida (User, UserManager, Admin).");
+
+    var user = await repo.GetByIdAsync(id);
+    if (user == null)
+        return Results.NotFound();
+
+    user.Role = role;
+    await repo.UpdateAsync(user);
+    return Results.NoContent();
+}).RequireAuthorization("AdminPolicy");
+
+app.MapPost("/users", async (UserCreateDto request, IUserRepository repo) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
+        return Results.BadRequest("Username e password são obrigatórios.");
+
+    if (!Enum.TryParse<UserRole>(request.Role, true, out var role))
+        return Results.BadRequest("Role inválida (User, UserManager, Admin).");
+
+    if (await repo.GetByUsernameAsync(request.Username) != null)
+        return Results.Conflict("Username já existe.");
+
+    var user = new User
+    {
+        Username = request.Username.Trim(),
+        Password = BCrypt.Net.BCrypt.HashPassword(request.Password),
+        Role = role
+    };
+
+    await repo.AddAsync(user);
+    return Results.Created($"/users/{user.Id}", new { user.Id, user.Username, user.Role });
+}).RequireAuthorization("UserManagerPolicy");
+
+app.MapGet("/records", async (ClaimsPrincipal user, IRecordRepository repo, IUserRepository userRepo) =>
+{
+    var userId = int.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : 0;
+    var current = await userRepo.GetByIdAsync(userId);
+    if (current == null) return Results.Unauthorized();
+
+    if (current.Role == UserRole.User)
+    {
+        var records = await repo.GetVisibleForUserAsync(userId);
+        return Results.Ok(records.Select(r => new RecordDto(r.Id, r.OwnerId, r.Content, r.IsShared, r.CreatedAt)));
+    }
+
+    var all = await repo.GetAllAsync();
+    return Results.Ok(all.Select(r => new RecordDto(r.Id, r.OwnerId, r.Content, r.IsShared, r.CreatedAt)));
+}).RequireAuthorization("UserPolicy");
+
+app.MapGet("/records/{id}", async (int id, ClaimsPrincipal user, IRecordRepository repo, IUserRepository userRepo) =>
+{
+    var rec = await repo.GetByIdAsync(id);
+    if (rec == null) return Results.NotFound();
+
+    var userId = int.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var uid) ? uid : 0;
+    var current = await userRepo.GetByIdAsync(userId);
+    if (current == null) return Results.Unauthorized();
+
+    if (current.Role == UserRole.Admin || current.Role == UserRole.UserManager || rec.OwnerId == userId || rec.IsShared)
+        return Results.Ok(new RecordDto(rec.Id, rec.OwnerId, rec.Content, rec.IsShared, rec.CreatedAt));
+
+    return Results.Forbid();
+}).RequireAuthorization("UserPolicy");
+
+app.MapPost("/records", async (RecordCreateDto request, ClaimsPrincipal user, IRecordRepository repo) =>
+{
+    var userId = int.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var uid) ? uid : 0;
+
+    if (string.IsNullOrWhiteSpace(request.Content))
+        return Results.BadRequest("Content obrigatório.");
+
+    var record = new Record { OwnerId = userId, Content = request.Content.Trim(), IsShared = request.IsShared };
+    await repo.AddAsync(record);
+    return Results.Created($"/records/{record.Id}", new RecordDto(record.Id, record.OwnerId, record.Content, record.IsShared, record.CreatedAt));
+}).RequireAuthorization("UserPolicy");
+
+app.MapPut("/records/{id}", async (int id, RecordUpdateDto request, ClaimsPrincipal user, IRecordRepository repo, IUserRepository userRepo) =>
+{
+    var rec = await repo.GetByIdAsync(id);
+    if (rec == null) return Results.NotFound();
+
+    var userId = int.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var uid) ? uid : 0;
+    var current = await userRepo.GetByIdAsync(userId);
+    if (current == null) return Results.Unauthorized();
+
+    if (current.Role != UserRole.Admin && current.Role != UserRole.UserManager && rec.OwnerId != userId)
+        return Results.Forbid();
+
+    rec.Content = request.Content.Trim();
+    rec.IsShared = request.IsShared;
+    await repo.UpdateAsync(rec);
+    return Results.NoContent();
+}).RequireAuthorization("UserPolicy");
+
+app.MapDelete("/records/{id}", async (int id, ClaimsPrincipal user, IRecordRepository repo, IUserRepository userRepo) =>
+{
+    var rec = await repo.GetByIdAsync(id);
+    if (rec == null) return Results.NotFound();
+
+    var userId = int.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var uid) ? uid : 0;
+    var current = await userRepo.GetByIdAsync(userId);
+    if (current == null) return Results.Unauthorized();
+
+    if (current.Role != UserRole.Admin && current.Role != UserRole.UserManager && rec.OwnerId != userId)
+        return Results.Forbid();
+
+    await repo.DeleteAsync(id);
+    return Results.NoContent();
+}).RequireAuthorization("UserPolicy");
+
+app.Run();
