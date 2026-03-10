@@ -36,6 +36,27 @@ app.MapGet("/weatherforecast", () =>
 .WithName("GetWeatherForecast")
 .WithOpenApi();
 
+// USER ADMIN AUTOMATICO AO CORRER 
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    var context = services.GetRequiredService<AppDbContext>();
+    
+    // Garante que a BD e as tabelas são criadas 
+    context.Database.EnsureCreated();
+
+    if (!context.Users.Any())
+    {
+        context.Users.Add(new User 
+        { 
+            Username = "admin", 
+            Password = "admin", // Requisito: credenciais conhecidas 
+            Role = UserRole.Admin  // Requisito: nível Admin 
+        });
+        context.SaveChanges();
+    }
+}
+
 app.Run();
 
 record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
