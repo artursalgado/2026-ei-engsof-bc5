@@ -1,0 +1,6 @@
+@GestaoTalentos.API_HostAddress = http://localhost:5193
+
+GET {{GestaoTalentos.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

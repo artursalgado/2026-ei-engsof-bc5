@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="GestaoTalentos.API/GestaoTalentos.API.csproj" />
+  <Project Path="GestaoTalentos.Client/GestaoTalentos.Client.csproj" />
+  <Project Path="GestaoTalentos.Domain/GestaoTalentos.Domain.csproj" />
+  <Project Path="GestaoTalentos.Infrastructure/GestaoTalentos.Infrastructure.csproj" />
+  <Project Path="GestaoTalentos.Tests/GestaoTalentos.Tests.csproj" />
+</Solution>
