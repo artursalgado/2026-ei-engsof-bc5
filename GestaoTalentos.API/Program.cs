@@ -125,7 +125,7 @@ app.MapPut("/users/{id}/role", async (int id, UserRoleUpdateDto request, IUserRe
     user.Role = role;
     await repo.UpdateAsync(user);
     return Results.NoContent();
-}).RequireAuthorization("AdminPolicy");
+}).RequireAuthorization("UserManagerPolicy");
 
 app.MapPost("/users", async (UserCreateDto request, IUserRepository repo) =>
 {
