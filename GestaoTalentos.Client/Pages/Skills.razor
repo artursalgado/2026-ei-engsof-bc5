@@ -1,0 +1,259 @@
+@page "/skills"
+@using GestaoTalentos.API
+@using GestaoTalentos.Client.Services
+@inject ISkillService SkillService
+@inject IJSRuntime JS
+
+<div class="container mt-5">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1><i class="oi oi-star"></i> Gerenciar Skills</h1>
+        </div>
+        <div class="col-md-4 text-end">
+            <button class="btn btn-success btn-lg" @onclick="OpenCreateModal">
+                <i class="oi oi-plus"></i> Criar Skill
+            </button>
+        </div>
+    </div>
+
+    @if (skills == null)
+    {
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Carregando...</span>
+        </div>
+    }
+    else if (skills.Count == 0)
+    {
+        <div class="alert alert-info">
+            <i class="oi oi-info"></i> Nenhuma skill cadastrada. Clique em "Criar Skill" para adicionar uma nova.
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Nome</th>
+                        <th>Área</th>
+                        <th>Abilidades</th>
+                        <th>Criado em</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var skill in skills)
+                    {
+                        <tr>
+                            <td>
+                                <i class="oi oi-check"></i> @skill.Nome
+                            </td>
+                            <td>
+                                <span class="badge bg-primary">@skill.AreaNome</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">@skill.TotalAbilidades</span>
+                            </td>
+                            <td>
+                                @skill.CriadoEm.ToString("dd/MM/yyyy HH:mm")
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-primary" @onclick="() => OpenEditModal(skill)" title="Editar">
+                                    <i class="oi oi-pencil"></i> Editar
+                                </button>
+                                <button class="btn btn-sm btn-danger" @onclick="() => ConfirmDelete(skill.Id)" title="Apagar">
+                                    <i class="oi oi-trash"></i> Apagar
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+<!-- Modal -->
+<div class="modal @(showModal ? "show d-block" : "")" style="background-color: rgba(0,0,0,0.5);">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="oi oi-@(isEditMode ? "pencil" : "plus")"></i>
+                    @(isEditMode ? "Editar Skill" : "Criar Nova Skill")
+                </h5>
+                <button type="button" class="btn-close" @onclick="CloseModal"></button>
+            </div>
+            <div class="modal-body">
+                @if (isEditMode)
+                {
+                    <EditForm Model="@updateSkill" OnValidSubmit="@HandleUpdateSubmit">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+
+                        <div class="mb-3">
+                            <label for="nome" class="form-label">Nome da Skill *</label>
+                            <InputText id="nome" class="form-control" @bind-Value="updateSkill.Nome" placeholder="Ex: C#, JavaScript, etc" />
+                            <ValidationMessage For="@(() => updateSkill.Nome)" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="areaId" class="form-label">Área Profissional *</label>
+                            <InputNumber id="areaId" class="form-control" @bind-Value="updateSkill.AreaId" />
+                            <ValidationMessage For="@(() => updateSkill.AreaId)" />
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancelar</button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="oi oi-pencil"></i> Atualizar
+                            </button>
+                        </div>
+                    </EditForm>
+                }
+                else
+                {
+                    <EditForm Model="@createSkill" OnValidSubmit="@HandleCreateSubmit">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+
+                        <div class="mb-3">
+                            <label for="nome" class="form-label">Nome da Skill *</label>
+                            <InputText id="nome" class="form-control" @bind-Value="createSkill.Nome" placeholder="Ex: C#, JavaScript, etc" />
+                            <ValidationMessage For="@(() => createSkill.Nome)" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="areaId" class="form-label">Área Profissional *</label>
+                            <InputNumber id="areaId" class="form-control" @bind-Value="createSkill.AreaId" />
+                            <ValidationMessage For="@(() => createSkill.AreaId)" />
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancelar</button>
+                            <button type="submit" class="btn btn-success">
+                                <i class="oi oi-plus"></i> Criar
+                            </button>
+                        </div>
+                    </EditForm>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<SkillDto>? skills;
+    private CreateSkillDto createSkill = new CreateSkillDto();
+    private UpdateSkillDto updateSkill = new UpdateSkillDto();
+    private bool showModal = false;
+    private bool isEditMode = false;
+    private int editingSkillId = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSkills();
+    }
+
+    private async Task LoadSkills()
+    {
+        skills = await SkillService.GetAllSkillsAsync();
+    }
+
+    private void OpenCreateModal()
+    {
+        isEditMode = false;
+        createSkill = new CreateSkillDto();
+        showModal = true;
+    }
+
+    private async Task OpenEditModal(SkillDto skill)
+    {
+        isEditMode = true;
+        editingSkillId = skill.Id;
+        updateSkill = new UpdateSkillDto
+        {
+            Nome = skill.Nome,
+            AreaId = skill.AreaId
+        };
+        showModal = true;
+    }
+
+    private async Task HandleCreateSubmit()
+    {
+        try
+        {
+            var result = await SkillService.CreateSkillAsync(createSkill);
+            if (result != null)
+            {
+                await LoadSkills();
+                CloseModal();
+                await JS.InvokeVoidAsync("alert", "Skill criada com sucesso!");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", $"Erro ao criar skill: {ex.Message}");
+        }
+    }
+
+    private async Task HandleUpdateSubmit()
+    {
+        try
+        {
+            var success = await SkillService.UpdateSkillAsync(editingSkillId, updateSkill);
+            if (success)
+            {
+                await LoadSkills();
+                CloseModal();
+                await JS.InvokeVoidAsync("alert", "Skill atualizada com sucesso!");
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("alert", "Erro ao atualizar skill!");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", $"Erro: {ex.Message}");
+        }
+    }
+
+    private async Task ConfirmDelete(int id)
+    {
+        var confirmed = await JS.InvokeAsync<bool>("confirm", "Tem certeza que deseja apagar esta skill?");
+        if (confirmed)
+        {
+            await DeleteSkill(id);
+        }
+    }
+
+    private async Task DeleteSkill(int id)
+    {
+        try
+        {
+            var success = await SkillService.DeleteSkillAsync(id);
+            if (success)
+            {
+                await LoadSkills();
+                await JS.InvokeVoidAsync("alert", "Skill deletada com sucesso!");
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("alert", "Erro ao deletar skill!");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", $"Erro ao deletar: {ex.Message}");
+        }
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        createSkill = new CreateSkillDto();
+        updateSkill = new UpdateSkillDto();
+        editingSkillId = 0;
+    }
+}
