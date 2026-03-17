@@ -1,6 +1,9 @@
 ﻿using System;
-
-using GestaoTalentos.API;
+using System.Collections.Generic;
+using System.Net.Http;
+using System.Net.Http.Json;
+using System.Threading.Tasks;
+using GestaoTalentos.Shared.DTOs;
 
 namespace GestaoTalentos.Client.Services;
 
@@ -68,7 +71,7 @@ public class SkillService : ISkillService
         {
             var response = await _httpClient.PostAsJsonAsync("api/skills", skillDto);
             response.EnsureSuccessStatusCode();
-            return await response.Content.ReadAsAsync<SkillDto>();
+            return await response.Content.ReadFromJsonAsync<SkillDto>();
         }
         catch (Exception ex)
         {
