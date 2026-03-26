@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Net.Http.Json;
+
 namespace GestaoTalentos.Shared.DTOs;
 
 public class UpdateSkillDto

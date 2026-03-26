@@ -1,6 +1,8 @@
 using GestaoTalentos.API;
 using GestaoTalentos.Domain;
+using GestaoTalentos.Shared;
 using GestaoTalentos.Infrastructure;
+using GestaoTalentos.Shared.DTOs;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -77,7 +79,7 @@ await using (var scope = app.Services.CreateAsyncScope())
     }
 }
 
-app.MapPost("/register", async (UserRegisterDto request, IUserRepository repo) =>
+app.MapPost("/register", async (GestaoTalentos.API.UserRegisterDto request, IUserRepository repo) =>
 {
     if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
         return Results.BadRequest("Username e password são obrigatórios.");
@@ -96,7 +98,7 @@ app.MapPost("/register", async (UserRegisterDto request, IUserRepository repo) =
     return Results.Created($"/users/{user.Id}", new { user.Id, user.Username, user.Role });
 });
 
-app.MapPost("/login", async (UserLoginDto request, IUserRepository repo) =>
+app.MapPost("/login", async (GestaoTalentos.API.UserLoginDto request, IUserRepository repo) =>
 {
     var user = await repo.GetByUsernameAsync(request.Username);
     if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.Password))
@@ -228,5 +230,58 @@ app.MapDelete("/records/{id}", async (int id, ClaimsPrincipal user, IRecordRepos
     await repo.DeleteAsync(id);
     return Results.NoContent();
 }).RequireAuthorization("UserPolicy");
+// GET skills (com Area)
+app.MapGet("/skills", async (ISkillRepository repo) =>
+{
+    var skills = await repo.GetAllWithAreaAsync();
+    return Results.Ok(skills.Select(s => new
+    {
+        s.Id,
+        s.Nome,
+        s.AreaId,
+        Area = s.Area == null ? null : new { s.Area.Id, s.Area.Nome },
+        s.CriadoEm,
+        s.AtualizadoEm
+    }));
+}).RequireAuthorization("UserPolicy");
+
+
+// POST skills (criar)
+app.MapPost("/skills", async (CreateSkillDto dto, ISkillRepository repo) =>
+{
+    var nome = (dto.Nome ?? "").Trim();
+
+    if (nome.Length < 2 || nome.Length > 100)
+        return Results.BadRequest("O nome deve ter entre 2 e 100 caracteres.");
+
+    if (dto.AreaId < 1)
+        return Results.BadRequest("Área inválida.");
+
+    if (await repo.GetByNomeAsync(nome) != null)
+        return Results.Conflict("Já existe uma skill com esse nome.");
+
+    var skill = new Skill
+    {
+        Nome = nome,
+        AreaId = dto.AreaId,
+        CriadoEm = DateTime.UtcNow,
+        AtualizadoEm = DateTime.UtcNow
+    };
+
+    await repo.AddAsync(skill);
+
+    return Results.Created($"/skills/{skill.Id}", new { skill.Id, skill.Nome, skill.AreaId });
+}).RequireAuthorization("UserManagerPolicy");
+
+
+// DELETE skills
+app.MapDelete("/skills/{id:int}", async (int id, ISkillRepository repo) =>
+{
+    var skill = await repo.GetByIdAsync(id);
+    if (skill == null) return Results.NotFound();
+
+    await repo.DeleteAsync(id);
+    return Results.NoContent();
+}).RequireAuthorization("UserManagerPolicy");
 
 app.Run();
