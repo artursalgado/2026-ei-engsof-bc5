@@ -22,6 +22,7 @@
   <ItemGroup>
     <ProjectReference Include="..\GestaoTalentos.Domain\GestaoTalentos.Domain.csproj" />
     <ProjectReference Include="..\GestaoTalentos.Infrastructure\GestaoTalentos.Infrastructure.csproj" />
+	  <ProjectReference Include="..\GestaoTalentos.Shared\GestaoTalentos.Shared.csproj" />
   </ItemGroup>
 
 </Project>
