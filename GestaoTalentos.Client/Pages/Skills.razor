@@ -1,5 +1,5 @@
 @page "/skills"
-@using GestaoTalentos.Shared.DTOs;
+@using GestaoTalentos.Shared.DTOs
 @using GestaoTalentos.Client.Services
 @inject ISkillService SkillService
 @inject IJSRuntime JS
@@ -10,7 +10,7 @@
             <h1><i class="oi oi-star"></i> Gerenciar Skills</h1>
         </div>
         <div class="col-md-4 text-end">
-            <button class="btn btn-success btn-lg" @onclick="OpenCreateModal">
+            <button class="btn btn-success btn-lg" @onclick="OpenCreateModal" disabled="@isBusy">
                 <i class="oi oi-plus"></i> Criar Skill
             </button>
         </div>
@@ -58,10 +58,16 @@
                                 @skill.CriadoEm.ToString("dd/MM/yyyy HH:mm")
                             </td>
                             <td>
-                                <button class="btn btn-sm btn-primary" @onclick="() => OpenEditModal(skill)" title="Editar">
+                                <button class="btn btn-sm btn-primary"
+                                        @onclick="() => OpenEditModal(skill)"
+                                        disabled="@isBusy"
+                                        title="Editar">
                                     <i class="oi oi-pencil"></i> Editar
                                 </button>
-                                <button class="btn btn-sm btn-danger" @onclick="() => ConfirmDelete(skill.Id)" title="Apagar">
+                                <button class="btn btn-sm btn-danger"
+                                        @onclick="() => ConfirmDelete(skill)"
+                                        disabled="@isBusy"
+                                        title="Apagar">
                                     <i class="oi oi-trash"></i> Apagar
                                 </button>
                             </td>
@@ -82,9 +88,15 @@
                     <i class="oi oi-@(isEditMode ? "pencil" : "plus")"></i>
                     @(isEditMode ? "Editar Skill" : "Criar Nova Skill")
                 </h5>
-                <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                <button type="button" class="btn-close" @onclick="CloseModal" disabled="@isBusy"></button>
             </div>
+
             <div class="modal-body">
+                @if (!string.IsNullOrWhiteSpace(formError))
+                {
+                    <div class="alert alert-danger">@formError</div>
+                }
+
                 @if (isEditMode)
                 {
                     <EditForm Model="@updateSkill" OnValidSubmit="@HandleUpdateSubmit">
@@ -93,20 +105,20 @@
 
                         <div class="mb-3">
                             <label for="nome" class="form-label">Nome da Skill *</label>
-                            <InputText id="nome" class="form-control" @bind-Value="updateSkill.Nome" placeholder="Ex: C#, JavaScript, etc" />
+                            <InputText id="nome" class="form-control" @bind-Value="updateSkill.Nome" />
                             <ValidationMessage For="@(() => updateSkill.Nome)" />
                         </div>
 
                         <div class="mb-3">
-                            <label for="areaId" class="form-label">Categoria *</label>
+                            <label for="areaId" class="form-label">Área Profissional *</label>
                             <InputNumber id="areaId" class="form-control" @bind-Value="updateSkill.AreaId" />
                             <ValidationMessage For="@(() => updateSkill.AreaId)" />
                         </div>
 
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancelar</button>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="oi oi-pencil"></i> Atualizar
+                            <button type="button" class="btn btn-secondary" @onclick="CloseModal" disabled="@isBusy">Cancelar</button>
+                            <button type="submit" class="btn btn-primary" disabled="@isBusy">
+                                <i class="oi oi-pencil"></i> @(isBusy ? "A atualizar..." : "Atualizar")
                             </button>
                         </div>
                     </EditForm>
@@ -119,7 +131,7 @@
 
                         <div class="mb-3">
                             <label for="nome" class="form-label">Nome da Skill *</label>
-                            <InputText id="nome" class="form-control" @bind-Value="createSkill.Nome" placeholder="Ex: C#, JavaScript, etc" />
+                            <InputText id="nome" class="form-control" @bind-Value="createSkill.Nome" />
                             <ValidationMessage For="@(() => createSkill.Nome)" />
                         </div>
 
@@ -130,9 +142,9 @@
                         </div>
 
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancelar</button>
-                            <button type="submit" class="btn btn-success">
-                                <i class="oi oi-plus"></i> Criar
+                            <button type="button" class="btn btn-secondary" @onclick="CloseModal" disabled="@isBusy">Cancelar</button>
+                            <button type="submit" class="btn btn-success" disabled="@isBusy">
+                                <i class="oi oi-plus"></i> @(isBusy ? "A criar..." : "Criar")
                             </button>
                         </div>
                     </EditForm>
@@ -144,11 +156,15 @@
 
 @code {
     private List<SkillDto>? skills;
-    private CreateSkillDto createSkill = new CreateSkillDto();
-    private UpdateSkillDto updateSkill = new UpdateSkillDto();
+    private CreateSkillDto createSkill = new();
+    private UpdateSkillDto updateSkill = new();
+
     private bool showModal = false;
     private bool isEditMode = false;
     private int editingSkillId = 0;
+
+    private bool isBusy = false;
+    private string? formError = null;
 
     protected override async Task OnInitializedAsync()
     {
@@ -162,27 +178,35 @@
 
     private void OpenCreateModal()
     {
+        formError = null;
         isEditMode = false;
         createSkill = new CreateSkillDto();
         showModal = true;
     }
 
-    private async Task OpenEditModal(SkillDto skill)
+    private Task OpenEditModal(SkillDto skill)
     {
+        formError = null;
         isEditMode = true;
         editingSkillId = skill.Id;
+
         updateSkill = new UpdateSkillDto
         {
             Nome = skill.Nome,
             AreaId = skill.AreaId
         };
+
         showModal = true;
+        return Task.CompletedTask;
     }
 
     private async Task HandleCreateSubmit()
     {
         try
         {
+            isBusy = true;
+            formError = null;
+
             var result = await SkillService.CreateSkillAsync(createSkill);
             if (result != null)
             {
@@ -190,10 +214,18 @@
                 CloseModal();
                 await JS.InvokeVoidAsync("alert", "Skill criada com sucesso!");
             }
+            else
+            {
+                formError = "Não foi possível criar a skill.";
+            }
         }
         catch (Exception ex)
         {
-            await JS.InvokeVoidAsync("alert", $"Erro ao criar skill: {ex.Message}");
+            formError = $"Erro ao criar skill: {ex.Message}";
+        }
+        finally
+        {
+            isBusy = false;
         }
     }
 
@@ -201,6 +233,9 @@
     {
         try
         {
+            isBusy = true;
+            formError = null;
+
             var success = await SkillService.UpdateSkillAsync(editingSkillId, updateSkill);
             if (success)
             {
@@ -210,21 +245,25 @@
             }
             else
             {
-                await JS.InvokeVoidAsync("alert", "Erro ao atualizar skill!");
+                formError = "Não foi possível atualizar a skill (verifica se estás autenticada como Admin/UserManager).";
             }
         }
         catch (Exception ex)
         {
-            await JS.InvokeVoidAsync("alert", $"Erro: {ex.Message}");
+            formError = $"Erro ao atualizar skill: {ex.Message}";
+        }
+        finally
+        {
+            isBusy = false;
         }
     }
 
-    private async Task ConfirmDelete(int id)
+    private async Task ConfirmDelete(SkillDto skill)
     {
-        var confirmed = await JS.InvokeAsync<bool>("confirm", "Tem certeza que deseja apagar esta skill?");
+        var confirmed = await JS.InvokeAsync<bool>("confirm", $"Tem certeza que deseja apagar a skill '{skill.Nome}'?");
         if (confirmed)
         {
-            await DeleteSkill(id);
+            await DeleteSkill(skill.Id);
         }
     }
 
@@ -232,6 +271,8 @@
     {
         try
         {
+            isBusy = true;
+
             var success = await SkillService.DeleteSkillAsync(id);
             if (success)
             {
@@ -240,20 +281,26 @@
             }
             else
             {
-                await JS.InvokeVoidAsync("alert", "Erro ao deletar skill!");
+                await JS.InvokeVoidAsync("alert", "Não foi possível deletar (verifica se estás autenticada como Admin/UserManager).");
             }
         }
         catch (Exception ex)
         {
             await JS.InvokeVoidAsync("alert", $"Erro ao deletar: {ex.Message}");
         }
+        finally
+        {
+            isBusy = false;
+        }
     }
 
     private void CloseModal()
     {
         showModal = false;
+        formError = null;
         createSkill = new CreateSkillDto();
         updateSkill = new UpdateSkillDto();
         editingSkillId = 0;
+        isEditMode = false;
     }
 }
