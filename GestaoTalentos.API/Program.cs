@@ -240,8 +240,11 @@ app.MapDelete("/records/{id}", async (int id, ClaimsPrincipal user, IRecordRepos
     return Results.NoContent();
 }).RequireAuthorization("UserPolicy");
 
-// GET skills (com Area)
+// ======================
+// SKILLS
+// ======================
 
+// GET skills (com Area)
 app.MapGet("/skills", async (ISkillRepository repo) =>
 {
     var skills = await repo.GetAllWithAreaAsync();
@@ -282,6 +285,35 @@ app.MapPost("/skills", async (CreateSkillDto dto, ISkillRepository repo) =>
     await repo.AddAsync(skill);
 
     return Results.Created($"/skills/{skill.Id}", new { skill.Id, skill.Nome, skill.AreaId });
+}).RequireAuthorization("UserManagerPolicy");
+
+
+// PUT skills (update)
+app.MapPut("/skills/{id:int}", async (int id, UpdateSkillDto dto, ISkillRepository repo) =>
+{
+    var skill = await repo.GetByIdAsync(id);
+    if (skill == null) return Results.NotFound();
+
+    var nome = (dto.Nome ?? "").Trim();
+
+    if (nome.Length < 2 || nome.Length > 100)
+        return Results.BadRequest("O nome deve ter entre 2 e 100 caracteres.");
+
+    if (dto.AreaId < 1)
+        return Results.BadRequest("Área inválida.");
+
+    // evitar nome duplicado (ignorando a própria skill)
+    var existing = await repo.GetByNomeAsync(nome);
+    if (existing != null && existing.Id != id)
+        return Results.Conflict("Já existe uma skill com esse nome.");
+
+    skill.Nome = nome;
+    skill.AreaId = dto.AreaId;
+    skill.AtualizadoEm = DateTime.UtcNow;
+
+    await repo.UpdateAsync(skill);
+
+    return Results.NoContent();
 }).RequireAuthorization("UserManagerPolicy");
 
 

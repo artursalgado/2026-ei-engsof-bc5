@@ -100,13 +100,28 @@ public class SkillService : ISkillService
         }
     }
 
-    public Task<bool> UpdateSkillAsync(int id, UpdateSkillDto skillDto)
+    public async Task<bool> UpdateSkillAsync(int id, UpdateSkillDto skillDto)
     {
-        // A API não tem endpoint de update.
-        //  criar na API: app.MapPut("/skills/{id:int}", ...)
-        Console.WriteLine("UpdateSkillAsync: endpoint não existe na API (PUT /skills/{id}).");
-        return Task.FromResult(false);
+        try
+        {
+            // API: PUT /skills/{id}
+            var response = await _httpClient.PutAsJsonAsync($"skills/{id}", skillDto);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var body = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Erro ao atualizar skill. Status={(int)response.StatusCode} {response.StatusCode}. Body={body}");
+            }
+
+            return response.IsSuccessStatusCode; // deve ser 204 NoContent quando OK
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erro ao atualizar skill: {ex.Message}");
+            return false;
+        }
     }
+
 
     public async Task<bool> DeleteSkillAsync(int id)
     {
