@@ -15,7 +15,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection") ?? "Host=localhost;Port=5432;Database=gestaotalentos;Username=postgres;Password=postgres"));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection") ?? "Host=localhost;Port=5432;Database=gestaotalentos;Username=postgres;Password=postgres123"));
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IRecordRepository, RecordRepository>();
@@ -47,15 +47,24 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("UserManagerPolicy", policy => policy.RequireRole(UserRole.UserManager.ToString(), UserRole.Admin.ToString()));
     options.AddPolicy("AdminPolicy", policy => policy.RequireRole(UserRole.Admin.ToString()));
 });
-
+// erro cors
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("ClientCors", policy =>
+        policy.WithOrigins("http://localhost:5025", "https://localhost:5025")
+              .AllowAnyHeader()
+              .AllowAnyMethod());
+});
+//
 var app = builder.Build();
+
 
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
+app.UseCors("ClientCors");
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
@@ -230,7 +239,9 @@ app.MapDelete("/records/{id}", async (int id, ClaimsPrincipal user, IRecordRepos
     await repo.DeleteAsync(id);
     return Results.NoContent();
 }).RequireAuthorization("UserPolicy");
+
 // GET skills (com Area)
+
 app.MapGet("/skills", async (ISkillRepository repo) =>
 {
     var skills = await repo.GetAllWithAreaAsync();

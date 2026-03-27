@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
@@ -11,9 +13,14 @@ public interface ISkillService
 {
     Task<List<SkillDto>> GetAllSkillsAsync();
     Task<SkillDto?> GetSkillByIdAsync(int id);
+
     Task<List<SkillDto>> GetSkillsByAreaAsync(int areaId);
+
     Task<SkillDto?> CreateSkillAsync(CreateSkillDto skillDto);
+
+  
     Task<bool> UpdateSkillAsync(int id, UpdateSkillDto skillDto);
+
     Task<bool> DeleteSkillAsync(int id);
 }
 
@@ -30,7 +37,8 @@ public class SkillService : ISkillService
     {
         try
         {
-            return await _httpClient.GetFromJsonAsync<List<SkillDto>>("api/skills") ?? new List<SkillDto>();
+            // API: GET /skills
+            return await _httpClient.GetFromJsonAsync<List<SkillDto>>("skills") ?? new List<SkillDto>();
         }
         catch (Exception ex)
         {
@@ -43,7 +51,8 @@ public class SkillService : ISkillService
     {
         try
         {
-            return await _httpClient.GetFromJsonAsync<SkillDto>($"api/skills/{id}");
+            var all = await GetAllSkillsAsync();
+            return all.FirstOrDefault(s => s.Id == id);
         }
         catch (Exception ex)
         {
@@ -56,7 +65,9 @@ public class SkillService : ISkillService
     {
         try
         {
-            return await _httpClient.GetFromJsonAsync<List<SkillDto>>($"api/skills/area/{areaId}") ?? new List<SkillDto>();
+            
+            var all = await GetAllSkillsAsync();
+            return all.Where(s => s.AreaId == areaId).ToList();
         }
         catch (Exception ex)
         {
@@ -69,7 +80,16 @@ public class SkillService : ISkillService
     {
         try
         {
-            var response = await _httpClient.PostAsJsonAsync("api/skills", skillDto);
+            // API: POST /skills (RequireAuthorization UserManagerPolicy)
+            var response = await _httpClient.PostAsJsonAsync("skills", skillDto);
+
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                var body = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Erro ao criar skill. Status={(int)response.StatusCode} {response.StatusCode}. Body={body}");
+            }
+
             response.EnsureSuccessStatusCode();
             return await response.Content.ReadFromJsonAsync<SkillDto>();
         }
@@ -80,25 +100,20 @@ public class SkillService : ISkillService
         }
     }
 
-    public async Task<bool> UpdateSkillAsync(int id, UpdateSkillDto skillDto)
+    public Task<bool> UpdateSkillAsync(int id, UpdateSkillDto skillDto)
     {
-        try
-        {
-            var response = await _httpClient.PutAsJsonAsync($"api/skills/{id}", skillDto);
-            return response.IsSuccessStatusCode;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Erro ao atualizar skill: {ex.Message}");
-            return false;
-        }
+        // A API não tem endpoint de update.
+        //  criar na API: app.MapPut("/skills/{id:int}", ...)
+        Console.WriteLine("UpdateSkillAsync: endpoint não existe na API (PUT /skills/{id}).");
+        return Task.FromResult(false);
     }
 
     public async Task<bool> DeleteSkillAsync(int id)
     {
         try
         {
-            var response = await _httpClient.DeleteAsync($"api/skills/{id}");
+            // API: DELETE /skills/{id}
+            var response = await _httpClient.DeleteAsync($"skills/{id}");
             return response.IsSuccessStatusCode;
         }
         catch (Exception ex)
