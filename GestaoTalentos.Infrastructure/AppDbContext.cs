@@ -18,6 +18,9 @@ public class AppDbContext : DbContext
     /// DbSet para a entidade Cliente, representando clientes na base de dados.
     public DbSet<Cliente> Clientes { get; set; } = null!;
     
+    /// DbSet para a entidade Apresentação, representante de apresentações na base de dados.
+   // public DbSet<Apresentacao> Apresentacoes { get; set; } = null!;
+    
     /// DbSet para a entidade Record, representando registros na base de dados.
     public DbSet<Record> Records { get; set; } = null!;
 }

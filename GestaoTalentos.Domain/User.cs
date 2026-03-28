@@ -1,7 +1,7 @@
 ﻿namespace GestaoTalentos.Domain;
 
 /// Classe que representa um utilizador no domínio da aplicação.
-/// Um utilizador possui ID, nome de utilizador, senha e role.
+/// Um utilizador possui ID, nome de utilizador, pass e role.
 public class User
 {
 
@@ -25,7 +25,7 @@ public enum UserRole
     /// Utilizador comum, com permissões básicas.
     User,
     
-    /// Gerenciador de utilizadores, pode gerenciar utilizadores e roles.
+    /// Gestor de utilizadores, pode gerir utilizadores e roles.
     UserManager,
     
     /// Administrador, com permissões totais.
