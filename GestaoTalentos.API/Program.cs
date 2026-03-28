@@ -1,5 +1,6 @@
 // Programa principal da API GestaoTalentos
-// Configura e executa uma aplicação ASP.NET Core com APIs mínimas para gestão de itilizadores, registros e clientes.
+// Configura e executa uma aplicação ASP.NET Core com APIs mínimas para gestão de
+// utilizadores, registros, clientes e apresentações.
 // Inclui autenticação JWT, autorização baseada em roles e acesso à base de dados PostgreSQL.
 
 using GestaoTalentos.API;
@@ -25,6 +26,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IRecordRepository, RecordRepository>();
 builder.Services.AddScoped<IClienteRepository, ClienteRepository>();
+//builder.Services.AddScoped<IApresentacaoRepository, ApresentacaoRepository>();
 
 // Configuração de autenticação JWT
 var jwtKey = builder.Configuration["Jwt:Key"] ?? "MudaIstoParaSegredoMuitoForte#2026";
@@ -298,5 +300,50 @@ app.MapPut("/clientes/{id}", async (int id, ClienteCreateDto request, ClaimsPrin
     await repo.UpdateAsync(cliente);
     return Results.NoContent();
 }).RequireAuthorization("UserPolicy");
+
+
+
+
+
+
+
+
+// Endpoint para listar todas as apresentações
+//app.MapGet("/apresentacoes", async (IApresentacaoRepository repo) =>
+//  Results.Ok(await repo.GetAllAsync())).RequireAuthorization("UserPolicy");!!!!!!!!!!!!!!!!
+
+// Endpoint para obter uma aprentação específica por ID de Cliente e ID de Talento
+//app.MapGet("/apresentacoes/{idCliente}", async (int idc, IApresentacaoRepository repo) =>
+//{
+//  var apresentacao = await repo.GetByIdAsync(idc);
+//  return apresentacao is null ? Results.NotFound() : Results.Ok(apresentacao);
+//}).RequireAuthorization("UserPolicy");!!!!!!!!!!!!!!!!!
+
+// Endpoint para criar um nova aprentação (define IdCriador automaticamente)
+//app.MapPost("/apresentacoes", async (ApresentacaoCreateDto request, ClaimsPrincipal user, IApresentacaoRepository repo) =>
+//{
+//  if (string.IsNullOrWhiteSpace(request.IdCliente))
+    //      return Results.BadRequest("IdCliente é obrigatório.");
+
+//    var apresentacao = new Apresentacao
+    //  {
+    //  idCliente = request.IdCliente.Trim(),
+    //  DataApresentacao = system.DateTime.UtcNow
+    //};
+    //await repo.AddAsync(cliente);
+    //return Results.Created($"/apresentacao/{apresentacao.id}", new ApresentacaoDto(apresentacao.idClinte, apresentacao.DataApresentacao));
+//}).RequireAuthorization("UserPolicy");
+
+// Endpoint para atualizar um cliente
+//app.MapPut("/clientes/{id}", async (int id, ApresentacaoCreateDto request, ClaimsPrincipal user, IApresentacaoRepository repo, IUserRepository userRepo) =>
+//{
+//  var apresentacao = await repo.GetByIdClienteAsync(id);
+//  if (apresentacao == null) return Results.NotFound();
+
+//    apresentacao.idClinte = request.IdCliente.Trim();
+//  DataApresentacao = request.DataApresentacao.Trim();
+//  await repo.UpdateAsync(apresentacao);
+//  return Results.NoContent();
+//}).RequireAuthorization("UserPolicy");
 
 app.Run();

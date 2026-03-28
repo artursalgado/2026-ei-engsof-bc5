@@ -12,14 +12,12 @@ public class ClienteRepository : IClienteRepository
     /// Construtor que injeta o contexto da base de dados.
     /// <param name="context">Instância do AppDbContext.</param>
     public ClienteRepository(GestaoTalentos.Infrastructure.AppDbContext context) => _context = context;
-    
 
     /// Obtém um cliente pelo nome.
     /// <param name="nome">Nome do cliente.</param>
     /// <returns>O cliente encontrado ou null se não existir.</returns>
     public async Task<Cliente?> GetByNomeAsync(string nome)
         => await _context.Clientes.FirstOrDefaultAsync(c => c.Nome == nome);
-    
 
     /// Obtém um cliente pelo ID.
     /// <param name="id">ID do cliente.</param>
@@ -52,6 +50,14 @@ public class ClienteRepository : IClienteRepository
     /// <returns>True se existir pelo menos um cliente, false caso contrário.</returns>
     public async Task<bool> AnyAsync() => await _context.Clientes.AnyAsync();
     
+    public async Task<List<Cliente>> GetByIdCriadorAsync(int id)
+        => await _context.Clientes.Where(c => c.IdCriador == id).ToListAsync();
     
+    public async Task<Cliente?> GetByIdMinhaContaAsync(int id)
+        => await _context.Clientes.FirstOrDefaultAsync(c => c.IdMinhaConta == id);
     
+    //public async Task<Cliente?> GetWithPropostaAsync(int id)
+    // => await _context.Clientes
+    //  .Include(c => c.Propostas)
+    // .FirstOrDefaultAsync(c => c.Id == id);
 }
