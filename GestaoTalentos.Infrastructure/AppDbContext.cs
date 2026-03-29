@@ -23,4 +23,24 @@ public class AppDbContext : DbContext
     
     /// DbSet para a entidade Record, representando registros na base de dados.
     public DbSet<Record> Records { get; set; } = null!;
+    
+    // Configurar relacionamentos
+    modelBuilder.Entity<Cliente>()
+    .HasOne(c => c.User)
+        .WithMany(a => a.Clientes)
+        .HasForeignKey(s => s.IdCriador)
+        .OnDelete(DeleteBehavior.Restrict);
+
+ //   modelBuilder.Entity<Apresentacao>()
+  //  .HasOne(a => a.Cliente)
+   //     .WithMany(s => s.Apresentacoes)
+    //    .HasForeignKey(a => a.IdCliente)
+ //       .OnDelete(DeleteBehavior.Cascade);
+
+
+    // Índices para performance
+    modelBuilder.Entity<Cliente>()
+    .HasIndex(c => c.IdMinhaConta)
+        .IsUnique();
+
 }
