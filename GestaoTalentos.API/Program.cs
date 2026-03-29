@@ -10,6 +10,16 @@ using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -42,7 +52,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection") ?? "Host=localhost;Port=5432;Database=gestaotalentos;Username=postgres;Password=postgres"));
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
-builder.Services.AddScoped<IRecordRepository, RecordRepository>();
+builder.Services.AddScoped<IPerfilRepository, PerfilRepository>();
 
 var jwtKey = builder.Configuration["Jwt:Key"] ?? "MudaIstoParaSegredoMuitoForte#2026";
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "GestaoTalentosApi";
@@ -76,6 +86,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+app.UseCors("AllowAll");
 
 app.UseHttpsRedirection();
 app.UseAuthentication();
@@ -175,7 +187,7 @@ app.MapPost("/users", async (UserCreateDto request, IUserRepository repo) =>
     return Results.Created($"/users/{user.Id}", new { user.Id, user.Username, user.Role });
 }).RequireAuthorization("UserManagerPolicy");
 
-app.MapGet("/records", async (ClaimsPrincipal user, IRecordRepository repo, IUserRepository userRepo) =>
+app.MapGet("/perfis", async (ClaimsPrincipal user, IPerfilRepository repo, IUserRepository userRepo) =>
 {
     var userId = int.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : 0;
     var current = await userRepo.GetByIdAsync(userId);
@@ -183,15 +195,15 @@ app.MapGet("/records", async (ClaimsPrincipal user, IRecordRepository repo, IUse
 
     if (current.Role == UserRole.User)
     {
-        var records = await repo.GetVisibleForUserAsync(userId);
-        return Results.Ok(records.Select(r => new RecordDto(r.Id, r.OwnerId, r.Content, r.IsShared, r.CreatedAt)));
+        var perfis = await repo.GetVisibleForUserAsync(userId);
+        return Results.Ok(perfis.Select(r => new PerfilDto(r.Id, r.OwnerId, r.Content, r.IsShared, r.CreatedAt)));
     }
 
     var all = await repo.GetAllAsync();
-    return Results.Ok(all.Select(r => new RecordDto(r.Id, r.OwnerId, r.Content, r.IsShared, r.CreatedAt)));
+    return Results.Ok(all.Select(r => new PerfilDto(r.Id, r.OwnerId, r.Content, r.IsShared, r.CreatedAt)));
 }).RequireAuthorization("UserPolicy");
 
-app.MapGet("/records/{id}", async (int id, ClaimsPrincipal user, IRecordRepository repo, IUserRepository userRepo) =>
+app.MapGet("/perfis/{id}", async (int id, ClaimsPrincipal user, IPerfilRepository repo, IUserRepository userRepo) =>
 {
     var rec = await repo.GetByIdAsync(id);
     if (rec == null) return Results.NotFound();
@@ -201,24 +213,24 @@ app.MapGet("/records/{id}", async (int id, ClaimsPrincipal user, IRecordReposito
     if (current == null) return Results.Unauthorized();
 
     if (current.Role == UserRole.Admin || current.Role == UserRole.UserManager || rec.OwnerId == userId || rec.IsShared)
-        return Results.Ok(new RecordDto(rec.Id, rec.OwnerId, rec.Content, rec.IsShared, rec.CreatedAt));
+        return Results.Ok(new PerfilDto(rec.Id, rec.OwnerId, rec.Content, rec.IsShared, rec.CreatedAt));
 
     return Results.Forbid();
 }).RequireAuthorization("UserPolicy");
 
-app.MapPost("/records", async (RecordCreateDto request, ClaimsPrincipal user, IRecordRepository repo) =>
+app.MapPost("/perfis", async (PerfilCreateDto request, ClaimsPrincipal user, IPerfilRepository repo) =>
 {
     var userId = int.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var uid) ? uid : 0;
 
     if (string.IsNullOrWhiteSpace(request.Content))
         return Results.BadRequest("Content obrigatório.");
 
-    var record = new Record { OwnerId = userId, Content = request.Content.Trim(), IsShared = request.IsShared };
-    await repo.AddAsync(record);
-    return Results.Created($"/records/{record.Id}", new RecordDto(record.Id, record.OwnerId, record.Content, record.IsShared, record.CreatedAt));
+    var perfil = new Perfil { OwnerId = userId, Content = request.Content.Trim(), IsShared = request.IsShared };
+    await repo.AddAsync(perfil);
+    return Results.Created($"/perfis/{perfil.Id}", new PerfilDto(perfil.Id, perfil.OwnerId, perfil.Content, perfil.IsShared, perfil.CreatedAt));
 }).RequireAuthorization("UserPolicy");
 
-app.MapPut("/records/{id}", async (int id, RecordUpdateDto request, ClaimsPrincipal user, IRecordRepository repo, IUserRepository userRepo) =>
+app.MapPut("/perfis/{id}", async (int id, PerfilUpdateDto request, ClaimsPrincipal user, IPerfilRepository repo, IUserRepository userRepo) =>
 {
     var rec = await repo.GetByIdAsync(id);
     if (rec == null) return Results.NotFound();
@@ -236,7 +248,7 @@ app.MapPut("/records/{id}", async (int id, RecordUpdateDto request, ClaimsPrinci
     return Results.NoContent();
 }).RequireAuthorization("UserPolicy");
 
-app.MapDelete("/records/{id}", async (int id, ClaimsPrincipal user, IRecordRepository repo, IUserRepository userRepo) =>
+app.MapDelete("/perfis/{id}", async (int id, ClaimsPrincipal user, IPerfilRepository repo, IUserRepository userRepo) =>
 {
     var rec = await repo.GetByIdAsync(id);
     if (rec == null) return Results.NotFound();

@@ -1,6 +1,6 @@
 namespace GestaoTalentos.Domain;
 
-public class Record
+public class Perfil
 {
     public int Id { get; set; }
     public int OwnerId { get; set; }
