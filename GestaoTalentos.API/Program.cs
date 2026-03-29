@@ -20,14 +20,16 @@ builder.Services.AddSwaggerGen();
 
 // Configuração do contexto da base de dados com PostgreSQL
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection") ?? "Host=localhost;Port=5432;Database=gestaotalentos;Username=postgres;Password=postgres"));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection") ?? 
+                      "Host=localhost;Port=5432;Database=gestaotalentos;Username=postgres;Password=postgres"));
 
 // Registro de repositórios para injeção de dependência
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IRecordRepository, RecordRepository>();
+//----------------------
 builder.Services.AddScoped<IClienteRepository, ClienteRepository>();
 //builder.Services.AddScoped<IApresentacaoRepository, ApresentacaoRepository>();
-
+//------------------------
 // Configuração de autenticação JWT
 var jwtKey = builder.Configuration["Jwt:Key"] ?? "MudaIstoParaSegredoMuitoForte#2026";
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "GestaoTalentosApi";
@@ -55,6 +57,16 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("AdminPolicy", policy => policy.RequireRole(UserRole.Admin.ToString()));
 });
 
+// erro cors
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("ClientCors", policy =>
+        policy.WithOrigins("http://localhost:5025", "https://localhost:5025")
+            .AllowAnyHeader()
+            .AllowAnyMethod());
+});
+
+
 var app = builder.Build();
 
 // Configuração de middleware para desenvolvimento
@@ -64,6 +76,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseCors("ClientCors");
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();

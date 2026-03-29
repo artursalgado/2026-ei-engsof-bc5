@@ -1,0 +1,305 @@
+@page "/skills"
+@using GestaoTalentos.API
+@using GestaoTalentos.Client.Services
+@inject ISkillService SkillService
+@inject IJSRuntime JS
+
+<div class="container mt-5">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1><i class="oi oi-star"></i> Gerir Clientes</h1>
+        </div>
+        <div class="col-md-4 text-end">
+            <button class="btn btn-success btn-lg" @onclick="OpenCreateModal" disabled="@isBusy">
+                <i class="oi oi-plus"></i> Criar Cliente
+            </button>
+        </div>
+    </div>
+
+    @if (clientes == null)
+    {
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Carregando...</span>
+        </div>
+    }
+    else if (clientes.Count == 0)
+    {
+        <div class="alert alert-info">
+            <i class="oi oi-info"></i> Nenhum clientes inserido. Clique em "Criar Cliente" para adicionar um novo.
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Nome</th>
+                        <th>Email</th>
+                        <th>Criado em</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var cliente in clientes)
+                    {
+                        <tr>
+                            <td>
+                                <i class="oi oi-check"></i> @cliente.Nome
+                            </td>
+                            <td>
+                                <span class="badge bg-primary">@cliente.IdCriadorNome</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">@cliente.TotalApresentacoes</span>
+                            </td>
+                            <td>
+                                @cliente.CriadoEm.ToString("dd/MM/yyyy HH:mm")
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-primary"
+                                        @onclick="() => OpenEditModal(cliente)"
+                                        disabled="@isBusy"
+                                        title="Editar">
+                                    <i class="oi oi-pencil"></i> Editar
+                                </button>
+                                <button class="btn btn-sm btn-danger"
+                                        @onclick="() => ConfirmDelete(cliente)"
+                                        disabled="@isBusy"
+                                        title="Apagar">
+                                    <i class="oi oi-trash"></i> Apagar
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+<!-- Modal -->
+<div class="modal @(showModal ? "show d-block" : "")" style="background-color: rgba(0,0,0,0.5);">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="oi oi-@(isEditMode ? "pencil" : "plus")"></i>
+                    @(isEditMode ? "Editar Cliente" : "Criar Novo Cliente")
+                </h5>
+                <button type="button" class="btn-close" @onclick="CloseModal" disabled="@isBusy"></button>
+            </div>
+
+            <div class="modal-body">
+                @if (!string.IsNullOrWhiteSpace(formError))
+                {
+                    <div class="alert alert-danger">@formError</div>
+                }
+
+                @if (isEditMode)
+                {
+                    <EditForm Model="@updateCliente" OnValidSubmit="@HandleUpdateSubmit">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+
+                        <div class="mb-3">
+                            <label for="nome" class="form-label">Nome do Cliente *</label>
+                            <InputText id="nome" class="form-control" @bind-Value="updateCliente.Nome" />
+                            <ValidationMessage For="@(() => updateCliente.Nome)" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email *</label>
+                            <InputString email="Email" class="form-control" @bind-Value="updateCliente.Email" />
+                            <ValidationMessage For="@(() => updateCliente.Email)" />
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @onclick="CloseModal" disabled="@isBusy">Cancelar</button>
+                            <button type="submit" class="btn btn-primary" disabled="@isBusy">
+                                <i class="oi oi-pencil"></i> @(isBusy ? "A atualizar..." : "Atualizar")
+                            </button>
+                        </div>
+                    </EditForm>
+                }
+                else
+                {
+                    <EditForm Model="@createCliente" OnValidSubmit="@HandleCreateSubmit">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+
+                        <div class="mb-3">
+                            <label for="nome" class="form-label">Nome do Cliente *</label>
+                            <InputText id="nome" class="form-control" @bind-Value="createCliente.Nome" />
+                            <ValidationMessage For="@(() => createCliente.Nome)" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="Email" class="form-label">Email do Cliente *</label>
+                            <InputString email="Email" class="form-control" @bind-Value="createCliente.Email" />
+                            <ValidationMessage For="@(() => createCliente.Email)" />
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @onclick="CloseModal" disabled="@isBusy">Cancelar</button>
+                            <button type="submit" class="btn btn-success" disabled="@isBusy">
+                                <i class="oi oi-plus"></i> @(isBusy ? "A criar..." : "Criar")
+                            </button>
+                        </div>
+                    </EditForm>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<ClienteDto>? clientes;
+    private CreateClienteDto createCliente = new();
+    private UpdateClienteDto updateCliente = new();
+
+    private bool showModal = false;
+    private bool isEditMode = false;
+    private int editingSkillId = 0;
+
+    private bool isBusy = false;
+    private string? formError = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadClientes();
+    }
+
+    private async Task LoadCliente()
+    {
+        clientes = await ClienteService.GetAllClientesAsync();
+    }
+
+    private void OpenCreateModal()
+    {
+        formError = null;
+        isEditMode = false;
+        createCliente = new CreateClienteDto();
+        showModal = true;
+    }
+
+    private Task OpenEditModal(ClienteDto cliente)
+    {
+        formError = null;
+        isEditMode = true;
+        editingClienteId = cliente.Id;
+
+        updateSkill = new UpdateClienteDto
+        {
+            Nome = cliente.Nome,
+            Email = cliente.Email
+        };
+
+        showModal = true;
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleCreateSubmit()
+    {
+        try
+        {
+            isBusy = true;
+            formError = null;
+
+            var result = await Task AddAsync(Cliente cliente);
+            if (result != null)
+            {
+                await LoadClientes();
+                CloseModal();
+                await JS.InvokeVoidAsync("alert", "Cliente criado com sucesso!");
+            }
+            else
+            {
+                formError = "Não foi possível criar o cliente.";
+            }
+        }
+        catch (Exception ex)
+        {
+            formError = $"Erro ao criar Cliente: {ex.Message}";
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private async Task HandleUpdateSubmit()
+    {
+        try
+        {
+            isBusy = true;
+            formError = null;
+
+            var success = await Task UpdateAsync(Cliente cliente);
+            if (success)
+            {
+                await LoadSkills();
+                CloseModal();
+                await JS.InvokeVoidAsync("alert", "Cliente atualizado com sucesso!");
+            }
+            else
+            {
+                formError = "Não foi possível atualizar o cliente (verifica se estás autenticado como o seu Criador/Admin).";
+            }
+        }
+        catch (Exception ex)
+        {
+            formError = $"Erro ao atualizar cliente: {ex.Message}";
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private async Task ConfirmDelete(ClienteDto cliente)
+    {
+        var confirmed = await JS.InvokeAsync<bool>("confirm", $"Tem certeza que deseja apagar o cliente '{cliente.Nome}'?");
+        if (confirmed)
+        {
+            await DeleteCliente(cliente.Id);
+        }
+    }
+
+    private async Task DeleteCliente(int id)
+    {
+        try
+        {
+            isBusy = true;
+
+            var success = await SkillService.DeleteSkillAsync(id);
+            if (success)
+            {
+                await LoadSkills();
+                await JS.InvokeVoidAsync("alert", "Cliente apagado com sucesso!");
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("alert", "Não foi possível apagar (verifica se estás autenticada como o seu Criador/Admin).");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", $"Erro ao apagar: {ex.Message}");
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        formError = null;
+        createSkill = new CreateClienteDto();
+        updateSkill = new UpdateClienteDto();
+        editingSkillId = 0;
+        isEditMode = false;
+    }
+}
