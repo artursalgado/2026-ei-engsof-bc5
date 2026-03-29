@@ -9,5 +9,12 @@
 //public Cliente Cliente { get; set; } = null!;
     //public int IdTalento { get; set; }
     //public Talento Talento { get; set; } = null!;
-    //public DateTime DataApresentacao { get; set; } = DateTime.UtcNow;
+//public DateTime DataApresentacao { get; set; } = DateTime.UtcNow;
+    
+//modelBuilder.Entity<Apresentacao>()
+    //   .HasOne(a => a.Cliente)
+    // .WithMany(c => c.Apresentacoes)
+    // .HasForeignKey(a => a.IdCliente)
+    //  .OnDelete(DeleteBehavior.Cascade);
+
 //}

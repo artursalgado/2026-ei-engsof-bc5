@@ -13,43 +13,38 @@ public class UserRepository : IUserRepository
     /// <param name="context">Instância do AppDbContext.</param>
     public UserRepository(GestaoTalentos.Infrastructure.AppDbContext context) => _context = context;
     
-    /// Obtém um utilizador pelo nome de utilizador.
-    /// <param name="username">Nome de utilizador.</param>
-    /// <returns>O utilizador encontrado ou null se não existir.</returns>
-    public async Task<User?> GetByUsernameAsync(string username)
+    
+    public async Task<User?> GetByUsernameAsync(string username) /// Obtém um utilizador pelo nome de utilizador.
         => await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
-    
-    /// Obtém um utilizador pelo ID.
-    /// <param name="id">ID do usuário.</param>
-    /// <returns>O utilizador encontrado ou null se não existir.</returns>
-    public async Task<User?> GetByIdAsync(int id)
+    public async Task<User?> GetByIdAsync(int id) /// Obtém um utilizador pelo ID.
         => await _context.Users.FindAsync(id);
+
     
-    /// Obtém todos os utilizadores.
-    /// <returns>Lista de todos os utilizadores.</returns>
-    public async Task<List<User>> GetAllAsync()
+    public async Task<List<User>> GetAllAsync() /// Obtém todos os utilizadores.
         => await _context.Users.AsNoTracking().ToListAsync();
 
-
-    /// Adiciona um novo utilizador na base de dados.
-    /// <param name="user">Instância do utilizador a ser adicionado.</param>
-    public async Task AddAsync(User user)
+    
+    public async Task AddAsync(User user)     /// Adiciona um novo utilizador na base de dados.
     {
         await _context.Users.AddAsync(user);
         await _context.SaveChangesAsync();
     }
-
-
-    /// Atualiza um utilizador existente na base de dados.
-    /// <param name="user">Instância do utilizador a ser atualizado.</param>
-    public async Task UpdateAsync(User user)
+    public async Task UpdateAsync(User user)    /// Atualiza um utilizador existente na base de dados.
     {
         _context.Users.Update(user);
         await _context.SaveChangesAsync();
     }
+    public async Task DeleteAsync(int id)    /// Exclui um utilizador da base de dados pelo ID.
+    {
+        var user = await _context.Users.FindAsync(id);
+        if (user != null)
+        {
+            _context.Users.Remove(user);
+            await _context.SaveChangesAsync();
+        }
+    }
 
-
-    /// Verifica se existe pelo menos um utilizador na base de dados.
-    /// <returns>True se existir pelo menos um utilizador, false caso contrário.</returns>
-    public async Task<bool> AnyAsync() => await _context.Users.AnyAsync();
+    
+    public async Task<bool> AnyAsync() /// Verifica se existe pelo menos um utilizador na base de dados. 
+        => await _context.Users.AnyAsync();
 }

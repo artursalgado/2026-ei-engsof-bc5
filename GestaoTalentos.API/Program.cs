@@ -11,12 +11,38 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Configuração de serviços da API
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Insira o token JWT gerado pelo endpoint /login."
+    });
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
 
 // Configuração do contexto da base de dados com PostgreSQL
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -60,13 +86,11 @@ builder.Services.AddAuthorization(options =>
 // erro cors
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("ClientCors", policy =>
-        policy.WithOrigins("http://localhost:5025", "https://localhost:5025")
-            .AllowAnyHeader()
-            .AllowAnyMethod());
+  options.AddPolicy("ClientCors", policy =>
+     policy.WithOrigins("http://localhost:5025", "https://localhost:5025")
+    	.AllowAnyHeader()
+	    .AllowAnyMethod());
 });
-
-
 var app = builder.Build();
 
 // Configuração de middleware para desenvolvimento

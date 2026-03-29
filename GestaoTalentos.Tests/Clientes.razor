@@ -1,7 +1,7 @@
-@page "/skills"
+@page "/clientes"
 @using GestaoTalentos.API
 @using GestaoTalentos.Client.Services
-@inject ISkillService SkillService
+@inject IClienteService ClienteService
 @inject IJSRuntime JS
 
 <div class="container mt-5">
@@ -160,7 +160,7 @@
 
     private bool showModal = false;
     private bool isEditMode = false;
-    private int editingSkillId = 0;
+    private int editingIdClinte = 0;
 
     private bool isBusy = false;
     private string? formError = null;
@@ -187,9 +187,9 @@
     {
         formError = null;
         isEditMode = true;
-        editingClienteId = cliente.Id;
+        editingIdCliente = cliente.Id;
 
-        updateSkill = new UpdateClienteDto
+        updateCliente = new UpdateClienteDto
         {
             Nome = cliente.Nome,
             Email = cliente.Email
@@ -206,7 +206,13 @@
             isBusy = true;
             formError = null;
 
-            var result = await Task AddAsync(Cliente cliente);
+            var result = await Task AddAsync(Cliente cliente) = await ClienteService.AddClienteAsync(new CreateClienteDto)
+            {
+                Nome = createCliente.Nome,
+                Email = createCliente.Email
+                IdCriador = user.Id;
+            });
+            
             if (result != null)
             {
                 await LoadClientes();
@@ -238,7 +244,7 @@
             var success = await Task UpdateAsync(Cliente cliente);
             if (success)
             {
-                await LoadSkills();
+                await LoadClientes();
                 CloseModal();
                 await JS.InvokeVoidAsync("alert", "Cliente atualizado com sucesso!");
             }
@@ -272,10 +278,10 @@
         {
             isBusy = true;
 
-            var success = await SkillService.DeleteSkillAsync(id);
+            var success = await ClienteService.DeleteClienteAsync(id);
             if (success)
             {
-                await LoadSkills();
+                await LoadClientes();
                 await JS.InvokeVoidAsync("alert", "Cliente apagado com sucesso!");
             }
             else
@@ -297,9 +303,9 @@
     {
         showModal = false;
         formError = null;
-        createSkill = new CreateClienteDto();
-        updateSkill = new UpdateClienteDto();
-        editingSkillId = 0;
+        createCliente = new CreateClienteDto();
+        updateCliente = new UpdateClienteDto();
+        editingIdCliente = 0;
         isEditMode = false;
     }
 }
