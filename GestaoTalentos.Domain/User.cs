@@ -4,30 +4,18 @@
 /// Um utilizador possui ID, nome de utilizador, pass e role.
 public class User
 {
-
-    /// Identificador único do utilizador (chave primária).
     public int Id { get; set; }
-    
-    /// Nome de usuário único para login.
     public string Username { get; set; } = string.Empty;
-    
-    /// Senha criptografada do usuário.
     public string Password { get; set; } = string.Empty;
-    
-    /// Role do usuário, definindo permissões.
     public UserRole Role { get; set; }
+    
+    public List<Cliente> Clientes { get; set; } = new();
 }
 
 /// Enumeração para os roles de usuário, definindo níveis de permissão.
 public enum UserRole
 {
-
-    /// Utilizador comum, com permissões básicas.
-    User,
-    
-    /// Gestor de utilizadores, pode gerir utilizadores e roles.
-    UserManager,
-    
-    /// Administrador, com permissões totais.
-    Admin
+    User, /// Utilizador comum, com permissões básicas.
+    UserManager, /// Gestor de utilizadores, pode gerir utilizadores e roles.
+    Admin/// Administrador, com permissões totais.
 }

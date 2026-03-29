@@ -7,6 +7,8 @@ namespace GestaoTalentos.Infrastructure;
 /// Implementa a interface IRecordRepository.
 public class RecordRepository : IRecordRepository
 {
+    /// Campo privado para armazenar o contexto da base de dados,
+    /// permitindo acesso às entidades e operações de persistência.
     private readonly AppDbContext _context;
     private DbSet<Record> Records => _context.Set<Record>();
 
@@ -14,46 +16,30 @@ public class RecordRepository : IRecordRepository
     /// <param name="context">Instância do AppDbContext.</param>
     public RecordRepository(AppDbContext context) => _context = context;
     
-    /// Obtém um registro pelo ID.
-    /// <param name="id">ID do registro.</param>
-    /// <returns>O registro encontrado ou null se não existir.</returns>
-    public async Task<Record?> GetByIdAsync(int id)
-        => await Records.FindAsync(id);
     
-    /// Obtém todos os registros.
-    /// <returns>Lista de todos os registros.</returns>
-    public async Task<List<Record>> GetAllAsync()
+    public async Task<Record?> GetByIdAsync(int id) // Obtém um registro pelo ID.
+        => await Records.FindAsync(id);
+ 
+    
+    public async Task<List<Record>> GetAllAsync() // Obtém todos os registros.
         => await Records.AsNoTracking().ToListAsync();
-
-
-    /// Obtém registros visíveis para um utilizador específico (próprios ou compartilhados).
-    /// <param name="userId">ID do utilizador.</param>
-    /// <returns>Lista de registros visíveis.</returns>
-    public async Task<List<Record>> GetVisibleForUserAsync(int userId)
-        => await Records.AsNoTracking()
+    public async Task<List<Record>> GetVisibleForUserAsync(int userId) /// Obtém registros visíveis para um utilizador
+        => await Records.AsNoTracking()                               /// específico (próprios ou compartilhados).
             .Where(r => r.OwnerId == userId || r.IsShared)
             .ToListAsync();
     
-    /// Adiciona um novo registro à base de dados.
-    /// <param name="record">Instância do registro a ser adicionado.</param>
-    public async Task AddAsync(Record record)
+    
+    public async Task AddAsync(Record record) /// Adiciona um novo registro à base de dados.
     {
         await Records.AddAsync(record);
         await _context.SaveChangesAsync();
     }
-
-
-    /// Atualiza um registro existente na base de dados.
-    /// <param name="record">Instância do registro a ser atualizado.</param>
-    public async Task UpdateAsync(Record record)
+    public async Task UpdateAsync(Record record) /// Atualiza um registro existente na base de dados.
     {
         Records.Update(record);
         await _context.SaveChangesAsync();
     }
-    
-    /// Remove um registro pelo ID.
-    /// <param name="id">ID do registro a ser removido.</param>
-    public async Task DeleteAsync(int id)
+    public async Task DeleteAsync(int id)  /// Remove um registro pelo ID.
     {
         var entity = await Records.FindAsync(id);
         if (entity != null)
