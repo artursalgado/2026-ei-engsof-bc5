@@ -1,7 +1,36 @@
-﻿@page "/"
+@page "/"
+@inject CustomAuthStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
 
 <PageTitle>Home</PageTitle>
 
-<h1>Hello, world!</h1>
+<h1>Welcome to Gestão Talentos!</h1>
 
-Welcome to your new app.
+<AuthorizeView>
+    <Authorized>
+        <div class="alert alert-success mt-4">
+            <p>Welcome back, <strong>@context.User.Identity?.Name</strong>! You are successfully logged in.</p>
+            <ul>
+                <li>Username: @context.User.Identity?.Name</li>
+                <li>Role: @context.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value</li>
+            </ul>
+        </div>
+        <button class="btn btn-warning mt-2" @onclick="Logout">Logout</button>
+    </Authorized>
+    <NotAuthorized>
+        <div class="alert alert-info mt-4">
+            <p>You are not logged in. Please log in to access your talent dashboard.</p>
+            <a href="/login" class="btn btn-primary mt-2">Go to Login</a>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private async Task Logout()
+    {
+        await JS.InvokeVoidAsync("localStorage.removeItem", "authToken");
+        AuthStateProvider.MarkUserAsLoggedOut();
+        Navigation.NavigateTo("/login");
+    }
+}
