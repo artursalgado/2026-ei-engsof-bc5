@@ -1,0 +1,72 @@
+@page "/login"
+@layout GestaoTalentos.Client.Layout.EmptyLayout
+@inject HttpClient Http
+@inject CustomAuthStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<PageTitle>Login</PageTitle>
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-4 card shadow-sm p-4">
+        <h3 class="text-center mb-4">Login Gestão de Talentos - Grupo 5</h3>
+        
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger">@errorMessage</div>
+        }
+        
+        <div class="mb-3">
+            <label class="form-label">Username</label>
+            <input @bind="loginModel.Username" class="form-control" placeholder="Enter username" />
+        </div>
+        <div class="mb-4">
+            <label class="form-label">Password</label>
+            <input @bind="loginModel.Password" type="password" class="form-control" placeholder="Enter password" />
+        </div>
+        <button class="btn btn-primary w-100" @onclick="HandleLogin">Login</button>
+    </div>
+</div>
+
+@code {
+    private LoginModel loginModel = new();
+    private string errorMessage = "";
+
+    private async Task HandleLogin()
+    {
+        errorMessage = "";
+        try
+        {
+            var response = await Http.PostAsJsonAsync("/login", loginModel);
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<LoginResult>();
+                if (result != null && !string.IsNullOrEmpty(result.Token))
+                {
+                    await JS.InvokeVoidAsync("localStorage.setItem", "authToken", result.Token);
+                    AuthStateProvider.MarkUserAsAuthenticated(result.Token);
+                    Navigation.NavigateTo("/");
+                }
+            }
+            else
+            {
+                errorMessage = "Invalid username or password.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Login failed: {ex.Message}";
+        }
+    }
+
+    public class LoginModel
+    {
+        public string Username { get; set; } = "";
+        public string Password { get; set; } = "";
+    }
+
+    public class LoginResult
+    {
+        public string Token { get; set; } = "";
+    }
+}
