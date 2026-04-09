@@ -21,7 +21,7 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IRecordRepository, RecordRepository>();
 //
 builder.Services.AddScoped<ISkillRepository, SkillRepository>();
-//builder.Services.AddScoped<IAreaRepository, AreaRepository>();
+builder.Services.AddScoped<IAreaRepository, AreaRepository>();
 
 var jwtKey = builder.Configuration["Jwt:Key"] ?? "MudaIstoParaSegredoMuitoForte#2026";
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "GestaoTalentosApi";
@@ -323,8 +323,24 @@ app.MapDelete("/skills/{id:int}", async (int id, ISkillRepository repo) =>
     var skill = await repo.GetByIdAsync(id);
     if (skill == null) return Results.NotFound();
 
-    await repo.DeleteAsync(id);
-    return Results.NoContent();
+    try
+    {
+        await repo.DeleteAsync(id);
+        return Results.NoContent();
+    }
+    catch (Microsoft.EntityFrameworkCore.DbUpdateException)
+    {
+        return Results.BadRequest("Não é possível apagar a skill pois já está a ser utilizada por um profissional.");
+    }
 }).RequireAuthorization("UserManagerPolicy");
+
+// ======================
+// AREAS
+// ======================
+app.MapGet("/areas", async (IAreaRepository repo) =>
+{
+    var areas = await repo.GetAllAsync();
+    return Results.Ok(areas.Select(a => new GestaoTalentos.Shared.DTOs.AreaDto { Id = a.Id, Nome = a.Nome }));
+}).RequireAuthorization("UserPolicy");
 
 app.Run();

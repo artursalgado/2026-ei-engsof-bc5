@@ -11,7 +11,6 @@ public class AppDbContext : DbContext
     public DbSet<Record> Records { get; set; } = null!;
     public DbSet<Area> Areas { get; set; } = null!;
     public DbSet<Skill> Skills { get; set; } = null!;
-    public DbSet<Abilidade> Abilidades { get; set; } = null!;
     public DbSet<SkillNecessaria> SkillsNecessarias { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -25,11 +24,7 @@ public class AppDbContext : DbContext
             .HasForeignKey(s => s.AreaId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        modelBuilder.Entity<Abilidade>()
-            .HasOne(a => a.Skill)
-            .WithMany(s => s.Abilidades)
-            .HasForeignKey(a => a.SkillId)
-            .OnDelete(DeleteBehavior.Cascade);
+
 
         modelBuilder.Entity<SkillNecessaria>()
             .HasOne(sn => sn.Skill)

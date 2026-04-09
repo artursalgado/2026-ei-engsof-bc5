@@ -3,6 +3,7 @@
 @using GestaoTalentos.Client.Services
 @inject ISkillService SkillService
 @inject IJSRuntime JS
+@inject HttpClient Http
 
 <div class="container mt-5">
     <div class="row mb-4">
@@ -36,7 +37,6 @@
                     <tr>
                         <th>Nome</th>
                         <th>Área</th>
-                        <th>Abilidades</th>
                         <th>Criado em</th>
                         <th>Ações</th>
                     </tr>
@@ -50,9 +50,6 @@
                             </td>
                             <td>
                                 <span class="badge bg-primary">@skill.AreaNome</span>
-                            </td>
-                            <td>
-                                <span class="badge bg-info">@skill.TotalAbilidades</span>
                             </td>
                             <td>
                                 @skill.CriadoEm.ToString("dd/MM/yyyy HH:mm")
@@ -111,7 +108,16 @@
 
                         <div class="mb-3">
                             <label for="areaId" class="form-label">Área Profissional *</label>
-                            <InputNumber id="areaId" class="form-control" @bind-Value="updateSkill.AreaId" />
+                            <InputSelect id="areaId" class="form-select" @bind-Value="updateSkill.AreaId">
+                                <option value="0">Selecione uma Área</option>
+                                @if (areas != null)
+                                {
+                                    foreach (var area in areas)
+                                    {
+                                        <option value="@area.Id">@area.Nome</option>
+                                    }
+                                }
+                            </InputSelect>
                             <ValidationMessage For="@(() => updateSkill.AreaId)" />
                         </div>
 
@@ -137,7 +143,16 @@
 
                         <div class="mb-3">
                             <label for="areaId" class="form-label">Área Profissional *</label>
-                            <InputNumber id="areaId" class="form-control" @bind-Value="createSkill.AreaId" />
+                            <InputSelect id="areaId" class="form-select" @bind-Value="createSkill.AreaId">
+                                <option value="0">Selecione uma Área</option>
+                                @if (areas != null)
+                                {
+                                    foreach (var area in areas)
+                                    {
+                                        <option value="@area.Id">@area.Nome</option>
+                                    }
+                                }
+                            </InputSelect>
                             <ValidationMessage For="@(() => createSkill.AreaId)" />
                         </div>
 
@@ -156,6 +171,7 @@
 
 @code {
     private List<SkillDto>? skills;
+    private List<AreaDto>? areas;
     private CreateSkillDto createSkill = new();
     private UpdateSkillDto updateSkill = new();
 
@@ -169,6 +185,9 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadSkills();
+        try {
+            areas = await Http.GetFromJsonAsync<List<AreaDto>>("areas");
+        } catch { /* Ignorar em caso da API estar desligada */ }
     }
 
     private async Task LoadSkills()
@@ -277,11 +296,11 @@
             if (success)
             {
                 await LoadSkills();
-                await JS.InvokeVoidAsync("alert", "Skill deletada com sucesso!");
+                await JS.InvokeVoidAsync("alert", "Skill eliminada com sucesso!");
             }
             else
             {
-                await JS.InvokeVoidAsync("alert", "Não foi possível deletar (verifica se estás autenticada como Admin/UserManager).");
+                await JS.InvokeVoidAsync("alert", "Erro ao apagar. Verifique se a Skill não está a ser utilizada num perfil e se é Admin.");
             }
         }
         catch (Exception ex)

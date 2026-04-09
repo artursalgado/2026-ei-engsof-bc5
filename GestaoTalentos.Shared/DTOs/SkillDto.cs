@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace GestaoTalentos.Shared.DTOs;
 
@@ -10,5 +10,4 @@ public class SkillDto
     public string? AreaNome { get; set; }
     public DateTime CriadoEm { get; set; }
     public DateTime AtualizadoEm { get; set; }
-    public int TotalAbilidades { get; set; }
 }
