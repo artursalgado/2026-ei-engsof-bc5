@@ -55,7 +55,6 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IPerfilRepository, PerfilRepository>();
-builder.Services.AddScoped<IRecordRepository, RecordRepository>();
 builder.Services.AddScoped<ISkillRepository, SkillRepository>();
 builder.Services.AddScoped<IAreaRepository, AreaRepository>();
 
@@ -109,6 +108,10 @@ await using (var scope = app.Services.CreateAsyncScope())
 {
     var services = scope.ServiceProvider;
     var context = services.GetRequiredService<AppDbContext>();
+    
+    // TRUQUE TEMPORÁRIO PARA LIMPAR A BASE DE DADOS:
+    // (Aviso: Depois correr a API a primeira vez com sucesso, APAGAR a linha EnsureDeleted!)
+    //await context.Database.EnsureDeletedAsync();
     await context.Database.EnsureCreatedAsync();
 
     var userRepository = services.GetRequiredService<IUserRepository>();

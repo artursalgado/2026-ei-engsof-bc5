@@ -8,7 +8,7 @@ public class AppDbContext : DbContext
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
     public DbSet<User> Users { get; set; } = null!;
-    public DbSet<Record> Records { get; set; } = null!;
+    public DbSet<Perfil> Perfis { get; set; } = null!;
     public DbSet<Area> Areas { get; set; } = null!;
     public DbSet<Skill> Skills { get; set; } = null!;
     public DbSet<SkillNecessaria> SkillsNecessarias { get; set; } = null!;
@@ -40,5 +40,12 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Area>()
             .HasIndex(a => a.Nome)
             .IsUnique();
+
+        // SEED DE DADOS PARA TESTE INICIAL:
+        modelBuilder.Entity<Area>().HasData(
+            new Area { Id = 1, Nome = "Eletromecânica" },
+            new Area { Id = 2, Nome = "Engenharia de Software" },
+            new Area { Id = 3, Nome = "Gestão de Projetos" }
+        );
     }
 }
