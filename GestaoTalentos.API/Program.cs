@@ -1,6 +1,8 @@
 using GestaoTalentos.API;
 using GestaoTalentos.Domain;
+using GestaoTalentos.Shared;
 using GestaoTalentos.Infrastructure;
+using GestaoTalentos.Shared.DTOs;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -49,10 +51,13 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection") ?? "Host=localhost;Port=5432;Database=gestaotalentos;Username=postgres;Password=postgres"));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection") ?? "Host=localhost;Port=5432;Database=gestaotalentos;Username=postgres;Password=postgres123"));
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IPerfilRepository, PerfilRepository>();
+builder.Services.AddScoped<IRecordRepository, RecordRepository>();
+builder.Services.AddScoped<ISkillRepository, SkillRepository>();
+builder.Services.AddScoped<IAreaRepository, AreaRepository>();
 
 var jwtKey = builder.Configuration["Jwt:Key"] ?? "MudaIstoParaSegredoMuitoForte#2026";
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "GestaoTalentosApi";
@@ -78,17 +83,24 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("UserManagerPolicy", policy => policy.RequireRole(UserRole.UserManager.ToString(), UserRole.Admin.ToString()));
     options.AddPolicy("AdminPolicy", policy => policy.RequireRole(UserRole.Admin.ToString()));
 });
-
+// erro cors
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("ClientCors", policy =>
+        policy.WithOrigins("http://localhost:5025", "https://localhost:5025")
+              .AllowAnyHeader()
+              .AllowAnyMethod());
+});
+//
 var app = builder.Build();
+
 
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
 app.UseCors("AllowAll");
-
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
@@ -112,7 +124,7 @@ await using (var scope = app.Services.CreateAsyncScope())
     }
 }
 
-app.MapPost("/register", async (UserRegisterDto request, IUserRepository repo) =>
+app.MapPost("/register", async (GestaoTalentos.API.UserRegisterDto request, IUserRepository repo) =>
 {
     if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
         return Results.BadRequest("Username e password são obrigatórios.");
@@ -131,7 +143,7 @@ app.MapPost("/register", async (UserRegisterDto request, IUserRepository repo) =
     return Results.Created($"/users/{user.Id}", new { user.Id, user.Username, user.Role });
 });
 
-app.MapPost("/login", async (UserLoginDto request, IUserRepository repo) =>
+app.MapPost("/login", async (GestaoTalentos.API.UserLoginDto request, IUserRepository repo) =>
 {
     var user = await repo.GetByUsernameAsync(request.Username);
     if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.Password))
@@ -262,6 +274,109 @@ app.MapDelete("/perfis/{id}", async (int id, ClaimsPrincipal user, IPerfilReposi
 
     await repo.DeleteAsync(id);
     return Results.NoContent();
+}).RequireAuthorization("UserPolicy");
+
+// ======================
+// SKILLS
+// ======================
+
+// GET skills (com Area)
+app.MapGet("/skills", async (ISkillRepository repo) =>
+{
+    var skills = await repo.GetAllWithAreaAsync();
+    return Results.Ok(skills.Select(s => new
+    {
+        s.Id,
+        s.Nome,
+        s.AreaId,
+        Area = s.Area == null ? null : new { s.Area.Id, s.Area.Nome },
+        s.CriadoEm,
+        s.AtualizadoEm
+    }));
+}).RequireAuthorization("UserPolicy");
+
+
+// POST skills (criar)
+app.MapPost("/skills", async (CreateSkillDto dto, ISkillRepository repo) =>
+{
+    var nome = (dto.Nome ?? "").Trim();
+
+    if (nome.Length < 2 || nome.Length > 100)
+        return Results.BadRequest("O nome deve ter entre 2 e 100 caracteres.");
+
+    if (dto.AreaId < 1)
+        return Results.BadRequest("Área inválida.");
+
+    if (await repo.GetByNomeAsync(nome) != null)
+        return Results.Conflict("Já existe uma skill com esse nome.");
+
+    var skill = new Skill
+    {
+        Nome = nome,
+        AreaId = dto.AreaId,
+        CriadoEm = DateTime.UtcNow,
+        AtualizadoEm = DateTime.UtcNow
+    };
+
+    await repo.AddAsync(skill);
+
+    return Results.Created($"/skills/{skill.Id}", new { skill.Id, skill.Nome, skill.AreaId });
+}).RequireAuthorization("UserManagerPolicy");
+
+
+// PUT skills (update)
+app.MapPut("/skills/{id:int}", async (int id, UpdateSkillDto dto, ISkillRepository repo) =>
+{
+    var skill = await repo.GetByIdAsync(id);
+    if (skill == null) return Results.NotFound();
+
+    var nome = (dto.Nome ?? "").Trim();
+
+    if (nome.Length < 2 || nome.Length > 100)
+        return Results.BadRequest("O nome deve ter entre 2 e 100 caracteres.");
+
+    if (dto.AreaId < 1)
+        return Results.BadRequest("Área inválida.");
+
+    // evitar nome duplicado (ignorando a própria skill)
+    var existing = await repo.GetByNomeAsync(nome);
+    if (existing != null && existing.Id != id)
+        return Results.Conflict("Já existe uma skill com esse nome.");
+
+    skill.Nome = nome;
+    skill.AreaId = dto.AreaId;
+    skill.AtualizadoEm = DateTime.UtcNow;
+
+    await repo.UpdateAsync(skill);
+
+    return Results.NoContent();
+}).RequireAuthorization("UserManagerPolicy");
+
+
+// DELETE skills
+app.MapDelete("/skills/{id:int}", async (int id, ISkillRepository repo) =>
+{
+    var skill = await repo.GetByIdAsync(id);
+    if (skill == null) return Results.NotFound();
+
+    try
+    {
+        await repo.DeleteAsync(id);
+        return Results.NoContent();
+    }
+    catch (Microsoft.EntityFrameworkCore.DbUpdateException)
+    {
+        return Results.BadRequest("Não é possível apagar a skill pois já está a ser utilizada por um profissional.");
+    }
+}).RequireAuthorization("UserManagerPolicy");
+
+// ======================
+// AREAS
+// ======================
+app.MapGet("/areas", async (IAreaRepository repo) =>
+{
+    var areas = await repo.GetAllAsync();
+    return Results.Ok(areas.Select(a => new GestaoTalentos.Shared.DTOs.AreaDto { Id = a.Id, Nome = a.Nome }));
 }).RequireAuthorization("UserPolicy");
 
 app.Run();

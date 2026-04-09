@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using GestaoTalentos.Client;
+using GestaoTalentos.Client.Services;
 
 using Microsoft.AspNetCore.Components.Authorization;
 using GestaoTalentos.Client.Auth;
@@ -19,5 +20,7 @@ builder.Services.AddHttpClient("Api", client =>
     .AddHttpMessageHandler<CustomHttpHandler>();
 
 builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().CreateClient("Api"));
+
+builder.Services.AddScoped<ISkillService, SkillService>();
 
 await builder.Build().RunAsync();
