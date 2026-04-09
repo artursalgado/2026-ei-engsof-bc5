@@ -1,3 +1,4 @@
+@using Microsoft.AspNetCore.Authorization
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">GestaoTalentos.Client</a>
@@ -14,11 +15,29 @@
                 <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
             </NavLink>
         </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="skills">
-                <span class="oi oi-star" aria-hidden="true"></span> Skills
-             </NavLink>
-        </div>
+        <AuthorizeView>
+            <Authorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="skills">
+                        <span class="oi oi-star" aria-hidden="true"></span> Skills
+                     </NavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="perfis">
+                        <span class="oi oi-person" aria-hidden="true"></span> Perfis de Talento
+                    </NavLink>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+        <AuthorizeView>
+            <NotAuthorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="register">
+                        <span class="oi oi-account-login" aria-hidden="true"></span> Criar Conta
+                    </NavLink>
+                </div>
+            </NotAuthorized>
+        </AuthorizeView>
     </nav>
 </div>
 
