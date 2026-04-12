@@ -7,4 +7,8 @@ public class Perfil
     public string Content { get; set; } = string.Empty;
     public bool IsShared { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public int PaisId { get; set; }
+    
+    // Relacionamentos
+    public Pais? Pais { get; set; }
 }

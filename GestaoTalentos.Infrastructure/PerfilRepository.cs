@@ -18,9 +18,17 @@ public class PerfilRepository : IPerfilRepository
 
     public async Task<List<Perfil>> GetVisibleForUserAsync(int userId)
         => await Perfis.AsNoTracking()
-            .Where(r => r.OwnerId == userId || r.IsShared)
+            .Where(r => r.OwnerId == userId || r.IsShared)//Ou quando user é Cliente e foi Apresentado
             .ToListAsync();
-
+    
+    public async Task<IEnumerable<Perfil>> GetByPaisIdAsync(int paisId)
+    {
+        return await _context.Perfis
+            .Where(p => p.PaisId == paisId)
+            .OrderBy(p => p.Id)
+            .ToListAsync();
+    }
+    
     public async Task AddAsync(Perfil perfil)
     {
         await Perfis.AddAsync(perfil);
