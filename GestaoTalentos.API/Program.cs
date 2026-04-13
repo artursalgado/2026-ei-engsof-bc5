@@ -338,6 +338,41 @@ app.MapPut("/clientes/{id}", async (int id, ClienteCreateDto request, ClaimsPrin
     return Results.NoContent();
 }).RequireAuthorization("UserPolicy");
 
+// Endpoint para deletar um cliente
+app.MapDelete("/clientes/{id}", async (int id, ClaimsPrincipal user, IClienteRepository repo,
+        IUserRepository userRepo) =>
+    {
+        // Selciona cliente
+        var rec = await repo.GetByIdAsync(id);
+        if (rec == null)
+            return Results.NotFound();
+
+        //Obter utilizador autenticado
+        var userId = int.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var uid)
+            ? uid : 0;
+
+        var current = await userRepo.GetByIdAsync(userId);
+        if (current == null)
+            return Results.Unauthorized();
+
+        // REGRA DE NEGÓCIO:
+        // Só pode ser apagado se NÃO estiver associado a uma conta
+        if (rec.IdMinhaConta != null)
+            return Results.Conflict("Não é possível eliminar um cliente associado a uma conta.");
+
+        // Verificação de permissões
+        bool isAdmin = current.Role == UserRole.Admin;
+        bool isManager = current.Role == UserRole.UserManager;
+        bool isOwner = rec.IdCreator == userId;
+
+        if (!isAdmin && !isManager && !isOwner)
+            return Results.Forbid();
+
+        // Eliminar
+        await repo.DeleteAsync(id);
+        return Results.NoContent();
+    })
+    .RequireAuthorization("UserPolicy");
 
 
 
