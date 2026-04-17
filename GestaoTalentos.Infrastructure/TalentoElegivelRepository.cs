@@ -1,5 +1,7 @@
 using GestaoTalentos.Domain;
+using GestaoTalentos.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+
 
 namespace GestaoTalentos.Infrastructure;
 
