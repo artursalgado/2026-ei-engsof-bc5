@@ -55,7 +55,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IPerfilRepository, PerfilRepository>();
-builder.Services.AddScoped<IRecordRepository, RecordRepository>();
+// builder.Services.AddScoped<IRecordRepository, RecordRepository>();
 builder.Services.AddScoped<ISkillRepository, SkillRepository>();
 builder.Services.AddScoped<IAreaRepository, AreaRepository>();
 builder.Services.AddScoped<IPropostaRepository, PropostaRepository>();
@@ -86,7 +86,7 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("UserManagerPolicy", policy => policy.RequireRole(UserRole.UserManager.ToString(), UserRole.Admin.ToString()));
     options.AddPolicy("AdminPolicy", policy => policy.RequireRole(UserRole.Admin.ToString()));
 });
-// erro cors
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("ClientCors", policy =>
@@ -94,9 +94,8 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader()
               .AllowAnyMethod());
 });
-//
-var app = builder.Build();
 
+var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
@@ -283,7 +282,6 @@ app.MapDelete("/perfis/{id}", async (int id, ClaimsPrincipal user, IPerfilReposi
 // SKILLS
 // ======================
 
-// GET skills (com Area)
 app.MapGet("/skills", async (ISkillRepository repo) =>
 {
     var skills = await repo.GetAllWithAreaAsync();
@@ -298,8 +296,6 @@ app.MapGet("/skills", async (ISkillRepository repo) =>
     }));
 }).RequireAuthorization("UserPolicy");
 
-
-// POST skills (criar)
 app.MapPost("/skills", async (CreateSkillDto dto, ISkillRepository repo) =>
 {
     var nome = (dto.Nome ?? "").Trim();
@@ -326,8 +322,6 @@ app.MapPost("/skills", async (CreateSkillDto dto, ISkillRepository repo) =>
     return Results.Created($"/skills/{skill.Id}", new { skill.Id, skill.Nome, skill.AreaId });
 }).RequireAuthorization("UserManagerPolicy");
 
-
-// PUT skills (update)
 app.MapPut("/skills/{id:int}", async (int id, UpdateSkillDto dto, ISkillRepository repo) =>
 {
     var skill = await repo.GetByIdAsync(id);
@@ -341,7 +335,6 @@ app.MapPut("/skills/{id:int}", async (int id, UpdateSkillDto dto, ISkillReposito
     if (dto.AreaId < 1)
         return Results.BadRequest("Área inválida.");
 
-    // evitar nome duplicado (ignorando a própria skill)
     var existing = await repo.GetByNomeAsync(nome);
     if (existing != null && existing.Id != id)
         return Results.Conflict("Já existe uma skill com esse nome.");
@@ -355,8 +348,6 @@ app.MapPut("/skills/{id:int}", async (int id, UpdateSkillDto dto, ISkillReposito
     return Results.NoContent();
 }).RequireAuthorization("UserManagerPolicy");
 
-
-// DELETE skills
 app.MapDelete("/skills/{id:int}", async (int id, ISkillRepository repo) =>
 {
     var skill = await repo.GetByIdAsync(id);
@@ -376,6 +367,7 @@ app.MapDelete("/skills/{id:int}", async (int id, ISkillRepository repo) =>
 // ======================
 // AREAS
 // ======================
+
 app.MapGet("/areas", async (IAreaRepository repo) =>
 {
     var areas = await repo.GetAllAsync();
@@ -386,7 +378,6 @@ app.MapGet("/areas", async (IAreaRepository repo) =>
 // PROPOSTAS DE TRABALHO
 // ======================
 
-// GET todas as propostas
 app.MapGet("/propostas", async (IPropostaRepository repo) =>
 {
     var propostas = await repo.GetAllWithSkillsAsync();
@@ -412,7 +403,6 @@ app.MapGet("/propostas", async (IPropostaRepository repo) =>
     }));
 }).RequireAuthorization("UserPolicy");
 
-// GET proposta por ID com talentos elegíveis ordenados por valor
 app.MapGet("/propostas/{id:int}", async (int id, IPropostaRepository repo, ITalentoElegivelRepository talentoRepo) =>
 {
     var proposta = await repo.GetByIdWithSkillsAsync(id);
@@ -449,8 +439,7 @@ app.MapGet("/propostas/{id:int}", async (int id, IPropostaRepository repo, ITale
     });
 }).RequireAuthorization("UserPolicy");
 
-// POST criar proposta
-app.MapPost("/propostas", async (CreatePropostaDto dto, IPropostaRepository repo, PropostaMatchingService matchingService, ITalentoElegivelRepository talentoRepo) =>
+app.MapPost("/propostas", async (CreatePropostaDto dto, IPropostaRepository repo, PropostaMatchingService matchingService, ITalentoElegivelRepository talentoRepo, AppDbContext context) =>
 {
     if (string.IsNullOrWhiteSpace(dto.Nome))
         return Results.BadRequest("Nome é obrigatório");
@@ -471,7 +460,6 @@ app.MapPost("/propostas", async (CreatePropostaDto dto, IPropostaRepository repo
 
     await repo.AddAsync(proposta);
 
-    // Adicionar skills necessárias
     foreach (var skillDto in dto.SkillsNecessarias)
     {
         var skillNecessaria = new SkillNecessaria
@@ -481,12 +469,11 @@ app.MapPost("/propostas", async (CreatePropostaDto dto, IPropostaRepository repo
             NivelMinimoRequerido = skillDto.AnosExperienciaMinimo,
             CriadoEm = DateTime.UtcNow
         };
-        await _context.SkillsNecessarias.AddAsync(skillNecessaria);
+        await context.SkillsNecessarias.AddAsync(skillNecessaria);
     }
 
-    await _context.SaveChangesAsync();
+    await context.SaveChangesAsync();
 
-    // Executar algoritmo de matching para identificar talentos elegíveis
     var talentosElegiveis = await matchingService.IdentificarTalentosElegiveisAsync(proposta.Id, proposta.PrecoHoraMedio);
     foreach (var talento in talentosElegiveis)
     {
@@ -496,8 +483,7 @@ app.MapPost("/propostas", async (CreatePropostaDto dto, IPropostaRepository repo
     return Results.Created($"/propostas/{proposta.Id}", new { proposta.Id, proposta.Nome });
 }).RequireAuthorization("UserManagerPolicy");
 
-// PUT atualizar proposta
-app.MapPut("/propostas/{id:int}", async (int id, UpdatePropostaDto dto, IPropostaRepository repo, PropostaMatchingService matchingService, ITalentoElegivelRepository talentoRepo) =>
+app.MapPut("/propostas/{id:int}", async (int id, UpdatePropostaDto dto, IPropostaRepository repo, PropostaMatchingService matchingService, ITalentoElegivelRepository talentoRepo, AppDbContext context) =>
 {
     var proposta = await repo.GetByIdWithSkillsAsync(id);
     if (proposta == null) return Results.NotFound();
@@ -509,10 +495,8 @@ app.MapPut("/propostas/{id:int}", async (int id, UpdatePropostaDto dto, IPropost
     proposta.PrecoHoraMedio = dto.PrecoHoraMedio;
     proposta.AtualizadoEm = DateTime.UtcNow;
 
-    // Remover skills antigas
-    _context.SkillsNecessarias.RemoveRange(proposta.SkillsNecessarias);
+    context.SkillsNecessarias.RemoveRange(proposta.SkillsNecessarias);
 
-    // Adicionar skills novas
     foreach (var skillDto in dto.SkillsNecessarias)
     {
         var skillNecessaria = new SkillNecessaria
@@ -526,7 +510,6 @@ app.MapPut("/propostas/{id:int}", async (int id, UpdatePropostaDto dto, IPropost
 
     await repo.UpdateAsync(proposta);
 
-    // Re-calcular talentos elegíveis
     await talentoRepo.DeleteByPropostaIdAsync(id);
     var talentosElegiveis = await matchingService.IdentificarTalentosElegiveisAsync(id, proposta.PrecoHoraMedio);
     foreach (var talento in talentosElegiveis)
@@ -537,7 +520,6 @@ app.MapPut("/propostas/{id:int}", async (int id, UpdatePropostaDto dto, IPropost
     return Results.NoContent();
 }).RequireAuthorization("UserManagerPolicy");
 
-// DELETE proposta
 app.MapDelete("/propostas/{id:int}", async (int id, IPropostaRepository repo) =>
 {
     var proposta = await repo.GetByIdAsync(id);
