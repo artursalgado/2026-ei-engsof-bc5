@@ -14,6 +14,7 @@ public class AppDbContext : DbContext
     public DbSet<SkillNecessaria> SkillsNecessarias { get; set; } = null!;
     public DbSet<Proposta> Propostas { get; set; } = null!;
     public DbSet<TalentoElegivel> TalentosElegiveis { get; set; } = null!;
+    public DbSet<Perfil> Perfis { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -65,5 +66,14 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Proposta>()
             .HasIndex(p => p.Nome)
             .IsUnique();
+
+        // Configurar Perfil
+        modelBuilder.Entity<Perfil>()
+                .HasOne(pf => pf.Owner)
+                .WithMany()
+                .HasForeignKey(pf => pf.OwnerId)
+                .OnDelete(DeleteBehavior.Cascade);
+
     }
+   
 }
