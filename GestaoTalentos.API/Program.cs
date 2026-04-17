@@ -62,6 +62,19 @@ builder.Services.AddScoped<IPropostaRepository, PropostaRepository>();
 builder.Services.AddScoped<ITalentoElegivelRepository, TalentoElegivelRepository>();
 builder.Services.AddScoped<PropostaMatchingService>();
 
+
+// Repositórios
+
+builder.Services.AddScoped<IPropostaRepository, PropostaRepository>();
+builder.Services.AddScoped<ITalentoElegiveRepository, TalentoElegiveRepository>();
+builder.Services.AddScoped<IPerfilRepository, PerfilRepository>();
+// Services
+builder.Services.AddScoped<IPropostaService, PropostaService>();
+builder.Services.AddScoped<ITalentoElegiveService, TalentoElegiveService>();
+builder.Services.AddScoped<IPerfilService, PerfilService>();
+
+
+
 var jwtKey = builder.Configuration["Jwt:Key"] ?? "MudaIstoParaSegredoMuitoForte#2026";
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "GestaoTalentosApi";
 
