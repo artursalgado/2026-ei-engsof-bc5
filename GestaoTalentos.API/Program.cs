@@ -353,7 +353,7 @@ app.MapGet("/skills", async (ISkillRepository repo) =>
         s.Id,
         s.Nome,
         s.AreaId,
-        Area = s.Area == null ? null : new { s.Area.Id, s.Area.Nome },
+        AreaNome = s.Area == null ? "" : s.Area.Nome,
         s.CriadoEm,
         s.AtualizadoEm
     }));
