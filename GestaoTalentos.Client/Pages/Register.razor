@@ -4,65 +4,152 @@
 @inject HttpClient Http
 @inject NavigationManager Navigation
 
-<PageTitle>Criar Conta</PageTitle>
+<PageTitle>Criar Conta - Gestão de Talentos</PageTitle>
 
-<div class="row justify-content-center mt-5">
-    <div class="col-md-4 card shadow-sm p-4">
-        <h3 class="text-center mb-4">Criar Conta</h3>
-
-        @if (!string.IsNullOrEmpty(errorMessage))
-        {
-            <div class="alert alert-danger">@errorMessage</div>
-        }
-
-        @if (registoSucesso)
-        {
-            <div class="alert alert-success">
-                Conta criada com sucesso! <a href="/login">Clica aqui para fazer login</a>.
-            </div>
-        }
-        else
-        {
-            <div class="mb-3">
-                <label class="form-label">Username</label>
-                <input @bind="username" class="form-control" placeholder="Escolhe um username" />
-            </div>
-            <div class="mb-3">
-                <label class="form-label">Password</label>
-                <input @bind="password" type="password" class="form-control" placeholder="Escolhe uma password" />
-            </div>
-            <div class="mb-3">
-                <label class="form-label">Confirmar Password</label>
-                <input @bind="confirmPassword" type="password" class="form-control" placeholder="Repete a password" />
-            </div>
-            <div class="mb-4">
-                <label class="form-label">Tipo de Conta</label>
-                <div class="d-flex gap-3">
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="tipoUtilizador" id="tipoTalento"
-                               checked="@(tipoUtilizador == "Talento")"
-                               @onchange="@(() => tipoUtilizador = "Talento")" />
-                        <label class="form-check-label" for="tipoTalento">
-                            <strong>Talento</strong> — sou um profissional
-                        </label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="tipoUtilizador" id="tipoCliente"
-                               checked="@(tipoUtilizador == "Cliente")"
-                               @onchange="@(() => tipoUtilizador = "Cliente")" />
-                        <label class="form-check-label" for="tipoCliente">
-                            <strong>Cliente</strong> — quero contratar
-                        </label>
-                    </div>
-                </div>
-            </div>
-            <button class="btn btn-primary w-100" @onclick="HandleRegister">Criar Conta</button>
-            <p class="text-center mt-3 text-muted">
-                Já tens conta? <a href="/login">Faz login</a>
-            </p>
-        }
+<div class="auth-card card">
+    <div class="auth-header">
+        <div class="brand-mark">GT</div>
+        <h2>Criar nova conta</h2>
+        <p class="auth-subtitle">Junta-te à plataforma em poucos segundos</p>
     </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger">@errorMessage</div>
+    }
+
+    @if (registoSucesso)
+    {
+        <div class="alert alert-success">
+            Conta criada com sucesso! <a href="/login">Faz login aqui</a>.
+        </div>
+    }
+    else
+    {
+        <div class="mb-3">
+            <label class="form-label">Username</label>
+            <input @bind="username" class="form-control" placeholder="escolhe um username" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Password</label>
+            <input @bind="password" type="password" class="form-control" placeholder="mínimo 4 caracteres" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Confirmar Password</label>
+            <input @bind="confirmPassword" type="password" class="form-control" placeholder="repete a password" />
+        </div>
+
+        <label class="form-label">Tipo de Conta</label>
+        <div class="type-grid mb-4">
+            <button type="button"
+                    class="type-card @(tipoUtilizador == "Talento" ? "active" : "")"
+                    @onclick='() => tipoUtilizador = "Talento"'>
+                <div class="type-ico">🎯</div>
+                <div class="type-title">Talento</div>
+                <div class="type-desc">Sou um profissional</div>
+            </button>
+            <button type="button"
+                    class="type-card @(tipoUtilizador == "Cliente" ? "active" : "")"
+                    @onclick='() => tipoUtilizador = "Cliente"'>
+                <div class="type-ico">💼</div>
+                <div class="type-title">Cliente</div>
+                <div class="type-desc">Quero contratar</div>
+            </button>
+        </div>
+
+        <button class="btn btn-primary w-100" @onclick="HandleRegister">Criar Conta</button>
+        <p class="auth-footer">
+            Já tens conta? <a href="/login">Faz login</a>
+        </p>
+    }
 </div>
+
+<style>
+    .auth-card {
+        padding: 2.5rem 2.25rem;
+    }
+
+    .auth-header {
+        text-align: center;
+        margin-bottom: 1.75rem;
+    }
+
+    .auth-header .brand-mark {
+        width: 48px;
+        height: 48px;
+        margin: 0 auto 1rem auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #6366f1, #4f46e5);
+        border-radius: 12px;
+        color: #fff;
+        font-weight: 700;
+        font-size: 1rem;
+    }
+
+    .auth-header h2 {
+        font-size: 1.5rem;
+        margin-bottom: 0.35rem;
+    }
+
+    .auth-subtitle {
+        color: var(--color-text-muted);
+        font-size: 0.9rem;
+        margin: 0;
+    }
+
+    .type-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+    }
+
+    .type-card {
+        background: var(--color-surface);
+        border: 1.5px solid var(--color-border);
+        border-radius: var(--radius-md);
+        padding: 1rem 0.75rem;
+        text-align: center;
+        cursor: pointer;
+        transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.05s ease;
+    }
+
+    .type-card:hover {
+        border-color: var(--color-border-strong);
+        background: var(--color-surface-alt);
+    }
+
+    .type-card.active {
+        border-color: var(--color-primary);
+        background: var(--color-primary-soft);
+    }
+
+    .type-ico {
+        font-size: 1.5rem;
+        margin-bottom: 0.35rem;
+    }
+
+    .type-title {
+        font-weight: 600;
+        font-size: 0.95rem;
+        color: var(--color-text);
+        margin-bottom: 0.15rem;
+    }
+
+    .type-desc {
+        font-size: 0.78rem;
+        color: var(--color-text-muted);
+    }
+
+    .auth-footer {
+        text-align: center;
+        margin-top: 1.25rem;
+        margin-bottom: 0;
+        color: var(--color-text-muted);
+        font-size: 0.88rem;
+    }
+</style>
 
 @code {
     private string username = "";

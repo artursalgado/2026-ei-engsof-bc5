@@ -5,35 +5,86 @@
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 
-<PageTitle>Login</PageTitle>
+<PageTitle>Entrar - Gestão de Talentos</PageTitle>
 
-<div class="row justify-content-center mt-5">
-    <div class="col-md-4 card shadow-sm p-4">
-        <h3 class="text-center mb-4">Login Gestão de Talentos - Grupo 5</h3>
-        
-        @if (!string.IsNullOrEmpty(errorMessage))
-        {
-            <div class="alert alert-danger">@errorMessage</div>
-        }
-        
-        <div class="mb-3">
-            <label class="form-label">Username</label>
-            <input @bind="loginModel.Username" class="form-control" placeholder="Enter username" />
-        </div>
-        <div class="mb-4">
-            <label class="form-label">Password</label>
-            <input @bind="loginModel.Password" type="password" class="form-control" placeholder="Enter password" />
-        </div>
-        <button class="btn btn-primary w-100" @onclick="HandleLogin">Login</button>
-        <p class="text-center mt-3 text-muted">
-            Ainda não tens conta? <a href="/register">Cria uma aqui</a>
-        </p>
+<div class="auth-card card">
+    <div class="auth-header">
+        <div class="brand-mark">GT</div>
+        <h2>Bem-vindo de volta</h2>
+        <p class="auth-subtitle">Entra na tua conta para continuar</p>
     </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger">@errorMessage</div>
+    }
+
+    <div class="mb-3">
+        <label class="form-label">Username</label>
+        <input @bind="loginModel.Username" class="form-control" placeholder="o teu username" @onkeydown="HandleKey" />
+    </div>
+    <div class="mb-4">
+        <label class="form-label">Password</label>
+        <input @bind="loginModel.Password" type="password" class="form-control" placeholder="••••••••" @onkeydown="HandleKey" />
+    </div>
+    <button class="btn btn-primary w-100" @onclick="HandleLogin">Entrar</button>
+    <p class="auth-footer">
+        Ainda não tens conta? <a href="/register">Cria uma aqui</a>
+    </p>
 </div>
+
+<style>
+    .auth-card {
+        padding: 2.5rem 2.25rem;
+    }
+
+    .auth-header {
+        text-align: center;
+        margin-bottom: 1.75rem;
+    }
+
+    .auth-header .brand-mark {
+        width: 48px;
+        height: 48px;
+        margin: 0 auto 1rem auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #6366f1, #4f46e5);
+        border-radius: 12px;
+        color: #fff;
+        font-weight: 700;
+        font-size: 1rem;
+    }
+
+    .auth-header h2 {
+        font-size: 1.5rem;
+        margin-bottom: 0.35rem;
+    }
+
+    .auth-subtitle {
+        color: var(--color-text-muted);
+        font-size: 0.9rem;
+        margin: 0;
+    }
+
+    .auth-footer {
+        text-align: center;
+        margin-top: 1.25rem;
+        margin-bottom: 0;
+        color: var(--color-text-muted);
+        font-size: 0.88rem;
+    }
+</style>
 
 @code {
     private LoginModel loginModel = new();
     private string errorMessage = "";
+
+    private async Task HandleKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await HandleLogin();
+    }
 
     private async Task HandleLogin()
     {
@@ -53,12 +104,12 @@
             }
             else
             {
-                errorMessage = "Invalid username or password.";
+                errorMessage = "Username ou password inválidos.";
             }
         }
         catch (Exception ex)
         {
-            errorMessage = $"Login failed: {ex.Message}";
+            errorMessage = $"Falha no login: {ex.Message}";
         }
     }
 
