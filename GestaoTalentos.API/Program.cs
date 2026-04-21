@@ -109,8 +109,7 @@ await using (var scope = app.Services.CreateAsyncScope())
     var services = scope.ServiceProvider;
     var context = services.GetRequiredService<AppDbContext>();
     
-    // TRUQUE TEMPORÁRIO PARA LIMPAR A BASE DE DADOS:
-    // (Aviso: Depois correr a API a primeira vez com sucesso, APAGAR a linha EnsureDeleted!)
+    // TRUQUE TEMPORÁRIO PARA LIMPAR A BASE DE DADOS (já utilizado - manter comentado!):
     //await context.Database.EnsureDeletedAsync();
     await context.Database.EnsureCreatedAsync();
 
@@ -139,7 +138,8 @@ app.MapPost("/register", async (GestaoTalentos.API.UserRegisterDto request, IUse
     {
         Username = request.Username.Trim(),
         Password = BCrypt.Net.BCrypt.HashPassword(request.Password),
-        Role = UserRole.User
+        Role = UserRole.User,
+        TipoUtilizador = request.TipoUtilizador
     };
 
     await repo.AddAsync(user);
@@ -160,75 +160,47 @@ app.MapGet("/users/me", async (ClaimsPrincipal user, IUserRepository repo) =>
 {
     var userId = int.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : 0;
     var current = await repo.GetByIdAsync(userId);
-    return current is null ? Results.NotFound() : Results.Ok(new { current.Id, current.Username, current.Role });
+    return current is null ? Results.NotFound() : Results.Ok(new { current.Id, current.Username, current.Role, current.TipoUtilizador });
 }).RequireAuthorization();
 
-app.MapGet("/users", async (IUserRepository repo) =>
-    Results.Ok(await repo.GetAllAsync())).RequireAuthorization("UserManagerPolicy");
-
-app.MapPut("/users/{id}/role", async (int id, UserRoleUpdateDto request, IUserRepository repo) =>
-{
-    if (!Enum.TryParse<UserRole>(request.Role, true, out var role))
-        return Results.BadRequest("Role inválida (User, UserManager, Admin).");
-
-    var user = await repo.GetByIdAsync(id);
-    if (user == null)
-        return Results.NotFound();
-
-    user.Role = role;
-    await repo.UpdateAsync(user);
-    return Results.NoContent();
-}).RequireAuthorization("UserManagerPolicy");
-
-app.MapPost("/users", async (UserCreateDto request, IUserRepository repo) =>
-{
-    if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
-        return Results.BadRequest("Username e password são obrigatórios.");
-
-    if (!Enum.TryParse<UserRole>(request.Role, true, out var role))
-        return Results.BadRequest("Role inválida (User, UserManager, Admin).");
-
-    if (await repo.GetByUsernameAsync(request.Username) != null)
-        return Results.Conflict("Username já existe.");
-
-    var user = new User
-    {
-        Username = request.Username.Trim(),
-        Password = BCrypt.Net.BCrypt.HashPassword(request.Password),
-        Role = role
-    };
-
-    await repo.AddAsync(user);
-    return Results.Created($"/users/{user.Id}", new { user.Id, user.Username, user.Role });
-}).RequireAuthorization("UserManagerPolicy");
-
+// Endpoints de Utilizadores (Focado apenas no Login/Me)
 app.MapGet("/perfis", async (ClaimsPrincipal user, IPerfilRepository repo, IUserRepository userRepo) =>
 {
     var userId = int.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : 0;
     var current = await userRepo.GetByIdAsync(userId);
     if (current == null) return Results.Unauthorized();
 
+    List<Perfil> perfis;
     if (current.Role == UserRole.User)
-    {
-        var perfis = await repo.GetVisibleForUserAsync(userId);
-        return Results.Ok(perfis.Select(r => new PerfilDto(r.Id, r.OwnerId, r.Content, r.IsShared, r.CreatedAt)));
-    }
+        perfis = await repo.GetVisibleForUserAsync(userId);
+    else
+        perfis = await repo.GetAllAsync();
 
-    var all = await repo.GetAllAsync();
-    return Results.Ok(all.Select(r => new PerfilDto(r.Id, r.OwnerId, r.Content, r.IsShared, r.CreatedAt)));
+    return Results.Ok(perfis.Select(p => MapPerfilToDto(p)));
+}).RequireAuthorization("UserPolicy");
+
+// NOVO: Sugestões de empresas baseadas no que já existe na BD (Para evitar hardcoded)
+app.MapGet("/perfis/empresas-sugestoes", async (AppDbContext context) =>
+{
+    var empresas = await context.ExperienciasProfissionais
+        .Select(e => e.Empresa)
+        .Distinct()
+        .OrderBy(n => n)
+        .ToListAsync();
+    return Results.Ok(empresas);
 }).RequireAuthorization("UserPolicy");
 
 app.MapGet("/perfis/{id}", async (int id, ClaimsPrincipal user, IPerfilRepository repo, IUserRepository userRepo) =>
 {
-    var rec = await repo.GetByIdAsync(id);
-    if (rec == null) return Results.NotFound();
+    var perfil = await repo.GetByIdAsync(id);
+    if (perfil == null) return Results.NotFound();
 
     var userId = int.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var uid) ? uid : 0;
     var current = await userRepo.GetByIdAsync(userId);
     if (current == null) return Results.Unauthorized();
 
-    if (current.Role == UserRole.Admin || current.Role == UserRole.UserManager || rec.OwnerId == userId || rec.IsShared)
-        return Results.Ok(new PerfilDto(rec.Id, rec.OwnerId, rec.Content, rec.IsShared, rec.CreatedAt));
+    if (current.Role == UserRole.Admin || current.Role == UserRole.UserManager || perfil.OwnerId == userId || perfil.IsShared)
+        return Results.Ok(MapPerfilToDto(perfil));
 
     return Results.Forbid();
 }).RequireAuthorization("UserPolicy");
@@ -237,42 +209,125 @@ app.MapPost("/perfis", async (PerfilCreateDto request, ClaimsPrincipal user, IPe
 {
     var userId = int.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var uid) ? uid : 0;
 
-    if (string.IsNullOrWhiteSpace(request.Content))
-        return Results.BadRequest("Content obrigatório.");
+    // Validações básicas
+    if (string.IsNullOrWhiteSpace(request.Nome))
+        return Results.BadRequest("Nome é obrigatório.");
+    if (string.IsNullOrWhiteSpace(request.Email))
+        return Results.BadRequest("Email é obrigatório.");
+    if (string.IsNullOrWhiteSpace(request.Pais))
+        return Results.BadRequest("País é obrigatório.");
+    if (request.PrecoPorHora <= 0)
+        return Results.BadRequest("Preço por hora deve ser maior que zero.");
 
-    var perfil = new Perfil { OwnerId = userId, Content = request.Content.Trim(), IsShared = request.IsShared };
+    // Validação de intervalo de datas (Ano Fim >= Ano Inicio)
+    foreach(var exp in request.Experiencias) {
+        if (exp.AnoFim.HasValue && exp.AnoFim < exp.AnoInicio)
+            return Results.BadRequest($"Na empresa '{exp.Empresa}', o ano de fim ({exp.AnoFim}) não pode ser anterior ao início ({exp.AnoInicio}).");
+    }
+
+    // Validação de sobreposição de datas
+    var erroData = ValidarSobreposicaoExperiencias(request.Experiencias);
+    if (erroData != null) return Results.BadRequest(erroData);
+
+    if (request.Skills.Any(s => s.AnosExperiencia < 1))
+        return Results.BadRequest("As skills devem ter pelo menos 1 ano de experiência.");
+
+    var perfil = new Perfil
+    {
+        Nome = request.Nome.Trim(),
+        Email = request.Email.Trim(),
+        Pais = request.Pais.Trim(),
+        PrecoPorHora = request.PrecoPorHora,
+        IsShared = request.IsShared,
+        OwnerId = userId,
+        Experiencias = request.Experiencias.Select(e => new ExperienciaProfissional
+        {
+            Titulo = e.Titulo.Trim(),
+            Empresa = e.Empresa.Trim(),
+            AnoInicio = e.AnoInicio,
+            AnoFim = e.AnoFim
+        }).ToList(),
+        PerfilSkills = request.Skills.Select(s => new PerfilSkill
+        {
+            SkillId = s.SkillId,
+            AnosExperiencia = s.AnosExperiencia
+        }).ToList()
+    };
+
     await repo.AddAsync(perfil);
-    return Results.Created($"/perfis/{perfil.Id}", new PerfilDto(perfil.Id, perfil.OwnerId, perfil.Content, perfil.IsShared, perfil.CreatedAt));
+    return Results.Created($"/perfis/{perfil.Id}", MapPerfilToDto(perfil));
 }).RequireAuthorization("UserPolicy");
 
 app.MapPut("/perfis/{id}", async (int id, PerfilUpdateDto request, ClaimsPrincipal user, IPerfilRepository repo, IUserRepository userRepo) =>
 {
-    var rec = await repo.GetByIdAsync(id);
-    if (rec == null) return Results.NotFound();
+    var perfil = await repo.GetByIdAsync(id);
+    if (perfil == null) return Results.NotFound();
 
     var userId = int.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var uid) ? uid : 0;
     var current = await userRepo.GetByIdAsync(userId);
     if (current == null) return Results.Unauthorized();
 
-    if (current.Role != UserRole.Admin && current.Role != UserRole.UserManager && rec.OwnerId != userId)
+    if (current.Role != UserRole.Admin && current.Role != UserRole.UserManager && perfil.OwnerId != userId)
         return Results.Forbid();
 
-    rec.Content = request.Content.Trim();
-    rec.IsShared = request.IsShared;
-    await repo.UpdateAsync(rec);
+    // Validações básicas
+    if (string.IsNullOrWhiteSpace(request.Nome))
+        return Results.BadRequest("Nome é obrigatório.");
+    if (string.IsNullOrWhiteSpace(request.Email))
+        return Results.BadRequest("Email é obrigatório.");
+    if (string.IsNullOrWhiteSpace(request.Pais))
+        return Results.BadRequest("País é obrigatório.");
+    if (request.PrecoPorHora <= 0)
+        return Results.BadRequest("Preço por hora deve ser maior que zero.");
+
+    // Validação de intervalo de datas (Ano Fim >= Ano Inicio)
+    foreach(var exp in request.Experiencias) {
+        if (exp.AnoFim.HasValue && exp.AnoFim < exp.AnoInicio)
+            return Results.BadRequest($"Na empresa '{exp.Empresa}', o ano de fim ({exp.AnoFim}) não pode ser anterior ao início ({exp.AnoInicio}).");
+    }
+
+    // Validação de sobreposição de datas
+    var erroData = ValidarSobreposicaoExperiencias(request.Experiencias);
+    if (erroData != null) return Results.BadRequest(erroData);
+
+    if (request.Skills.Any(s => s.AnosExperiencia < 1))
+        return Results.BadRequest("As skills devem ter pelo menos 1 ano de experiência.");
+
+    // Atualizar os dados do perfil (o repositório trata de apagar os antigos)
+    perfil.Nome = request.Nome.Trim();
+    perfil.Email = request.Email.Trim();
+    perfil.Pais = request.Pais.Trim();
+    perfil.PrecoPorHora = request.PrecoPorHora;
+    perfil.IsShared = request.IsShared;
+    perfil.Experiencias = request.Experiencias.Select(e => new ExperienciaProfissional
+    {
+        PerfilId = id,
+        Titulo = e.Titulo.Trim(),
+        Empresa = e.Empresa.Trim(),
+        AnoInicio = e.AnoInicio,
+        AnoFim = e.AnoFim
+    }).ToList();
+    perfil.PerfilSkills = request.Skills.Select(s => new PerfilSkill
+    {
+        PerfilId = id,
+        SkillId = s.SkillId,
+        AnosExperiencia = s.AnosExperiencia
+    }).ToList();
+
+    await repo.UpdateAsync(perfil);
     return Results.NoContent();
 }).RequireAuthorization("UserPolicy");
 
 app.MapDelete("/perfis/{id}", async (int id, ClaimsPrincipal user, IPerfilRepository repo, IUserRepository userRepo) =>
 {
-    var rec = await repo.GetByIdAsync(id);
-    if (rec == null) return Results.NotFound();
+    var perfil = await repo.GetByIdAsync(id);
+    if (perfil == null) return Results.NotFound();
 
     var userId = int.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var uid) ? uid : 0;
     var current = await userRepo.GetByIdAsync(userId);
     if (current == null) return Results.Unauthorized();
 
-    if (current.Role != UserRole.Admin && current.Role != UserRole.UserManager && rec.OwnerId != userId)
+    if (current.Role != UserRole.Admin && current.Role != UserRole.UserManager && perfil.OwnerId != userId)
         return Results.Forbid();
 
     await repo.DeleteAsync(id);
@@ -357,10 +412,15 @@ app.MapPut("/skills/{id:int}", async (int id, UpdateSkillDto dto, ISkillReposito
 
 
 // DELETE skills
-app.MapDelete("/skills/{id:int}", async (int id, ISkillRepository repo) =>
+app.MapDelete("/skills/{id:int}", async (int id, ISkillRepository repo, AppDbContext context) =>
 {
     var skill = await repo.GetByIdAsync(id);
     if (skill == null) return Results.NotFound();
+
+    // Requisito: Uma skill só pode ser apagada se não estiver associada a nenhum profissional
+    bool estaSendoUsada = await context.PerfilSkills.AnyAsync(ps => ps.SkillId == id);
+    if (estaSendoUsada)
+        return Results.BadRequest("Não é possível apagar a skill pois já está a ser utilizada por um profissional.");
 
     try
     {
@@ -383,3 +443,53 @@ app.MapGet("/areas", async (IAreaRepository repo) =>
 }).RequireAuthorization("UserPolicy");
 
 app.Run();
+
+// ====================================
+// FUNÇÕES AUXILIARES
+// ====================================
+
+// Converte a entidade Perfil para o DTO de resposta completo
+static object MapPerfilToDto(Perfil p) => new
+{
+    p.Id,
+    p.OwnerId,
+    p.Nome,
+    p.Email,
+    p.Pais,
+    p.PrecoPorHora,
+    p.IsShared,
+    p.CreatedAt,
+    Experiencias = p.Experiencias.Select(e => new
+    {
+        e.Id, e.Titulo, e.Empresa, e.AnoInicio, e.AnoFim
+    }),
+    Skills = p.PerfilSkills.Select(ps => new
+    {
+        ps.SkillId,
+        SkillNome = ps.Skill?.Nome,
+        ps.AnosExperiencia
+    })
+};
+
+// Algoritmo detetive de sobreposicao temporal de experiencias profissionais
+// Retorna mensagem de erro se houver conflito, ou null se ficar limpo
+static string? ValidarSobreposicaoExperiencias(List<ExperienciaCreateDto> experiencias)
+{
+    for (int i = 0; i < experiencias.Count; i++)
+    {
+        var expA = experiencias[i];
+        int fimA = expA.AnoFim ?? DateTime.UtcNow.Year;
+
+        for (int j = i + 1; j < experiencias.Count; j++)
+        {
+            var expB = experiencias[j];
+            int fimB = expB.AnoFim ?? DateTime.UtcNow.Year;
+
+            // Há sobreposição se um período começa antes de outro terminar
+            bool sobreposicao = expA.AnoInicio <= fimB && expB.AnoInicio <= fimA;
+            if (sobreposicao)
+                return $"Sobreposição de datas detetada entre '{expA.Empresa}' ({expA.AnoInicio}-{expA.AnoFim?.ToString() ?? "atual"}) e '{expB.Empresa}' ({expB.AnoInicio}-{expB.AnoFim?.ToString() ?? "atual"}).";
+        }
+    }
+    return null;
+}

@@ -1,0 +1,118 @@
+@page "/register"
+@layout GestaoTalentos.Client.Layout.EmptyLayout
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<PageTitle>Criar Conta</PageTitle>
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-4 card shadow-sm p-4">
+        <h3 class="text-center mb-4">Criar Conta</h3>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger">@errorMessage</div>
+        }
+
+        @if (registoSucesso)
+        {
+            <div class="alert alert-success">
+                Conta criada com sucesso! <a href="/login">Clica aqui para fazer login</a>.
+            </div>
+        }
+        else
+        {
+            <div class="mb-3">
+                <label class="form-label">Username</label>
+                <input @bind="username" class="form-control" placeholder="Escolhe um username" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Password</label>
+                <input @bind="password" type="password" class="form-control" placeholder="Escolhe uma password" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Confirmar Password</label>
+                <input @bind="confirmPassword" type="password" class="form-control" placeholder="Repete a password" />
+            </div>
+            <div class="mb-4">
+                <label class="form-label">Tipo de Conta</label>
+                <div class="d-flex gap-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="tipoUtilizador" id="tipoTalento"
+                               checked="@(tipoUtilizador == "Talento")"
+                               @onchange="@(() => tipoUtilizador = "Talento")" />
+                        <label class="form-check-label" for="tipoTalento">
+                            <strong>Talento</strong> — sou um profissional
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="tipoUtilizador" id="tipoCliente"
+                               checked="@(tipoUtilizador == "Cliente")"
+                               @onchange="@(() => tipoUtilizador = "Cliente")" />
+                        <label class="form-check-label" for="tipoCliente">
+                            <strong>Cliente</strong> — quero contratar
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <button class="btn btn-primary w-100" @onclick="HandleRegister">Criar Conta</button>
+            <p class="text-center mt-3 text-muted">
+                Já tens conta? <a href="/login">Faz login</a>
+            </p>
+        }
+    </div>
+</div>
+
+@code {
+    private string username = "";
+    private string password = "";
+    private string confirmPassword = "";
+    private string tipoUtilizador = "Talento";
+    private string errorMessage = "";
+    private bool registoSucesso = false;
+
+    private async Task HandleRegister()
+    {
+        errorMessage = "";
+
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            errorMessage = "O username é obrigatório.";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(password) || password.Length < 4)
+        {
+            errorMessage = "A password deve ter pelo menos 4 caracteres.";
+            return;
+        }
+        if (password != confirmPassword)
+        {
+            errorMessage = "As passwords não coincidem.";
+            return;
+        }
+
+        try
+        {
+            var payload = new { Username = username, Password = password, TipoUtilizador = tipoUtilizador };
+            var response = await Http.PostAsJsonAsync("/register", payload);
+
+            if (response.IsSuccessStatusCode)
+            {
+                registoSucesso = true;
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+            {
+                errorMessage = "Esse username já existe. Escolhe outro.";
+            }
+            else
+            {
+                errorMessage = "Erro ao criar conta. Tenta novamente.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erro: {ex.Message}";
+        }
+    }
+}
