@@ -3,34 +3,187 @@
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 
-<PageTitle>Home</PageTitle>
-
-<h1>Welcome to Gestão Talentos!</h1>
+<PageTitle>Início - Gestão de Talentos</PageTitle>
 
 <AuthorizeView>
     <Authorized>
-        <div class="alert alert-success mt-4">
-            <p>Welcome back, <strong>@context.User.Identity?.Name</strong>! You are successfully logged in.</p>
-            <ul>
-                <li>Username: @context.User.Identity?.Name</li>
-                <li>Role: @context.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value</li>
-            </ul>
+        <div class="welcome-header">
+            <h1>Olá, @context.User.Identity?.Name 👋</h1>
+            <p class="subtitle">Bem-vindo à tua plataforma de gestão de talentos.</p>
         </div>
-        <button class="btn btn-warning mt-2" @onclick="Logout">Logout</button>
+
+        <div class="quick-grid">
+            <a href="perfis" class="quick-card">
+                <div class="quick-ico">👤</div>
+                <div>
+                    <h3>Perfis de Talento</h3>
+                    <p>Gere currículos e competências</p>
+                </div>
+            </a>
+            <a href="skills" class="quick-card">
+                <div class="quick-ico">⚡</div>
+                <div>
+                    <h3>Catálogo de Skills</h3>
+                    <p>Organiza as competências do sistema</p>
+                </div>
+            </a>
+        </div>
+
+        <div class="session-info">
+            <div class="session-row">
+                <span class="session-label">Utilizador</span>
+                <span>@context.User.Identity?.Name</span>
+            </div>
+            <div class="session-row">
+                <span class="session-label">Permissão</span>
+                <span class="badge badge-role">@context.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value</span>
+            </div>
+        </div>
     </Authorized>
     <NotAuthorized>
-        <div class="alert alert-info mt-4">
-            <p>You are not logged in. Please log in to access your talent dashboard.</p>
-            <a href="/login" class="btn btn-primary mt-2">Go to Login</a>
+        <div class="landing">
+            <div class="brand-mark-lg">GT</div>
+            <h1>Gestão de Talentos</h1>
+            <p class="subtitle">Plataforma de gestão de currículos para profissionais IT.</p>
+            <div class="landing-actions">
+                <a href="/login" class="btn btn-primary">Entrar</a>
+                <a href="/register" class="btn btn-secondary">Criar Conta</a>
+            </div>
         </div>
     </NotAuthorized>
 </AuthorizeView>
 
-@code {
-    private async Task Logout()
-    {
-        await JS.InvokeVoidAsync("localStorage.removeItem", "authToken");
-        AuthStateProvider.MarkUserAsLoggedOut();
-        Navigation.NavigateTo("/login");
+<style>
+    .welcome-header {
+        margin-bottom: 2rem;
     }
+
+    .welcome-header h1 {
+        font-size: 1.75rem;
+        margin-bottom: 0.35rem;
+    }
+
+    .subtitle {
+        color: var(--color-text-muted);
+        font-size: 0.95rem;
+        margin: 0;
+    }
+
+    .quick-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .quick-card {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1.25rem;
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-lg);
+        text-decoration: none;
+        color: inherit;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+    }
+
+    .quick-card:hover {
+        border-color: var(--color-primary);
+        box-shadow: var(--shadow-md);
+        transform: translateY(-2px);
+        color: inherit;
+    }
+
+    .quick-ico {
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--color-primary-soft);
+        border-radius: var(--radius-md);
+        font-size: 1.4rem;
+        flex-shrink: 0;
+    }
+
+    .quick-card h3 {
+        font-size: 1rem;
+        margin: 0 0 0.2rem 0;
+    }
+
+    .quick-card p {
+        color: var(--color-text-muted);
+        font-size: 0.85rem;
+        margin: 0;
+    }
+
+    .session-info {
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-lg);
+        padding: 1.25rem 1.5rem;
+        max-width: 420px;
+    }
+
+    .session-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid var(--color-border);
+        font-size: 0.9rem;
+    }
+
+    .session-row:last-child {
+        border-bottom: none;
+    }
+
+    .session-label {
+        color: var(--color-text-muted);
+        font-size: 0.85rem;
+    }
+
+    .badge-role {
+        background: var(--color-primary-soft);
+        color: var(--color-primary);
+        font-weight: 600;
+    }
+
+    .landing {
+        text-align: center;
+        padding: 4rem 1rem;
+        max-width: 480px;
+        margin: 0 auto;
+    }
+
+    .brand-mark-lg {
+        width: 64px;
+        height: 64px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.5rem auto;
+        background: linear-gradient(135deg, #6366f1, #4f46e5);
+        border-radius: 16px;
+        color: #fff;
+        font-weight: 700;
+        font-size: 1.2rem;
+    }
+
+    .landing h1 {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .landing-actions {
+        display: flex;
+        gap: 0.75rem;
+        justify-content: center;
+        margin-top: 1.75rem;
+    }
+</style>
+
+@code {
 }
