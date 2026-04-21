@@ -4,17 +4,26 @@
 @attribute [Authorize]
 @inject HttpClient Http
 @inject NavigationManager Navigation
+@inject IJSRuntime JS
 
-<PageTitle>Perfis de Talento</PageTitle>
+<PageTitle>Perfis de Talento - Gestão de Talentos</PageTitle>
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>Perfis de Talento</h2>
+<div class="page-header">
+    <div>
+        <h1>Perfis de Talento</h1>
+        <p class="page-subtitle">Gere os currículos e competências dos profissionais</p>
+    </div>
     <button class="btn btn-primary" @onclick="CriarNovo">+ Novo Perfil</button>
 </div>
 
+@if (!string.IsNullOrEmpty(mensagemSucesso))
+{
+    <div class="alert alert-success mb-4">@mensagemSucesso</div>
+}
+
 @if (carregando)
 {
-    <p>A carregar perfis...</p>
+    <div class="loading-state">A carregar perfis...</div>
 }
 else if (erro != null)
 {
@@ -22,50 +31,207 @@ else if (erro != null)
 }
 else if (!perfis.Any())
 {
-    <div class="alert alert-info">Ainda não existem perfis. Cria o teu primeiro talento!</div>
+    <div class="empty-state">
+        <div class="empty-ico">👤</div>
+        <h3>Ainda não há perfis</h3>
+        <p>Cria o primeiro perfil de talento para começar.</p>
+        <button class="btn btn-primary" @onclick="CriarNovo">Criar primeiro perfil</button>
+    </div>
 }
 else
 {
-    <div class="row g-3">
+    <div class="perfis-grid">
         @foreach (var p in perfis)
         {
-            <div class="col-md-6 col-lg-4">
-                <div class="card h-100 shadow-sm">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <strong>@p.Nome</strong>
-                        <span class="badge @(p.IsShared ? "bg-success" : "bg-secondary")">
-                            @(p.IsShared ? "Público" : "Privado")
-                        </span>
+            <div class="perfil-card">
+                <div class="perfil-card-head">
+                    <div class="perfil-avatar">@(p.Nome.Length > 0 ? p.Nome[0].ToString().ToUpper() : "?")</div>
+                    <div class="perfil-info">
+                        <h3>@p.Nome</h3>
+                        <span class="perfil-location">📍 @p.Pais</span>
                     </div>
-                    <div class="card-body">
-                        <p class="mb-1"><span class="text-muted">📧</span> @p.Email</p>
-                        <p class="mb-1"><span class="text-muted">🌍</span> @p.Pais</p>
-                        <p class="mb-1"><span class="text-muted">💶</span> @p.PrecoPorHora €/hora</p>
-                        
-                        @if (p.Skills != null && p.Skills.Any())
-                        {
-                            <div class="mt-2">
-                                @foreach (var s in p.Skills)
-                                {
-                                    <span class="badge bg-primary me-1">@s.SkillNome (@s.AnosExperiencia ano(s))</span>
-                                }
-                            </div>
-                        }
+                    <span class="visibility-badge @(p.IsShared ? "public" : "private")">
+                        @(p.IsShared ? "Público" : "Privado")
+                    </span>
+                </div>
+
+                <div class="perfil-card-body">
+                    <div class="perfil-meta-row">
+                        <span class="meta-label">Email</span>
+                        <span>@p.Email</span>
                     </div>
-                    <div class="card-footer d-flex justify-content-end gap-2">
-                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => Editar(p.Id)">Editar</button>
-                        <button class="btn btn-sm btn-outline-danger" @onclick="() => Apagar(p.Id)">Apagar</button>
+                    <div class="perfil-meta-row">
+                        <span class="meta-label">Preço/hora</span>
+                        <span class="price-tag">@p.PrecoPorHora.ToString("F2") €</span>
                     </div>
+
+                    @if (p.Skills != null && p.Skills.Any())
+                    {
+                        <div class="skill-pills">
+                            @foreach (var s in p.Skills.Take(4))
+                            {
+                                <span class="skill-pill">@s.SkillNome <span class="skill-years">@s.AnosExperiencia a</span></span>
+                            }
+                            @if (p.Skills.Count > 4)
+                            {
+                                <span class="skill-pill more">+@(p.Skills.Count - 4)</span>
+                            }
+                        </div>
+                    }
+                </div>
+
+                <div class="perfil-card-foot">
+                    <button class="btn btn-sm btn-secondary" @onclick="() => Editar(p.Id)">Editar</button>
+                    <button class="btn btn-sm btn-danger" @onclick="() => ConfirmarApagar(p)">Apagar</button>
                 </div>
             </div>
         }
     </div>
 }
 
-@if (!string.IsNullOrEmpty(mensagemSucesso))
-{
-    <div class="alert alert-success mt-3">@mensagemSucesso</div>
-}
+<style>
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        margin-bottom: 1.75rem;
+        gap: 1rem;
+    }
+
+    .page-header h1 { margin-bottom: 0.25rem; }
+
+    .page-subtitle {
+        color: var(--color-text-muted);
+        font-size: 0.92rem;
+        margin: 0;
+    }
+
+    .loading-state {
+        padding: 3rem;
+        text-align: center;
+        color: var(--color-text-muted);
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        background: var(--color-surface);
+        border: 1px dashed var(--color-border-strong);
+        border-radius: var(--radius-lg);
+    }
+
+    .empty-ico { font-size: 2.5rem; margin-bottom: 0.75rem; }
+    .empty-state h3 { font-size: 1.1rem; margin-bottom: 0.35rem; }
+    .empty-state p { color: var(--color-text-muted); margin-bottom: 1.25rem; }
+
+    .perfis-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1rem;
+    }
+
+    .perfil-card {
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        transition: box-shadow 0.15s ease, border-color 0.15s ease;
+    }
+
+    .perfil-card:hover {
+        border-color: var(--color-border-strong);
+        box-shadow: var(--shadow-md);
+    }
+
+    .perfil-card-head {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1.1rem 1.1rem 0.75rem;
+    }
+
+    .perfil-avatar {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #6366f1, #4f46e5);
+        color: #fff;
+        font-weight: 700;
+        font-size: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .perfil-info { flex: 1; min-width: 0; }
+    .perfil-info h3 { font-size: 0.95rem; margin: 0 0 0.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .perfil-location { font-size: 0.8rem; color: var(--color-text-muted); }
+
+    .visibility-badge {
+        font-size: 0.72rem;
+        font-weight: 600;
+        padding: 0.2em 0.55em;
+        border-radius: var(--radius-sm);
+        flex-shrink: 0;
+    }
+
+    .visibility-badge.public { background: #f0fdf4; color: #166534; }
+    .visibility-badge.private { background: var(--color-surface-alt); color: var(--color-text-muted); }
+
+    .perfil-card-body {
+        padding: 0 1.1rem 0.75rem;
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    .perfil-meta-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.3rem 0;
+        font-size: 0.88rem;
+    }
+
+    .meta-label { color: var(--color-text-muted); }
+
+    .price-tag { font-weight: 600; color: var(--color-primary); }
+
+    .skill-pills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+        margin-top: 0.6rem;
+    }
+
+    .skill-pill {
+        background: var(--color-primary-soft);
+        color: var(--color-primary);
+        font-size: 0.75rem;
+        font-weight: 500;
+        padding: 0.2em 0.6em;
+        border-radius: var(--radius-sm);
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3em;
+    }
+
+    .skill-pill.more {
+        background: var(--color-surface-alt);
+        color: var(--color-text-muted);
+    }
+
+    .skill-years {
+        opacity: 0.7;
+        font-weight: 400;
+    }
+
+    .perfil-card-foot {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.5rem;
+        padding: 0.75rem 1.1rem;
+    }
+</style>
 
 @code {
     private List<PerfilVm> perfis = new();
@@ -93,19 +259,15 @@ else
         carregando = false;
     }
 
-    private void CriarNovo()
-    {
-        Navigation.NavigateTo("/perfis/form");
-    }
+    private void CriarNovo() => Navigation.NavigateTo("/perfis/form");
+    private void Editar(int id) => Navigation.NavigateTo($"/perfis/form/{id}");
 
-    private void Editar(int id)
+    private async Task ConfirmarApagar(PerfilVm p)
     {
-        Navigation.NavigateTo($"/perfis/form/{id}");
-    }
+        var ok = await JS.InvokeAsync<bool>("confirm", $"Queres mesmo apagar o perfil de '{p.Nome}'?");
+        if (!ok) return;
 
-    private async Task Apagar(int id)
-    {
-        var resposta = await Http.DeleteAsync($"/perfis/{id}");
+        var resposta = await Http.DeleteAsync($"/perfis/{p.Id}");
         if (resposta.IsSuccessStatusCode)
         {
             mensagemSucesso = "Perfil apagado com sucesso.";
@@ -117,7 +279,6 @@ else
         }
     }
 
-    // Modelo de visualização para os dados recebidos da API
     public class PerfilVm
     {
         public int Id { get; set; }
