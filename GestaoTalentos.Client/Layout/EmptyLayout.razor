@@ -1,9 +1,35 @@
 @inherits LayoutComponentBase
 
-<div class="page">
-    <main class="w-100">
-        <article class="content px-4 w-100 h-100">
-            @Body
-        </article>
+<div class="auth-page">
+    <div class="auth-bg"></div>
+    <main>
+        @Body
     </main>
 </div>
+
+<style>
+    .auth-page {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem 1rem;
+        position: relative;
+        background: linear-gradient(135deg, #eef2ff 0%, #f8fafc 45%, #fff 100%);
+    }
+
+    .auth-bg {
+        position: absolute;
+        inset: 0;
+        background-image:
+            radial-gradient(circle at 20% 20%, rgba(99, 102, 241, 0.15), transparent 40%),
+            radial-gradient(circle at 80% 70%, rgba(16, 185, 129, 0.10), transparent 40%);
+        pointer-events: none;
+    }
+
+    .auth-page main {
+        position: relative;
+        width: 100%;
+        max-width: 440px;
+    }
+</style>
