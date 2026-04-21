@@ -4,64 +4,67 @@
 @inject HttpClient Http
 @inject NavigationManager Navigation
 
-<PageTitle>Criar Conta</PageTitle>
+<PageTitle>Criar Conta - Gestão de Talentos</PageTitle>
 
-<div class="row justify-content-center mt-5">
-    <div class="col-md-4 card shadow-sm p-4">
-        <h3 class="text-center mb-4">Criar Conta</h3>
-
-        @if (!string.IsNullOrEmpty(errorMessage))
-        {
-            <div class="alert alert-danger">@errorMessage</div>
-        }
-
-        @if (registoSucesso)
-        {
-            <div class="alert alert-success">
-                Conta criada com sucesso! <a href="/login">Clica aqui para fazer login</a>.
-            </div>
-        }
-        else
-        {
-            <div class="mb-3">
-                <label class="form-label">Username</label>
-                <input @bind="username" class="form-control" placeholder="Escolhe um username" />
-            </div>
-            <div class="mb-3">
-                <label class="form-label">Password</label>
-                <input @bind="password" type="password" class="form-control" placeholder="Escolhe uma password" />
-            </div>
-            <div class="mb-3">
-                <label class="form-label">Confirmar Password</label>
-                <input @bind="confirmPassword" type="password" class="form-control" placeholder="Repete a password" />
-            </div>
-            <div class="mb-4">
-                <label class="form-label">Tipo de Conta</label>
-                <div class="d-flex gap-3">
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="tipoUtilizador" id="tipoTalento"
-                               checked="@(tipoUtilizador == "Talento")"
-                               @onchange="@(() => tipoUtilizador = "Talento")" />
-                        <label class="form-check-label" for="tipoTalento">
-                            <strong>Talento</strong> — sou um profissional
-                        </label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="tipoUtilizador" id="tipoCliente"
-                               checked="@(tipoUtilizador == "Cliente")"
-                               @onchange="@(() => tipoUtilizador = "Cliente")" />
-                        <label class="form-check-label" for="tipoCliente">
-                            <strong>Cliente</strong> — quero contratar
-                        </label>
-                    </div>
-                </div>
-            </div>
-            <button class="btn btn-primary w-100" @onclick="HandleRegister">Criar Conta</button>
-            <p class="text-center mt-3 text-muted">
-                Já tens conta? <a href="/login">Faz login</a>
-            </p>
-        }
+<div class="auth-card card">
+    <div class="auth-header">
+        <div class="brand-mark">GT</div>
+        <h2>Criar nova conta</h2>
+        <p class="auth-subtitle">Junta-te à plataforma em poucos segundos</p>
     </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger">@errorMessage</div>
+    }
+
+    @if (registoSucesso)
+    {
+        <div class="success-state">
+            <div class="success-ico">✓</div>
+            <h3>Conta criada!</h3>
+            <p>A tua conta foi criada com sucesso.<br />Já podes entrar na plataforma.</p>
+            <a href="/login" class="btn btn-primary w-100">Ir para o login</a>
+        </div>
+    }
+    else
+    {
+        <div class="mb-3">
+            <label class="form-label">Username</label>
+            <input @bind="username" class="form-control" placeholder="escolhe um username" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Password</label>
+            <input @bind="password" type="password" class="form-control" placeholder="mínimo 4 caracteres" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Confirmar Password</label>
+            <input @bind="confirmPassword" type="password" class="form-control" placeholder="repete a password" />
+        </div>
+
+        <label class="form-label">Tipo de Conta</label>
+        <div class="type-grid mb-4">
+            <button type="button"
+                    class="type-card @(tipoUtilizador == "Talento" ? "active" : "")"
+                    @onclick='() => tipoUtilizador = "Talento"'>
+                <div class="type-ico">🎯</div>
+                <div class="type-title">Talento</div>
+                <div class="type-desc">Sou um profissional</div>
+            </button>
+            <button type="button"
+                    class="type-card @(tipoUtilizador == "Cliente" ? "active" : "")"
+                    @onclick='() => tipoUtilizador = "Cliente"'>
+                <div class="type-ico">💼</div>
+                <div class="type-title">Cliente</div>
+                <div class="type-desc">Quero contratar</div>
+            </button>
+        </div>
+
+        <button class="btn btn-primary w-100" @onclick="HandleRegister">Criar Conta</button>
+        <p class="auth-footer">
+            Já tens conta? <a href="/login">Faz login</a>
+        </p>
+    }
 </div>
 
 @code {

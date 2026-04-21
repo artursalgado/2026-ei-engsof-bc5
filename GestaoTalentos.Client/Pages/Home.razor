@@ -3,34 +3,68 @@
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 
-<PageTitle>Home</PageTitle>
-
-<h1>Welcome to Gestão Talentos!</h1>
+<PageTitle>Início - Gestão de Talentos</PageTitle>
 
 <AuthorizeView>
     <Authorized>
-        <div class="alert alert-success mt-4">
-            <p>Welcome back, <strong>@context.User.Identity?.Name</strong>! You are successfully logged in.</p>
-            <ul>
-                <li>Username: @context.User.Identity?.Name</li>
-                <li>Role: @context.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value</li>
-            </ul>
+        <div class="welcome-header">
+            <h1>Olá, @context.User.Identity?.Name 👋</h1>
+            <p class="subtitle">Bem-vindo à tua plataforma de gestão de talentos.</p>
         </div>
-        <button class="btn btn-warning mt-2" @onclick="Logout">Logout</button>
+
+        <div class="quick-grid">
+            @if (context.User.FindFirst("TipoUtilizador")?.Value == "Cliente")
+            {
+                <a href="perfis" class="quick-card">
+                    <div class="quick-ico">🔍</div>
+                    <div>
+                        <h3>Pesquisa de Talentos</h3>
+                        <p>Encontra profissionais disponíveis</p>
+                    </div>
+                </a>
+            }
+            else
+            {
+                <a href="perfis" class="quick-card">
+                    <div class="quick-ico">👤</div>
+                    <div>
+                        <h3>Os Meus Perfis</h3>
+                        <p>Gere currículos e competências</p>
+                    </div>
+                </a>
+                <a href="skills" class="quick-card">
+                    <div class="quick-ico">⚡</div>
+                    <div>
+                        <h3>Catálogo de Skills</h3>
+                        <p>Organiza as competências do sistema</p>
+                    </div>
+                </a>
+            }
+        </div>
+
+        <div class="session-info">
+            <div class="session-row">
+                <span class="session-label">Utilizador</span>
+                <span>@context.User.Identity?.Name</span>
+            </div>
+            <div class="session-row">
+                <span class="session-label">Tipo de conta</span>
+                <span class="badge badge-role">@context.User.FindFirst("TipoUtilizador")?.Value</span>
+            </div>
+        </div>
     </Authorized>
     <NotAuthorized>
-        <div class="alert alert-info mt-4">
-            <p>You are not logged in. Please log in to access your talent dashboard.</p>
-            <a href="/login" class="btn btn-primary mt-2">Go to Login</a>
+        <div class="landing">
+            <div class="brand-mark-lg">GT</div>
+            <h1>Gestão de Talentos</h1>
+            <p class="subtitle">Plataforma de gestão de currículos para profissionais IT.</p>
+            <div class="landing-actions">
+                <a href="/login" class="btn btn-primary">Entrar</a>
+                <a href="/register" class="btn btn-secondary">Criar Conta</a>
+            </div>
         </div>
     </NotAuthorized>
 </AuthorizeView>
 
 @code {
-    private async Task Logout()
-    {
-        await JS.InvokeVoidAsync("localStorage.removeItem", "authToken");
-        AuthStateProvider.MarkUserAsLoggedOut();
-        Navigation.NavigateTo("/login");
-    }
 }
