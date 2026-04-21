@@ -28,6 +28,24 @@ public class PerfilRepository : IPerfilRepository
             .AsNoTracking()
             .ToListAsync();
 
+    public async Task<List<Perfil>> GetByOwnerAsync(int userId)
+        => await Perfis
+            .Include(p => p.Experiencias)
+            .Include(p => p.PerfilSkills)
+                .ThenInclude(ps => ps.Skill)
+            .AsNoTracking()
+            .Where(p => p.OwnerId == userId)
+            .ToListAsync();
+
+    public async Task<List<Perfil>> GetPublicAsync()
+        => await Perfis
+            .Include(p => p.Experiencias)
+            .Include(p => p.PerfilSkills)
+                .ThenInclude(ps => ps.Skill)
+            .AsNoTracking()
+            .Where(p => p.IsShared)
+            .ToListAsync();
+
     // Lista apenas os perfis visíveis para um utilizador (os seus + os públicos)
     public async Task<List<Perfil>> GetVisibleForUserAsync(int userId)
         => await Perfis
