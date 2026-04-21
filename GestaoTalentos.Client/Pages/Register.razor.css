@@ -1,0 +1,116 @@
+.auth-card {
+    padding: 2.5rem 2.25rem;
+}
+
+.auth-header {
+    text-align: center;
+    margin-bottom: 1.75rem;
+}
+
+.auth-header .brand-mark {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 1rem auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #6366f1, #4f46e5);
+    border-radius: 12px;
+    color: #fff;
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+.auth-header h2 {
+    font-size: 1.5rem;
+    margin-bottom: 0.35rem;
+}
+
+.auth-subtitle {
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+.type-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+
+.type-card {
+    background: var(--color-surface);
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 1rem 0.75rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.05s ease;
+}
+
+.type-card:hover {
+    border-color: var(--color-border-strong);
+    background: var(--color-surface-alt);
+}
+
+.type-card.active {
+    border-color: var(--color-primary);
+    background: var(--color-primary-soft);
+}
+
+.type-ico {
+    font-size: 1.5rem;
+    margin-bottom: 0.35rem;
+}
+
+.type-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--color-text);
+    margin-bottom: 0.15rem;
+}
+
+.type-desc {
+    font-size: 0.78rem;
+    color: var(--color-text-muted);
+}
+
+.auth-footer {
+    text-align: center;
+    margin-top: 1.25rem;
+    margin-bottom: 0;
+    color: var(--color-text-muted);
+    font-size: 0.88rem;
+}
+
+.success-state {
+    text-align: center;
+    padding: 1rem 0 0.5rem;
+}
+
+.success-ico {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: #f0fdf4;
+    border: 2px solid #bbf7d0;
+    color: #16a34a;
+    font-size: 1.5rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.25rem;
+}
+
+.success-state h3 {
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+}
+
+.success-state p {
+    color: var(--color-text-muted);
+    font-size: 0.92rem;
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+}
