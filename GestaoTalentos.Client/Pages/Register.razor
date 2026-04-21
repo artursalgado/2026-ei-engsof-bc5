@@ -20,8 +20,11 @@
 
     @if (registoSucesso)
     {
-        <div class="alert alert-success">
-            Conta criada com sucesso! <a href="/login">Faz login aqui</a>.
+        <div class="success-state">
+            <div class="success-ico">✓</div>
+            <h3>Conta criada!</h3>
+            <p>A tua conta foi criada com sucesso.<br />Já podes entrar na plataforma.</p>
+            <a href="/login" class="btn btn-primary w-100">Ir para o login</a>
         </div>
     }
     else
