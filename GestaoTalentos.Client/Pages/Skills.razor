@@ -1,9 +1,14 @@
 @page "/skills"
 @using GestaoTalentos.Shared.DTOs
 @using GestaoTalentos.Client.Services
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
 @inject ISkillService SkillService
 @inject IJSRuntime JS
 @inject HttpClient Http
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+@attribute [Authorize]
 
 <div class="container mt-5">
     <div class="row mb-4">
@@ -186,8 +191,10 @@
     {
         await LoadSkills();
         try {
-            areas = await Http.GetFromJsonAsync<List<AreaDto>>("areas");
-        } catch { /* Ignorar em caso da API estar desligada */ }
+            areas = await Http.GetFromJsonAsync<List<AreaDto>>("/areas");
+        } catch (Exception ex) {
+            formError = $"Aviso: n\u00e3o foi poss\u00edvel carregar as \u00e1reas: {ex.Message}";
+        }
     }
 
     private async Task LoadSkills()

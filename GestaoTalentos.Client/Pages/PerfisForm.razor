@@ -1,0 +1,408 @@
+@page "/perfis/form"
+@page "/perfis/form/{Id:int}"
+@using System.Net.Http.Json
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<PageTitle>@(Id.HasValue ? "Editar Perfil" : "Novo Perfil")</PageTitle>
+
+<h2 class="mb-4">@(Id.HasValue ? "Editar Perfil de Talento" : "Criar Novo Perfil de Talento")</h2>
+
+@if (!string.IsNullOrEmpty(erro))
+{
+    <div class="alert alert-danger">@erro</div>
+}
+
+@if (carregando)
+{
+    <p>A carregar dados...</p>
+}
+else
+{
+    <div class="card shadow-sm p-4">
+        <!-- DADOS PRINCIPAIS DO PERFIL -->
+        <h5 class="mb-3">📋 Dados Pessoais</h5>
+        <div class="row g-3 mb-4">
+            <div class="col-md-6">
+                <label class="form-label">Nome *</label>
+                <input @bind="nome" class="form-control" placeholder="Nome completo" />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Email *</label>
+                <input @bind="email" class="form-control" placeholder="email@exemplo.com" type="email" />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">País *</label>
+                <input @bind="pais" class="form-control" placeholder="Ex: Portugal" />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Preço por hora (€) *</label>
+                <input @bind="precoPorHora" class="form-control" type="number" min="0" step="0.5" />
+            </div>
+            <div class="col-12">
+                <div class="form-check">
+                    <input @bind="isShared" class="form-check-input" type="checkbox" id="chkPublico" />
+                    <label class="form-check-label" for="chkPublico">Perfil Público (visível para todos)</label>
+                </div>
+            </div>
+        </div>
+
+        <hr />
+
+        <!-- EXPERIÊNCIAS PROFISSIONAIS -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0">💼 Experiências Profissionais</h5>
+            <button class="btn btn-sm btn-outline-primary" @onclick="AdicionarExperiencia">+ Adicionar</button>
+        </div>
+
+        @if (!experiencias.Any())
+        {
+            <p class="text-muted fst-italic">Nenhuma experiência adicionada.</p>
+        }
+
+        @foreach (var exp in experiencias)
+        {
+            <div class="card mb-2 border-secondary">
+                <div class="card-body">
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <label class="form-label">Título *</label>
+                            <input @bind="exp.Titulo" class="form-control" placeholder="Ex: Desenvolvedor Sénior" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Empresa *</label>
+                            <input @bind="exp.Empresa" class="form-control" list="empresas-list" placeholder="Ex: Google" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Ano Início *</label>
+                            <input @bind="exp.AnoInicio" class="form-control" type="number" min="1950" max="2100" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Ano Fim (vazio = atual)</label>
+                            <input @bind="exp.AnoFimStr" class="form-control" type="number" min="1950" max="2100" placeholder="Em curso" />
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button class="btn btn-sm btn-outline-danger w-100" @onclick="() => RemoverExperiencia(exp)">Remover</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <hr />
+
+        <!-- SKILLS DO PERFIL -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0">⭐ Skills</h5>
+            <button class="btn btn-sm btn-outline-primary" @onclick="AdicionarSkill">+ Adicionar</button>
+        </div>
+
+        @if (!skillsAdicionadas.Any())
+        {
+            <p class="text-muted fst-italic">Nenhuma skill adicionada.</p>
+        }
+
+        @foreach (var ps in skillsAdicionadas)
+        {
+            <div class="card mb-2 border-secondary">
+                <div class="card-body">
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <label class="form-label">Skill *</label>
+                            <select @bind="ps.SkillId" class="form-select">
+                                <option value="0">-- Seleciona uma skill --</option>
+                                @foreach (var s in todasAsSkills)
+                                {
+                                    <option value="@s.Id">@s.Nome (@s.AreaNome)</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Anos de Experiência *</label>
+                            <input @bind="ps.AnosExperiencia" class="form-control" type="number" min="0" max="50" />
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button class="btn btn-sm btn-outline-danger w-100" @onclick="() => RemoverSkill(ps)">Remover</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <hr />
+
+        <!-- BOTÕES DE AÇÃO -->
+        <div class="d-flex gap-2 justify-content-end mt-3">
+            <button class="btn btn-secondary" @onclick="Cancelar">Cancelar</button>
+            <button class="btn btn-primary" @onclick="Guardar">
+                @(Id.HasValue ? "Guardar Alterações" : "Criar Perfil")
+            </button>
+        </div>
+    </div>
+}
+
+@* Sugestões de Empresas (Datalist) *@
+<datalist id="empresas-list">
+    @foreach (var emp in sugestoesEmpresa)
+    {
+        <option value="@emp" />
+    }
+</datalist>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+
+    // Dados do formulário principal
+    private string nome = "";
+    private string email = "";
+    private string pais = "";
+    private decimal precoPorHora;
+    private bool isShared;
+
+    // Listas de sub-formulários em memória local
+    private List<ExperienciaFormVm> experiencias = new();
+    private List<SkillFormVm> skillsAdicionadas = new();
+
+    // Dados carregados da API para os dropdowns
+    private List<SkillOpcaoVm> todasAsSkills = new();
+
+    private bool carregando = true;
+    private bool isBusy = false;
+
+    // Lista dinâmica carregada da base de dados
+    private List<string> sugestoesEmpresa = new();
+
+    private string? erro;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Carregar todas as skills disponíveis para o dropdown
+        try
+        {
+            var skills = await Http.GetFromJsonAsync<List<SkillOpcaoVm>>("/skills");
+            todasAsSkills = skills ?? new();
+
+            // Carregar sugestões de empresas que já existem na BD
+            var empresas = await Http.GetFromJsonAsync<List<string>>("/perfis/empresas-sugestoes");
+            sugestoesEmpresa = empresas ?? new();
+        }
+        catch { }
+
+        // Se estiver a editar, carregar o perfil existente
+        if (Id.HasValue)
+        {
+            try
+            {
+                var perfil = await Http.GetFromJsonAsync<PerfilDetalheVm>($"/perfis/{Id}");
+                if (perfil != null)
+                {
+                    nome = perfil.Nome;
+                    email = perfil.Email;
+                    pais = perfil.Pais;
+                    precoPorHora = perfil.PrecoPorHora;
+                    isShared = perfil.IsShared;
+
+                    experiencias = perfil.Experiencias.Select(e => new ExperienciaFormVm
+                    {
+                        Titulo = e.Titulo,
+                        Empresa = e.Empresa,
+                        AnoInicio = e.AnoInicio,
+                        AnoFimStr = e.AnoFim?.ToString()
+                    }).ToList();
+
+                    skillsAdicionadas = perfil.Skills.Select(s => new SkillFormVm
+                    {
+                        SkillId = s.SkillId,
+                        AnosExperiencia = s.AnosExperiencia
+                    }).ToList();
+                }
+            }
+            catch (Exception ex)
+            {
+                erro = $"Erro ao carregar perfil: {ex.Message}";
+            }
+        }
+
+        carregando = false;
+    }
+
+    private void AdicionarExperiencia()
+    {
+        experiencias.Add(new ExperienciaFormVm { AnoInicio = DateTime.Now.Year });
+    }
+
+    private void RemoverExperiencia(ExperienciaFormVm exp)
+    {
+        experiencias.Remove(exp);
+    }
+
+    private void AdicionarSkill()
+    {
+        skillsAdicionadas.Add(new SkillFormVm());
+    }
+
+    private void RemoverSkill(SkillFormVm s)
+    {
+        skillsAdicionadas.Remove(s);
+    }
+
+    private async Task Guardar()
+    {
+        erro = null;
+
+        // Validações básicas no lado do cliente antes de enviar
+        if (string.IsNullOrWhiteSpace(nome)) { erro = "Nome é obrigatório."; return; }
+        if (string.IsNullOrWhiteSpace(email)) { erro = "Email é obrigatório."; return; }
+        if (string.IsNullOrWhiteSpace(pais)) { erro = "País é obrigatório."; return; }
+        if (precoPorHora <= 0) { erro = "Preço por hora deve ser maior que zero."; return; }
+
+        // Validações de Experiência
+        foreach (var exp in experiencias)
+        {
+            if (string.IsNullOrWhiteSpace(exp.Titulo) || string.IsNullOrWhiteSpace(exp.Empresa))
+            {
+                erro = $"A experiência na empresa '{exp.Empresa}' tem campos vazios.";
+                return;
+            }
+            
+            // Converter string para int? para validação
+            int? anoFimVal = string.IsNullOrWhiteSpace(exp.AnoFimStr) ? (int?)null : int.TryParse(exp.AnoFimStr, out var v) ? v : (int?)null;
+
+            if (anoFimVal.HasValue && anoFimVal < exp.AnoInicio)
+            {
+                erro = $"Na empresa '{exp.Empresa}', o ano de fim ({anoFimVal}) não pode ser anterior ao início ({exp.AnoInicio}).";
+                return;
+            }
+        }
+
+        // Verificar sobreposição local
+        for (int i = 0; i < experiencias.Count; i++)
+        {
+            var expA = experiencias[i];
+            int? fimAVal = string.IsNullOrWhiteSpace(expA.AnoFimStr) ? (int?)null : int.TryParse(expA.AnoFimStr, out var va) ? va : (int?)null;
+            int fimA = fimAVal ?? DateTime.Now.Year;
+            
+            for (int j = i + 1; j < experiencias.Count; j++)
+            {
+                var expB = experiencias[j];
+                int? fimBVal = string.IsNullOrWhiteSpace(expB.AnoFimStr) ? (int?)null : int.TryParse(expB.AnoFimStr, out var vb) ? vb : (int?)null;
+                int fimB = fimBVal ?? DateTime.Now.Year;
+
+                if (expA.AnoInicio <= fimB && expB.AnoInicio <= fimA)
+                {
+                    erro = $"Sobreposição detetada entre '{expA.Empresa}' e '{expB.Empresa}'.";
+                    return;
+                }
+            }
+        }
+
+        // Verificar se alguma skill foi selecionada com valor inválido
+        if (skillsAdicionadas.Any(s => s.SkillId == 0))
+        {
+            erro = "Todas as skills adicionadas têm de ter uma skill selecionada.";
+            return;
+        }
+
+        if (skillsAdicionadas.Any(s => s.AnosExperiencia < 1))
+        {
+            erro = "As skills devem ter pelo menos 1 ano de experiência.";
+            return;
+        }
+
+        // Construir o payload da API
+        var payload = new
+        {
+            Nome = nome,
+            Email = email,
+            Pais = pais,
+            PrecoPorHora = precoPorHora,
+            IsShared = isShared,
+            Experiencias = experiencias.Select(e => new
+            {
+                e.Titulo,
+                e.Empresa,
+                e.AnoInicio,
+                AnoFim = string.IsNullOrWhiteSpace(e.AnoFimStr) ? (int?)null : int.Parse(e.AnoFimStr)
+            }).ToList(),
+            Skills = skillsAdicionadas.Select(s => new
+            {
+                s.SkillId,
+                s.AnosExperiencia
+            }).ToList()
+        };
+
+        HttpResponseMessage resposta;
+        if (Id.HasValue)
+            resposta = await Http.PutAsJsonAsync($"/perfis/{Id}", payload);
+        else
+            resposta = await Http.PostAsJsonAsync("/perfis", payload);
+
+        if (resposta.IsSuccessStatusCode)
+        {
+            Navigation.NavigateTo("/perfis");
+        }
+        else
+        {
+            var detalhe = await resposta.Content.ReadAsStringAsync();
+            erro = $"Erro ao guardar: {detalhe}";
+        }
+    }
+
+    private void Cancelar()
+    {
+        Navigation.NavigateTo("/perfis");
+    }
+
+    // Modelos de formulário em memória (não são DTOs da API, são só para o UI)
+    public class ExperienciaFormVm
+    {
+        public string Titulo { get; set; } = "";
+        public string Empresa { get; set; } = "";
+        public int AnoInicio { get; set; }
+        public string? AnoFimStr { get; set; }
+    }
+
+    public class SkillFormVm
+    {
+        public int SkillId { get; set; }
+        public int AnosExperiencia { get; set; }
+    }
+
+    // Modelos para deserializar respostas da API
+    public class SkillOpcaoVm
+    {
+        public int Id { get; set; }
+        public string Nome { get; set; } = "";
+        public string? AreaNome { get; set; }
+    }
+
+    public class PerfilDetalheVm
+    {
+        public int Id { get; set; }
+        public string Nome { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string Pais { get; set; } = "";
+        public decimal PrecoPorHora { get; set; }
+        public bool IsShared { get; set; }
+        public List<ExperienciaDetalheVm> Experiencias { get; set; } = new();
+        public List<SkillDetalheVm> Skills { get; set; } = new();
+    }
+
+    public class ExperienciaDetalheVm
+    {
+        public int Id { get; set; }
+        public string Titulo { get; set; } = "";
+        public string Empresa { get; set; } = "";
+        public int AnoInicio { get; set; }
+        public int? AnoFim { get; set; }
+    }
+
+    public class SkillDetalheVm
+    {
+        public int SkillId { get; set; }
+        public string? SkillNome { get; set; }
+        public int AnosExperiencia { get; set; }
+    }
+}

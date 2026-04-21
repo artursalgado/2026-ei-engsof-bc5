@@ -10,7 +10,7 @@ public class AreaRepository : Repository<Area>, IAreaRepository
 {
     public AreaRepository(AppDbContext context) : base(context) { }
 
-    public async Task<IEnumerable<Area>> GetAllAsync()
+    public new async Task<IEnumerable<Area>> GetAllAsync()
     {
         return await _context.Areas.OrderBy(a => a.Nome).ToListAsync();
     }

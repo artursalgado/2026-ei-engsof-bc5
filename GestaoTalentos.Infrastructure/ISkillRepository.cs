@@ -1,4 +1,4 @@
-﻿
+
 using GestaoTalentos.Domain;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -10,5 +10,4 @@ public interface ISkillRepository : IRepository<Skill>
     Task<Skill?> GetByNomeAsync(string nome);
     Task<IEnumerable<Skill>> GetByAreaIdAsync(int areaId);
     Task<IEnumerable<Skill>> GetAllWithAreaAsync();
-    Task UpdateAsync(Skill skill);
 }
