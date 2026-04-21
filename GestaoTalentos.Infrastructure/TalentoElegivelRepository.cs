@@ -1,6 +1,7 @@
 using GestaoTalentos.Domain;
-using GestaoTalentos.Infrastructure;
+
 using Microsoft.EntityFrameworkCore;
+using System.Threading.Tasks;
 
 
 namespace GestaoTalentos.Infrastructure;
@@ -33,6 +34,12 @@ public class TalentoElegivelRepository : Repository<TalentoElegivel>, ITalentoEl
             .ToListAsync();
         
         _context.TalentosElegiveis.RemoveRange(talentos);
+        await _context.SaveChangesAsync();
+    }
+
+    //
+    public async Task SaveChangesAsync()
+    {
         await _context.SaveChangesAsync();
     }
 }

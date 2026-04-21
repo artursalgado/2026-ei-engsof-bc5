@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace GestaoTalentos.Infrastructure;
 
-public interface ITalentoElegiveRepository
+public interface ITalentoElegivelRepository
 {
     Task<IEnumerable<TalentoElegivel>> GetAllAsync();
     Task<TalentoElegivel?> GetByIdAsync(int id);
@@ -12,4 +12,7 @@ public interface ITalentoElegiveRepository
     Task UpdateAsync(TalentoElegivel talentoElegivel);
     Task DeleteAsync(int id);
     Task SaveChangesAsync();
+    Task<IEnumerable<TalentoElegivel>> GetByPropostaIdAsync(int propostaId);
+    Task<IEnumerable<TalentoElegivel>> GetByPropostaIdOrderedByValorAsync(int propostaId);
+    Task DeleteByPropostaIdAsync(int propostaId);
 }
