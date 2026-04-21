@@ -138,7 +138,8 @@ app.MapPost("/register", async (GestaoTalentos.API.UserRegisterDto request, IUse
     {
         Username = request.Username.Trim(),
         Password = BCrypt.Net.BCrypt.HashPassword(request.Password),
-        Role = UserRole.User
+        Role = UserRole.User,
+        TipoUtilizador = request.TipoUtilizador
     };
 
     await repo.AddAsync(user);
@@ -159,7 +160,7 @@ app.MapGet("/users/me", async (ClaimsPrincipal user, IUserRepository repo) =>
 {
     var userId = int.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : 0;
     var current = await repo.GetByIdAsync(userId);
-    return current is null ? Results.NotFound() : Results.Ok(new { current.Id, current.Username, current.Role });
+    return current is null ? Results.NotFound() : Results.Ok(new { current.Id, current.Username, current.Role, current.TipoUtilizador });
 }).RequireAuthorization();
 
 // Endpoints de Utilizadores (Focado apenas no Login/Me)
