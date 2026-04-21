@@ -6,144 +6,154 @@
 @inject HttpClient Http
 @inject NavigationManager Navigation
 
-<PageTitle>@(Id.HasValue ? "Editar Perfil" : "Novo Perfil")</PageTitle>
+<PageTitle>@(Id.HasValue ? "Editar Perfil" : "Novo Perfil") - Gestão de Talentos</PageTitle>
 
-<h2 class="mb-4">@(Id.HasValue ? "Editar Perfil de Talento" : "Criar Novo Perfil de Talento")</h2>
+<div class="form-page-header">
+    <button class="btn-back" @onclick="Cancelar">← Perfis</button>
+    <h1>@(Id.HasValue ? "Editar Perfil de Talento" : "Novo Perfil de Talento")</h1>
+</div>
 
 @if (!string.IsNullOrEmpty(erro))
 {
-    <div class="alert alert-danger">@erro</div>
+    <div class="alert alert-danger mb-4">@erro</div>
 }
 
 @if (carregando)
 {
-    <p>A carregar dados...</p>
+    <div class="loading-state">A carregar...</div>
 }
 else
 {
-    <div class="card shadow-sm p-4">
-        <!-- DADOS PRINCIPAIS DO PERFIL -->
-        <h5 class="mb-3">📋 Dados Pessoais</h5>
-        <div class="row g-3 mb-4">
-            <div class="col-md-6">
-                <label class="form-label">Nome *</label>
-                <input @bind="nome" class="form-control" placeholder="Nome completo" />
+    <div class="form-sections">
+
+        <!-- Dados Pessoais -->
+        <div class="form-section">
+            <div class="section-header">
+                <span class="section-ico">👤</span>
+                <h2>Dados Pessoais</h2>
             </div>
-            <div class="col-md-6">
-                <label class="form-label">Email *</label>
-                <input @bind="email" class="form-control" placeholder="email@exemplo.com" type="email" />
-            </div>
-            <div class="col-md-6">
-                <label class="form-label">País *</label>
-                <input @bind="pais" class="form-control" placeholder="Ex: Portugal" />
-            </div>
-            <div class="col-md-6">
-                <label class="form-label">Preço por hora (€) *</label>
-                <input @bind="precoPorHora" class="form-control" type="number" min="0" step="0.5" />
-            </div>
-            <div class="col-12">
-                <div class="form-check">
-                    <input @bind="isShared" class="form-check-input" type="checkbox" id="chkPublico" />
-                    <label class="form-check-label" for="chkPublico">Perfil Público (visível para todos)</label>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Nome completo *</label>
+                    <input @bind="nome" class="form-control" placeholder="ex: João Silva" />
                 </div>
-            </div>
-        </div>
-
-        <hr />
-
-        <!-- EXPERIÊNCIAS PROFISSIONAIS -->
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="mb-0">💼 Experiências Profissionais</h5>
-            <button class="btn btn-sm btn-outline-primary" @onclick="AdicionarExperiencia">+ Adicionar</button>
-        </div>
-
-        @if (!experiencias.Any())
-        {
-            <p class="text-muted fst-italic">Nenhuma experiência adicionada.</p>
-        }
-
-        @foreach (var exp in experiencias)
-        {
-            <div class="card mb-2 border-secondary">
-                <div class="card-body">
-                    <div class="row g-2">
-                        <div class="col-md-6">
-                            <label class="form-label">Título *</label>
-                            <input @bind="exp.Titulo" class="form-control" placeholder="Ex: Desenvolvedor Sénior" />
+                <div class="col-md-6">
+                    <label class="form-label">Email *</label>
+                    <input @bind="email" class="form-control" placeholder="joao@exemplo.com" type="email" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">País *</label>
+                    <input @bind="pais" class="form-control" placeholder="ex: Portugal" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Preço por hora (€) *</label>
+                    <input @bind="precoPorHora" class="form-control" type="number" min="0" step="0.5" />
+                </div>
+                <div class="col-12">
+                    <div class="toggle-row">
+                        <div>
+                            <div class="toggle-label">Perfil Público</div>
+                            <div class="toggle-desc">Visível para todos os utilizadores da plataforma</div>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Empresa *</label>
-                            <input @bind="exp.Empresa" class="form-control" list="empresas-list" placeholder="Ex: Google" />
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Ano Início *</label>
-                            <input @bind="exp.AnoInicio" class="form-control" type="number" min="1950" max="2100" />
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Ano Fim (vazio = atual)</label>
-                            <input @bind="exp.AnoFimStr" class="form-control" type="number" min="1950" max="2100" placeholder="Em curso" />
-                        </div>
-                        <div class="col-md-4 d-flex align-items-end">
-                            <button class="btn btn-sm btn-outline-danger w-100" @onclick="() => RemoverExperiencia(exp)">Remover</button>
-                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" @bind="isShared" />
+                            <span class="toggle-track"></span>
+                        </label>
                     </div>
                 </div>
             </div>
-        }
-
-        <hr />
-
-        <!-- SKILLS DO PERFIL -->
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="mb-0">⭐ Skills</h5>
-            <button class="btn btn-sm btn-outline-primary" @onclick="AdicionarSkill">+ Adicionar</button>
         </div>
 
-        @if (!skillsAdicionadas.Any())
-        {
-            <p class="text-muted fst-italic">Nenhuma skill adicionada.</p>
-        }
+        <!-- Experiências -->
+        <div class="form-section">
+            <div class="section-header">
+                <span class="section-ico">💼</span>
+                <h2>Experiências Profissionais</h2>
+                <button type="button" class="btn btn-sm btn-secondary" @onclick="AdicionarExperiencia">+ Adicionar</button>
+            </div>
 
-        @foreach (var ps in skillsAdicionadas)
-        {
-            <div class="card mb-2 border-secondary">
-                <div class="card-body">
-                    <div class="row g-2">
+            @if (!experiencias.Any())
+            {
+                <div class="section-empty">Nenhuma experiência adicionada ainda.</div>
+            }
+
+            @foreach (var exp in experiencias)
+            {
+                <div class="sub-card">
+                    <div class="row g-3">
                         <div class="col-md-6">
+                            <label class="form-label">Título *</label>
+                            <input @bind="exp.Titulo" class="form-control" placeholder="ex: Desenvolvedor Sénior" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Empresa *</label>
+                            <input @bind="exp.Empresa" class="form-control" list="empresas-list" placeholder="ex: Google" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Ano início *</label>
+                            <input @bind="exp.AnoInicio" class="form-control" type="number" min="1950" max="2100" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Ano fim <span class="optional">(vazio = atual)</span></label>
+                            <input @bind="exp.AnoFimStr" class="form-control" type="number" min="1950" max="2100" placeholder="Em curso" />
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="button" class="btn btn-sm btn-danger w-100" @onclick="() => RemoverExperiencia(exp)">Remover</button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Skills -->
+        <div class="form-section">
+            <div class="section-header">
+                <span class="section-ico">⚡</span>
+                <h2>Skills</h2>
+                <button type="button" class="btn btn-sm btn-secondary" @onclick="AdicionarSkill">+ Adicionar</button>
+            </div>
+
+            @if (!skillsAdicionadas.Any())
+            {
+                <div class="section-empty">Nenhuma skill adicionada ainda.</div>
+            }
+
+            @foreach (var ps in skillsAdicionadas)
+            {
+                <div class="sub-card">
+                    <div class="row g-3">
+                        <div class="col-md-7">
                             <label class="form-label">Skill *</label>
                             <select @bind="ps.SkillId" class="form-select">
-                                <option value="0">-- Seleciona uma skill --</option>
+                                <option value="0">Seleciona uma skill</option>
                                 @foreach (var s in todasAsSkills)
                                 {
                                     <option value="@s.Id">@s.Nome (@s.AreaNome)</option>
                                 }
                             </select>
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Anos de Experiência *</label>
-                            <input @bind="ps.AnosExperiencia" class="form-control" type="number" min="0" max="50" />
+                        <div class="col-md-3">
+                            <label class="form-label">Anos exp. *</label>
+                            <input @bind="ps.AnosExperiencia" class="form-control" type="number" min="1" max="50" />
                         </div>
                         <div class="col-md-2 d-flex align-items-end">
-                            <button class="btn btn-sm btn-outline-danger w-100" @onclick="() => RemoverSkill(ps)">Remover</button>
+                            <button type="button" class="btn btn-sm btn-danger w-100" @onclick="() => RemoverSkill(ps)">✕</button>
                         </div>
                     </div>
                 </div>
-            </div>
-        }
+            }
+        </div>
 
-        <hr />
-
-        <!-- BOTÕES DE AÇÃO -->
-        <div class="d-flex gap-2 justify-content-end mt-3">
-            <button class="btn btn-secondary" @onclick="Cancelar">Cancelar</button>
-            <button class="btn btn-primary" @onclick="Guardar">
-                @(Id.HasValue ? "Guardar Alterações" : "Criar Perfil")
+        <!-- Ações -->
+        <div class="form-actions">
+            <button class="btn btn-secondary" @onclick="Cancelar" disabled="@isBusy">Cancelar</button>
+            <button class="btn btn-primary" @onclick="Guardar" disabled="@isBusy">
+                @(isBusy ? "A guardar..." : (Id.HasValue ? "Guardar alterações" : "Criar perfil"))
             </button>
         </div>
     </div>
 }
 
-@* Sugestões de Empresas (Datalist) *@
 <datalist id="empresas-list">
     @foreach (var emp in sugestoesEmpresa)
     {
@@ -151,46 +161,179 @@ else
     }
 </datalist>
 
+<style>
+    .form-page-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1.75rem;
+    }
+
+    .form-page-header h1 {
+        margin: 0;
+        font-size: 1.5rem;
+    }
+
+    .btn-back {
+        background: none;
+        border: none;
+        color: var(--color-text-muted);
+        font-size: 0.9rem;
+        font-weight: 500;
+        cursor: pointer;
+        padding: 0;
+        white-space: nowrap;
+    }
+
+    .btn-back:hover { color: var(--color-primary); }
+
+    .form-sections {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+    }
+
+    .form-section {
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-lg);
+        padding: 1.5rem;
+    }
+
+    .section-header {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .section-ico { font-size: 1.1rem; }
+
+    .section-header h2 {
+        flex: 1;
+        font-size: 1rem;
+        margin: 0;
+    }
+
+    .section-empty {
+        color: var(--color-text-muted);
+        font-size: 0.9rem;
+        font-style: italic;
+        padding: 0.5rem 0;
+    }
+
+    .sub-card {
+        background: var(--color-surface-alt);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .sub-card:last-child { margin-bottom: 0; }
+
+    .optional {
+        color: var(--color-text-soft);
+        font-weight: 400;
+        font-size: 0.8rem;
+    }
+
+    .toggle-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: var(--color-surface-alt);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        padding: 0.85rem 1rem;
+    }
+
+    .toggle-label { font-weight: 500; font-size: 0.92rem; }
+    .toggle-desc { color: var(--color-text-muted); font-size: 0.82rem; margin-top: 0.1rem; }
+
+    .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 44px;
+        height: 24px;
+        flex-shrink: 0;
+    }
+
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+
+    .toggle-track {
+        position: absolute;
+        cursor: pointer;
+        inset: 0;
+        background: var(--color-border-strong);
+        border-radius: 24px;
+        transition: background 0.2s;
+    }
+
+    .toggle-track::before {
+        content: "";
+        position: absolute;
+        width: 18px;
+        height: 18px;
+        left: 3px;
+        top: 3px;
+        background: white;
+        border-radius: 50%;
+        transition: transform 0.2s;
+    }
+
+    .toggle-switch input:checked + .toggle-track {
+        background: var(--color-primary);
+    }
+
+    .toggle-switch input:checked + .toggle-track::before {
+        transform: translateX(20px);
+    }
+
+    .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        padding-top: 0.25rem;
+    }
+
+    .loading-state {
+        padding: 3rem;
+        text-align: center;
+        color: var(--color-text-muted);
+    }
+</style>
+
 @code {
     [Parameter] public int? Id { get; set; }
 
-    // Dados do formulário principal
     private string nome = "";
     private string email = "";
     private string pais = "";
     private decimal precoPorHora;
     private bool isShared;
 
-    // Listas de sub-formulários em memória local
     private List<ExperienciaFormVm> experiencias = new();
     private List<SkillFormVm> skillsAdicionadas = new();
-
-    // Dados carregados da API para os dropdowns
     private List<SkillOpcaoVm> todasAsSkills = new();
+    private List<string> sugestoesEmpresa = new();
 
     private bool carregando = true;
     private bool isBusy = false;
-
-    // Lista dinâmica carregada da base de dados
-    private List<string> sugestoesEmpresa = new();
-
     private string? erro;
 
     protected override async Task OnInitializedAsync()
     {
-        // Carregar todas as skills disponíveis para o dropdown
         try
         {
             var skills = await Http.GetFromJsonAsync<List<SkillOpcaoVm>>("/skills");
             todasAsSkills = skills ?? new();
 
-            // Carregar sugestões de empresas que já existem na BD
             var empresas = await Http.GetFromJsonAsync<List<string>>("/perfis/empresas-sugestoes");
             sugestoesEmpresa = empresas ?? new();
         }
         catch { }
 
-        // Se estiver a editar, carregar o perfil existente
         if (Id.HasValue)
         {
             try
@@ -228,68 +371,45 @@ else
         carregando = false;
     }
 
-    private void AdicionarExperiencia()
-    {
+    private void AdicionarExperiencia() =>
         experiencias.Add(new ExperienciaFormVm { AnoInicio = DateTime.Now.Year });
-    }
 
-    private void RemoverExperiencia(ExperienciaFormVm exp)
-    {
-        experiencias.Remove(exp);
-    }
-
-    private void AdicionarSkill()
-    {
-        skillsAdicionadas.Add(new SkillFormVm());
-    }
-
-    private void RemoverSkill(SkillFormVm s)
-    {
-        skillsAdicionadas.Remove(s);
-    }
+    private void RemoverExperiencia(ExperienciaFormVm exp) => experiencias.Remove(exp);
+    private void AdicionarSkill() => skillsAdicionadas.Add(new SkillFormVm());
+    private void RemoverSkill(SkillFormVm s) => skillsAdicionadas.Remove(s);
 
     private async Task Guardar()
     {
         erro = null;
 
-        // Validações básicas no lado do cliente antes de enviar
         if (string.IsNullOrWhiteSpace(nome)) { erro = "Nome é obrigatório."; return; }
         if (string.IsNullOrWhiteSpace(email)) { erro = "Email é obrigatório."; return; }
         if (string.IsNullOrWhiteSpace(pais)) { erro = "País é obrigatório."; return; }
         if (precoPorHora <= 0) { erro = "Preço por hora deve ser maior que zero."; return; }
 
-        // Validações de Experiência
         foreach (var exp in experiencias)
         {
             if (string.IsNullOrWhiteSpace(exp.Titulo) || string.IsNullOrWhiteSpace(exp.Empresa))
             {
-                erro = $"A experiência na empresa '{exp.Empresa}' tem campos vazios.";
+                erro = $"A experiência '{exp.Empresa}' tem campos obrigatórios vazios.";
                 return;
             }
-            
-            // Converter string para int? para validação
-            int? anoFimVal = string.IsNullOrWhiteSpace(exp.AnoFimStr) ? (int?)null : int.TryParse(exp.AnoFimStr, out var v) ? v : (int?)null;
-
+            int? anoFimVal = string.IsNullOrWhiteSpace(exp.AnoFimStr) ? null : int.TryParse(exp.AnoFimStr, out var v) ? v : (int?)null;
             if (anoFimVal.HasValue && anoFimVal < exp.AnoInicio)
             {
-                erro = $"Na empresa '{exp.Empresa}', o ano de fim ({anoFimVal}) não pode ser anterior ao início ({exp.AnoInicio}).";
+                erro = $"Em '{exp.Empresa}': o ano de fim não pode ser anterior ao início.";
                 return;
             }
         }
 
-        // Verificar sobreposição local
         for (int i = 0; i < experiencias.Count; i++)
         {
             var expA = experiencias[i];
-            int? fimAVal = string.IsNullOrWhiteSpace(expA.AnoFimStr) ? (int?)null : int.TryParse(expA.AnoFimStr, out var va) ? va : (int?)null;
-            int fimA = fimAVal ?? DateTime.Now.Year;
-            
+            int fimA = (string.IsNullOrWhiteSpace(expA.AnoFimStr) ? null : int.TryParse(expA.AnoFimStr, out var va) ? va : (int?)null) ?? DateTime.Now.Year;
             for (int j = i + 1; j < experiencias.Count; j++)
             {
                 var expB = experiencias[j];
-                int? fimBVal = string.IsNullOrWhiteSpace(expB.AnoFimStr) ? (int?)null : int.TryParse(expB.AnoFimStr, out var vb) ? vb : (int?)null;
-                int fimB = fimBVal ?? DateTime.Now.Year;
-
+                int fimB = (string.IsNullOrWhiteSpace(expB.AnoFimStr) ? null : int.TryParse(expB.AnoFimStr, out var vb) ? vb : (int?)null) ?? DateTime.Now.Year;
                 if (expA.AnoInicio <= fimB && expB.AnoInicio <= fimA)
                 {
                     erro = $"Sobreposição detetada entre '{expA.Empresa}' e '{expB.Empresa}'.";
@@ -298,51 +418,38 @@ else
             }
         }
 
-        // Verificar se alguma skill foi selecionada com valor inválido
         if (skillsAdicionadas.Any(s => s.SkillId == 0))
         {
-            erro = "Todas as skills adicionadas têm de ter uma skill selecionada.";
+            erro = "Seleciona uma skill em todas as linhas adicionadas.";
             return;
         }
-
         if (skillsAdicionadas.Any(s => s.AnosExperiencia < 1))
         {
-            erro = "As skills devem ter pelo menos 1 ano de experiência.";
+            erro = "Cada skill precisa de pelo menos 1 ano de experiência.";
             return;
         }
 
-        // Construir o payload da API
+        isBusy = true;
         var payload = new
         {
-            Nome = nome,
-            Email = email,
-            Pais = pais,
-            PrecoPorHora = precoPorHora,
-            IsShared = isShared,
+            Nome = nome, Email = email, Pais = pais,
+            PrecoPorHora = precoPorHora, IsShared = isShared,
             Experiencias = experiencias.Select(e => new
             {
-                e.Titulo,
-                e.Empresa,
-                e.AnoInicio,
+                e.Titulo, e.Empresa, e.AnoInicio,
                 AnoFim = string.IsNullOrWhiteSpace(e.AnoFimStr) ? (int?)null : int.Parse(e.AnoFimStr)
             }).ToList(),
-            Skills = skillsAdicionadas.Select(s => new
-            {
-                s.SkillId,
-                s.AnosExperiencia
-            }).ToList()
+            Skills = skillsAdicionadas.Select(s => new { s.SkillId, s.AnosExperiencia }).ToList()
         };
 
-        HttpResponseMessage resposta;
-        if (Id.HasValue)
-            resposta = await Http.PutAsJsonAsync($"/perfis/{Id}", payload);
-        else
-            resposta = await Http.PostAsJsonAsync("/perfis", payload);
+        HttpResponseMessage resposta = Id.HasValue
+            ? await Http.PutAsJsonAsync($"/perfis/{Id}", payload)
+            : await Http.PostAsJsonAsync("/perfis", payload);
+
+        isBusy = false;
 
         if (resposta.IsSuccessStatusCode)
-        {
             Navigation.NavigateTo("/perfis");
-        }
         else
         {
             var detalhe = await resposta.Content.ReadAsStringAsync();
@@ -350,12 +457,8 @@ else
         }
     }
 
-    private void Cancelar()
-    {
-        Navigation.NavigateTo("/perfis");
-    }
+    private void Cancelar() => Navigation.NavigateTo("/perfis");
 
-    // Modelos de formulário em memória (não são DTOs da API, são só para o UI)
     public class ExperienciaFormVm
     {
         public string Titulo { get; set; } = "";
@@ -370,7 +473,6 @@ else
         public int AnosExperiencia { get; set; }
     }
 
-    // Modelos para deserializar respostas da API
     public class SkillOpcaoVm
     {
         public int Id { get; set; }
