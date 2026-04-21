@@ -1,5 +1,7 @@
 using GestaoTalentos.Domain;
 using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace GestaoTalentos.Infrastructure;
 
@@ -41,9 +43,14 @@ public class PropostaRepository : Repository<Proposta>, IPropostaRepository
             .ToListAsync();
     }
 
-    public async Task UpdateAsync(Proposta proposta)
+    public override async Task UpdateAsync(Proposta proposta)
     {
         _context.Propostas.Update(proposta);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task SaveChangesAsync()
+    {
         await _context.SaveChangesAsync();
     }
 }

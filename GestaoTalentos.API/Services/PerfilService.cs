@@ -8,9 +8,9 @@ namespace GestaoTalentos.API.Services;
 
 public class PerfilService : IPerfilService
 {
-    private readonly IPerfilRepository _repository;
+    private readonly GestaoTalentos.Infrastructure.IPerfilRepository _repository;
 
-    public PerfilService(IPerfilRepository repository)
+    public PerfilService(GestaoTalentos.Infrastructure.IPerfilRepository repository)
     {
         _repository = repository;
     }
