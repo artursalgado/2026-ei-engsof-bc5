@@ -28,7 +28,6 @@ public class PerfilRepository : IPerfilRepository
             .AsNoTracking()
             .ToListAsync();
 
-    // Apenas os perfis do próprio utilizador (Talento)
     public async Task<List<Perfil>> GetByOwnerAsync(int userId)
         => await Perfis
             .Include(p => p.Experiencias)
@@ -38,7 +37,6 @@ public class PerfilRepository : IPerfilRepository
             .Where(p => p.OwnerId == userId)
             .ToListAsync();
 
-    // Apenas perfis públicos (Cliente a pesquisar talentos)
     public async Task<List<Perfil>> GetPublicAsync()
         => await Perfis
             .Include(p => p.Experiencias)
