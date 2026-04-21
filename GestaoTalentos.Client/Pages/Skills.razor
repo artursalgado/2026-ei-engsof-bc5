@@ -142,130 +142,10 @@ else
     </div>
 }
 
-<style>
-    .page-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-end;
-        margin-bottom: 1.75rem;
-        gap: 1rem;
-    }
-
-    .page-header h1 {
-        margin-bottom: 0.25rem;
-    }
-
-    .page-subtitle {
-        color: var(--color-text-muted);
-        font-size: 0.92rem;
-        margin: 0;
-    }
-
-    .table-card {
-        padding: 0;
-        overflow: hidden;
-    }
-
-    .cell-name {
-        font-weight: 500;
-    }
-
-    .cell-muted {
-        color: var(--color-text-muted);
-        font-size: 0.88rem;
-    }
-
-    .badge-area {
-        background: var(--color-primary-soft);
-        color: var(--color-primary);
-        font-weight: 500;
-    }
-
-    .loading-state {
-        padding: 3rem;
-        text-align: center;
-        color: var(--color-text-muted);
-    }
-
-    .empty-state {
-        text-align: center;
-        padding: 4rem 2rem;
-        background: var(--color-surface);
-        border: 1px dashed var(--color-border-strong);
-        border-radius: var(--radius-lg);
-    }
-
-    .empty-ico {
-        font-size: 2.5rem;
-        margin-bottom: 0.75rem;
-    }
-
-    .empty-state h3 {
-        font-size: 1.1rem;
-        margin-bottom: 0.35rem;
-    }
-
-    .empty-state p {
-        color: var(--color-text-muted);
-        margin-bottom: 1.25rem;
-    }
-
-    .modal-backdrop-custom {
-        position: fixed;
-        inset: 0;
-        background: rgba(15, 23, 42, 0.45);
-        z-index: 1040;
-        backdrop-filter: blur(2px);
-    }
-
-    .modal-custom {
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 95%;
-        max-width: 480px;
-        background: var(--color-surface);
-        border-radius: var(--radius-lg);
-        box-shadow: var(--shadow-lg);
-        z-index: 1050;
-        max-height: 90vh;
-        overflow-y: auto;
-    }
-
-    .modal-head {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 1.25rem 1.5rem;
-        border-bottom: 1px solid var(--color-border);
-    }
-
-    .modal-head h3 {
-        margin: 0;
-        font-size: 1.1rem;
-    }
-
-    .modal-close {
-        background: none;
-        border: none;
-        font-size: 1.5rem;
-        color: var(--color-text-muted);
-        cursor: pointer;
-        line-height: 1;
-    }
-
-    .modal-body-custom {
-        padding: 1.5rem;
-    }
-
-    .modal-foot {
-        display: flex;
-        justify-content: flex-end;
-        gap: 0.5rem;
-        margin-top: 1.5rem;
-    }
-</style>
+@if (toastVisible)
+{
+    <div class="toast-sucesso">@toastMensagem</div>
+}
 
 @code {
     private List<SkillDto>? skills;
@@ -279,6 +159,8 @@ else
 
     private bool isBusy = false;
     private string? formError = null;
+    private bool toastVisible = false;
+    private string toastMensagem = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -331,6 +213,7 @@ else
             {
                 await LoadSkills();
                 CloseModal();
+                await ShowToast("Skill criada com sucesso.");
             }
             else
             {
@@ -359,6 +242,7 @@ else
             {
                 await LoadSkills();
                 CloseModal();
+                await ShowToast("Skill atualizada com sucesso.");
             }
             else
             {
@@ -407,6 +291,16 @@ else
         {
             isBusy = false;
         }
+    }
+
+    private async Task ShowToast(string mensagem)
+    {
+        toastMensagem = mensagem;
+        toastVisible = true;
+        StateHasChanged();
+        await Task.Delay(3000);
+        toastVisible = false;
+        StateHasChanged();
     }
 
     private void CloseModal()
