@@ -1,11 +1,18 @@
 using GestaoTalentos.Domain;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace GestaoTalentos.Infrastructure;
 
-public interface IPropostaRepository : IRepository<Proposta>
+public interface IPropostaRepository
 {
-    Task<Proposta?> GetByIdWithSkillsAsync(int id);
+    Task<IEnumerable<Proposta>> GetAllAsync();
     Task<IEnumerable<Proposta>> GetAllWithSkillsAsync();
+    Task<Proposta?> GetByIdAsync(int id);
+    Task<Proposta?> GetByIdWithSkillsAsync(int id);
     Task<Proposta?> GetByNomeAsync(string nome);
-    Task<IEnumerable<Proposta>> GetByAreaIdAsync(int areaId);
+    Task AddAsync(Proposta proposta);
+    Task UpdateAsync(Proposta proposta);
+    Task DeleteAsync(int id);
+    Task SaveChangesAsync();
 }

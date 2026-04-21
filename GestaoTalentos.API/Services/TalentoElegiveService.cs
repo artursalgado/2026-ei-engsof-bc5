@@ -8,9 +8,9 @@ namespace GestaoTalentos.API.Services;
 
 public class TalentoElegiveService : ITalentoElegiveService
 {
-    private readonly ITalentoElegiveRepository _repository;
+    private readonly ITalentoElegivelRepository _repository;
 
-    public TalentoElegiveService(ITalentoElegiveRepository repository)
+    public TalentoElegiveService(ITalentoElegivelRepository repository)
     {
         _repository = repository;
     }

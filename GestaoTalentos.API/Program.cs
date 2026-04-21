@@ -1,4 +1,5 @@
 using GestaoTalentos.API;
+using GestaoTalentos.API.Services;
 using GestaoTalentos.Domain;
 using GestaoTalentos.Shared;
 using GestaoTalentos.Infrastructure;
@@ -54,7 +55,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection") ?? "Host=localhost;Port=5432;Database=gestaotalentos;Username=postgres;Password=postgres123"));
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
-builder.Services.AddScoped<IPerfilRepository, PerfilRepository>();
+builder.Services.AddScoped<GestaoTalentos.Infrastructure.IPerfilRepository, PerfilRepository>();
 // builder.Services.AddScoped<IRecordRepository, RecordRepository>();
 builder.Services.AddScoped<ISkillRepository, SkillRepository>();
 builder.Services.AddScoped<IAreaRepository, AreaRepository>();
@@ -66,8 +67,8 @@ builder.Services.AddScoped<PropostaMatchingService>();
 // Repositórios
 
 builder.Services.AddScoped<IPropostaRepository, PropostaRepository>();
-builder.Services.AddScoped<ITalentoElegiveRepository, TalentoElegiveRepository>();
-builder.Services.AddScoped<IPerfilRepository, PerfilRepository>();
+builder.Services.AddScoped<ITalentoElegivelRepository, TalentoElegivelRepository>();
+builder.Services.AddScoped<GestaoTalentos.Infrastructure.IPerfilRepository, PerfilRepository>();
 // Services
 builder.Services.AddScoped<IPropostaService, PropostaService>();
 builder.Services.AddScoped<ITalentoElegiveService, TalentoElegiveService>();
@@ -214,7 +215,7 @@ app.MapPost("/users", async (UserCreateDto request, IUserRepository repo) =>
     return Results.Created($"/users/{user.Id}", new { user.Id, user.Username, user.Role });
 }).RequireAuthorization("UserManagerPolicy");
 
-app.MapGet("/perfis", async (ClaimsPrincipal user, IPerfilRepository repo, IUserRepository userRepo) =>
+app.MapGet("/perfis", async (ClaimsPrincipal user, GestaoTalentos.Infrastructure.IPerfilRepository repo, IUserRepository userRepo) =>
 {
     var userId = int.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : 0;
     var current = await userRepo.GetByIdAsync(userId);
@@ -230,7 +231,7 @@ app.MapGet("/perfis", async (ClaimsPrincipal user, IPerfilRepository repo, IUser
     return Results.Ok(all.Select(r => new PerfilDto(r.Id, r.OwnerId, r.Content, r.IsShared, r.CreatedAt)));
 }).RequireAuthorization("UserPolicy");
 
-app.MapGet("/perfis/{id}", async (int id, ClaimsPrincipal user, IPerfilRepository repo, IUserRepository userRepo) =>
+app.MapGet("/perfis/{id}", async (int id, ClaimsPrincipal user, GestaoTalentos.Infrastructure.IPerfilRepository repo, IUserRepository userRepo) =>
 {
     var rec = await repo.GetByIdAsync(id);
     if (rec == null) return Results.NotFound();
@@ -245,7 +246,7 @@ app.MapGet("/perfis/{id}", async (int id, ClaimsPrincipal user, IPerfilRepositor
     return Results.Forbid();
 }).RequireAuthorization("UserPolicy");
 
-app.MapPost("/perfis", async (PerfilCreateDto request, ClaimsPrincipal user, IPerfilRepository repo) =>
+app.MapPost("/perfis", async (PerfilCreateDto request, ClaimsPrincipal user, GestaoTalentos.Infrastructure.IPerfilRepository repo) =>
 {
     var userId = int.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var uid) ? uid : 0;
 
@@ -257,7 +258,7 @@ app.MapPost("/perfis", async (PerfilCreateDto request, ClaimsPrincipal user, IPe
     return Results.Created($"/perfis/{perfil.Id}", new PerfilDto(perfil.Id, perfil.OwnerId, perfil.Content, perfil.IsShared, perfil.CreatedAt));
 }).RequireAuthorization("UserPolicy");
 
-app.MapPut("/perfis/{id}", async (int id, PerfilUpdateDto request, ClaimsPrincipal user, IPerfilRepository repo, IUserRepository userRepo) =>
+app.MapPut("/perfis/{id}", async (int id, PerfilUpdateDto request, ClaimsPrincipal user, GestaoTalentos.Infrastructure.IPerfilRepository repo, IUserRepository userRepo) =>
 {
     var rec = await repo.GetByIdAsync(id);
     if (rec == null) return Results.NotFound();
@@ -275,7 +276,7 @@ app.MapPut("/perfis/{id}", async (int id, PerfilUpdateDto request, ClaimsPrincip
     return Results.NoContent();
 }).RequireAuthorization("UserPolicy");
 
-app.MapDelete("/perfis/{id}", async (int id, ClaimsPrincipal user, IPerfilRepository repo, IUserRepository userRepo) =>
+app.MapDelete("/perfis/{id}", async (int id, ClaimsPrincipal user, GestaoTalentos.Infrastructure.IPerfilRepository repo, IUserRepository userRepo) =>
 {
     var rec = await repo.GetByIdAsync(id);
     if (rec == null) return Results.NotFound();
