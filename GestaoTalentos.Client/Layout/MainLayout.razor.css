@@ -77,13 +77,32 @@ main {
         width: 0;
     }
 
-    .top-row, article {
-        padding-left: 2.5rem !important;
-        padding-right: 2rem !important;
+    .page .top-row,
+    .page article {
+        padding-left: 2.5rem;
+        padding-right: 2rem;
     }
 
     article.content {
         padding-top: 2rem;
         padding-bottom: 3rem;
     }
+}
+
+.user-info {
+    font-size: 0.88rem;
+    color: var(--color-text);
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-right: 1rem;
+}
+
+.user-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--color-success);
+    display: inline-block;
 }
