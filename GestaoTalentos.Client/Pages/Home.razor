@@ -13,20 +13,33 @@
         </div>
 
         <div class="quick-grid">
-            <a href="perfis" class="quick-card">
-                <div class="quick-ico">👤</div>
-                <div>
-                    <h3>Perfis de Talento</h3>
-                    <p>Gere currículos e competências</p>
-                </div>
-            </a>
-            <a href="skills" class="quick-card">
-                <div class="quick-ico">⚡</div>
-                <div>
-                    <h3>Catálogo de Skills</h3>
-                    <p>Organiza as competências do sistema</p>
-                </div>
-            </a>
+            @if (context.User.FindFirst("TipoUtilizador")?.Value == "Cliente")
+            {
+                <a href="perfis" class="quick-card">
+                    <div class="quick-ico">🔍</div>
+                    <div>
+                        <h3>Pesquisa de Talentos</h3>
+                        <p>Encontra profissionais disponíveis</p>
+                    </div>
+                </a>
+            }
+            else
+            {
+                <a href="perfis" class="quick-card">
+                    <div class="quick-ico">👤</div>
+                    <div>
+                        <h3>Os Meus Perfis</h3>
+                        <p>Gere currículos e competências</p>
+                    </div>
+                </a>
+                <a href="skills" class="quick-card">
+                    <div class="quick-ico">⚡</div>
+                    <div>
+                        <h3>Catálogo de Skills</h3>
+                        <p>Organiza as competências do sistema</p>
+                    </div>
+                </a>
+            }
         </div>
 
         <div class="session-info">
@@ -35,8 +48,8 @@
                 <span>@context.User.Identity?.Name</span>
             </div>
             <div class="session-row">
-                <span class="session-label">Permissão</span>
-                <span class="badge badge-role">@context.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value</span>
+                <span class="session-label">Tipo de conta</span>
+                <span class="badge badge-role">@context.User.FindFirst("TipoUtilizador")?.Value</span>
             </div>
         </div>
     </Authorized>
