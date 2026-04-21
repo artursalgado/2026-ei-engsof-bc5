@@ -175,8 +175,10 @@ app.MapGet("/perfis", async (ClaimsPrincipal user, IPerfilRepository repo, IUser
     if (current == null) return Results.Unauthorized();
 
     List<Perfil> perfis;
-    if (current.Role == UserRole.User)
-        perfis = await repo.GetVisibleForUserAsync(userId);
+    if (current.Role == UserRole.User && current.TipoUtilizador == TipoUtilizador.Cliente)
+        perfis = await repo.GetPublicAsync();
+    else if (current.Role == UserRole.User)
+        perfis = await repo.GetByOwnerAsync(userId);
     else
         perfis = await repo.GetAllAsync();
 
