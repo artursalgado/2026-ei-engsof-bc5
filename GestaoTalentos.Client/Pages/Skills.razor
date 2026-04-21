@@ -15,11 +15,14 @@
 <div class="page-header">
     <div>
         <h1>Catálogo de Skills</h1>
-        <p class="page-subtitle">Gere as competências disponíveis na plataforma</p>
+        <p class="page-subtitle">@(podeGerir ? "Gere as competências disponíveis na plataforma" : "Competências disponíveis na plataforma")</p>
     </div>
-    <button class="btn btn-primary" @onclick="OpenCreateModal" disabled="@isBusy">
-        + Nova Skill
-    </button>
+    @if (podeGerir)
+    {
+        <button class="btn btn-primary" @onclick="OpenCreateModal" disabled="@isBusy">
+            + Nova Skill
+        </button>
+    }
 </div>
 
 @if (skills == null)
@@ -31,8 +34,15 @@ else if (skills.Count == 0)
     <div class="empty-state">
         <div class="empty-ico">⚡</div>
         <h3>Ainda não há skills</h3>
-        <p>Começa por adicionar a primeira competência ao catálogo.</p>
-        <button class="btn btn-primary" @onclick="OpenCreateModal">Criar primeira skill</button>
+        @if (podeGerir)
+        {
+            <p>Começa por adicionar a primeira competência ao catálogo.</p>
+            <button class="btn btn-primary" @onclick="OpenCreateModal">Criar primeira skill</button>
+        }
+        else
+        {
+            <p>Ainda não foram adicionadas competências ao catálogo.</p>
+        }
     </div>
 }
 else
@@ -44,7 +54,10 @@ else
                     <th>Nome</th>
                     <th>Área</th>
                     <th>Criado em</th>
-                    <th class="text-end">Ações</th>
+                    @if (podeGerir)
+                    {
+                        <th class="text-end">Ações</th>
+                    }
                 </tr>
             </thead>
             <tbody>
@@ -54,10 +67,13 @@ else
                         <td class="cell-name">@skill.Nome</td>
                         <td><span class="badge badge-area">@skill.AreaNome</span></td>
                         <td class="cell-muted">@skill.CriadoEm.ToString("dd/MM/yyyy")</td>
-                        <td class="text-end">
-                            <button class="btn btn-sm btn-secondary" @onclick="() => OpenEditModal(skill)" disabled="@isBusy">Editar</button>
-                            <button class="btn btn-sm btn-danger" @onclick="() => ConfirmDelete(skill)" disabled="@isBusy">Apagar</button>
-                        </td>
+                        @if (podeGerir)
+                        {
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-secondary" @onclick="() => OpenEditModal(skill)" disabled="@isBusy">Editar</button>
+                                <button class="btn btn-sm btn-danger" @onclick="() => ConfirmDelete(skill)" disabled="@isBusy">Apagar</button>
+                            </td>
+                        }
                     </tr>
                 }
             </tbody>
@@ -161,9 +177,14 @@ else
     private string? formError = null;
     private bool toastVisible = false;
     private string toastMensagem = "";
+    private bool podeGerir = false;
 
     protected override async Task OnInitializedAsync()
     {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var role = authState.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+        podeGerir = role == "UserManager" || role == "Admin";
+
         await LoadSkills();
         try {
             areas = await Http.GetFromJsonAsync<List<AreaDto>>("/areas");
