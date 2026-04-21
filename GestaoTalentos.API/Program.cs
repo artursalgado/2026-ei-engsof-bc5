@@ -363,7 +363,7 @@ app.MapDelete("/clientes/{id}", async (int id, ClaimsPrincipal user, IClienteRep
         // Verificação de permissões
         bool isAdmin = current.Role == UserRole.Admin;
         bool isManager = current.Role == UserRole.UserManager;
-        bool isOwner = rec.IdCreator == userId;
+        bool isOwner = rec.IdCriador == userId;
 
         if (!isAdmin && !isManager && !isOwner)
             return Results.Forbid();
@@ -375,47 +375,5 @@ app.MapDelete("/clientes/{id}", async (int id, ClaimsPrincipal user, IClienteRep
     .RequireAuthorization("UserPolicy");
 
 
-
-
-
-
-
-// Endpoint para listar todas as apresentações
-//app.MapGet("/apresentacoes", async (IApresentacaoRepository repo) =>
-//  Results.Ok(await repo.GetAllAsync())).RequireAuthorization("UserPolicy");!!!!!!!!!!!!!!!!
-
-// Endpoint para obter uma aprentação específica por ID de Cliente e ID de Talento
-//app.MapGet("/apresentacoes/{idCliente}", async (int idc, IApresentacaoRepository repo) =>
-//{
-//  var apresentacao = await repo.GetByIdAsync(idc);
-//  return apresentacao is null ? Results.NotFound() : Results.Ok(apresentacao);
-//}).RequireAuthorization("UserPolicy");!!!!!!!!!!!!!!!!!
-
-// Endpoint para criar um nova aprentação (define IdCriador automaticamente)
-//app.MapPost("/apresentacoes", async (ApresentacaoCreateDto request, ClaimsPrincipal user, IApresentacaoRepository repo) =>
-//{
-//  if (string.IsNullOrWhiteSpace(request.IdCliente))
-    //      return Results.BadRequest("IdCliente é obrigatório.");
-
-//    var apresentacao = new Apresentacao
-    //  {
-    //  idCliente = request.IdCliente.Trim(),
-    //  DataApresentacao = system.DateTime.UtcNow
-    //};
-    //await repo.AddAsync(cliente);
-    //return Results.Created($"/apresentacao/{apresentacao.id}", new ApresentacaoDto(apresentacao.idClinte, apresentacao.DataApresentacao));
-//}).RequireAuthorization("UserPolicy");
-
-// Endpoint para atualizar um cliente
-//app.MapPut("/clientes/{id}", async (int id, ApresentacaoCreateDto request, ClaimsPrincipal user, IApresentacaoRepository repo, IUserRepository userRepo) =>
-//{
-//  var apresentacao = await repo.GetByIdClienteAsync(id);
-//  if (apresentacao == null) return Results.NotFound();
-
-//    apresentacao.idClinte = request.IdCliente.Trim();
-//  DataApresentacao = request.DataApresentacao.Trim();
-//  await repo.UpdateAsync(apresentacao);
-//  return Results.NoContent();
-//}).RequireAuthorization("UserPolicy");
 
 app.Run();
