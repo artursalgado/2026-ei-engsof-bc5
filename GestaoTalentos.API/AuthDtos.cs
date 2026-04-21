@@ -2,7 +2,7 @@ namespace GestaoTalentos.API;
 
 using GestaoTalentos.Shared.DTOs;
 
-public record UserRegisterDto(string Username, string Password);
+public record UserRegisterDto(string Username, string Password, GestaoTalentos.Domain.TipoUtilizador TipoUtilizador);
 public record UserLoginDto(string Username, string Password);
 public record UserRoleUpdateDto(int UserId, string Role);
 public record UserCreateDto(string Username, string Password, string Role);

@@ -31,9 +31,30 @@
                 <label class="form-label">Password</label>
                 <input @bind="password" type="password" class="form-control" placeholder="Escolhe uma password" />
             </div>
-            <div class="mb-4">
+            <div class="mb-3">
                 <label class="form-label">Confirmar Password</label>
                 <input @bind="confirmPassword" type="password" class="form-control" placeholder="Repete a password" />
+            </div>
+            <div class="mb-4">
+                <label class="form-label">Tipo de Conta</label>
+                <div class="d-flex gap-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="tipoUtilizador" id="tipoTalento"
+                               checked="@(tipoUtilizador == "Talento")"
+                               @onchange="@(() => tipoUtilizador = "Talento")" />
+                        <label class="form-check-label" for="tipoTalento">
+                            <strong>Talento</strong> — sou um profissional
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="tipoUtilizador" id="tipoCliente"
+                               checked="@(tipoUtilizador == "Cliente")"
+                               @onchange="@(() => tipoUtilizador = "Cliente")" />
+                        <label class="form-check-label" for="tipoCliente">
+                            <strong>Cliente</strong> — quero contratar
+                        </label>
+                    </div>
+                </div>
             </div>
             <button class="btn btn-primary w-100" @onclick="HandleRegister">Criar Conta</button>
             <p class="text-center mt-3 text-muted">
@@ -47,6 +68,7 @@
     private string username = "";
     private string password = "";
     private string confirmPassword = "";
+    private string tipoUtilizador = "Talento";
     private string errorMessage = "";
     private bool registoSucesso = false;
 
@@ -72,7 +94,7 @@
 
         try
         {
-            var payload = new { Username = username, Password = password };
+            var payload = new { Username = username, Password = password, TipoUtilizador = tipoUtilizador };
             var response = await Http.PostAsJsonAsync("/register", payload);
 
             if (response.IsSuccessStatusCode)
