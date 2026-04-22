@@ -189,3 +189,110 @@
 .modal-footer {
     border-color: var(--color-border);
 }
+
+/* Modal customizado (usado em Perfis, Clientes, Skills) */
+.modal-backdrop-custom {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(3px);
+    z-index: 1040;
+    animation: modalFadeIn 0.18s ease-out;
+}
+
+.modal-custom {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(520px, 92vw);
+    max-height: 88vh;
+    background: #fff;
+    border-radius: var(--radius-lg);
+    box-shadow: 0 20px 50px -12px rgba(15, 23, 42, 0.35);
+    z-index: 1050;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: modalSlideIn 0.22s ease-out;
+}
+
+.modal-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.1rem 1.4rem;
+    border-bottom: 1px solid var(--color-border);
+    flex-shrink: 0;
+}
+
+.modal-head h3 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 600;
+}
+
+.modal-close {
+    background: transparent;
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-size: 1.4rem;
+    line-height: 1;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.modal-close:hover:not(:disabled) {
+    background: var(--color-surface-alt);
+    color: var(--color-text);
+}
+
+.modal-close:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.modal-body-custom {
+    padding: 1.4rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.modal-foot {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.6rem;
+    margin-top: 0.5rem;
+}
+
+@keyframes modalFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes modalSlideIn {
+    from { opacity: 0; transform: translate(-50%, -48%); }
+    to { opacity: 1; transform: translate(-50%, -50%); }
+}
+
+/* Toast de sucesso */
+.toast-sucesso {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    background: #10b981;
+    color: #fff;
+    padding: 0.75rem 1.1rem;
+    border-radius: var(--radius-md);
+    box-shadow: 0 10px 25px -8px rgba(16, 185, 129, 0.45);
+    font-size: 0.9rem;
+    font-weight: 500;
+    z-index: 2000;
+    animation: modalSlideIn 0.22s ease-out;
+}
