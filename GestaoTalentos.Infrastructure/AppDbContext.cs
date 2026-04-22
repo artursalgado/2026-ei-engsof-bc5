@@ -8,6 +8,7 @@ public class AppDbContext : DbContext
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
     public DbSet<User> Users { get; set; } = null!;
+    public DbSet<Cliente> Clientes { get; set; } = null!;
     public DbSet<Perfil> Perfis { get; set; } = null!;
     public DbSet<Area> Areas { get; set; } = null!;
     public DbSet<Skill> Skills { get; set; } = null!;
@@ -55,6 +56,13 @@ public class AppDbContext : DbContext
             .HasOne(ps => ps.Skill)
             .WithMany()
             .HasForeignKey(ps => ps.SkillId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Cliente → User (criador)
+        modelBuilder.Entity<Cliente>()
+            .HasOne(c => c.User)
+            .WithMany()
+            .HasForeignKey(c => c.IdCriador)
             .OnDelete(DeleteBehavior.Restrict);
 
         // Índices para performance
