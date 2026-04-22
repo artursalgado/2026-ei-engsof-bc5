@@ -131,7 +131,7 @@ await using (var scope = app.Services.CreateAsyncScope())
     }
 }
 
-app.MapPost("/register", async (GestaoTalentos.API.UserRegisterDto request, IUserRepository repo) =>
+app.MapPost("/register", async (GestaoTalentos.API.UserRegisterDto request, IUserRepository repo, IClienteRepository clienteRepo) =>
 {
     if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
         return Results.BadRequest("Username e password são obrigatórios.");
@@ -148,6 +148,20 @@ app.MapPost("/register", async (GestaoTalentos.API.UserRegisterDto request, IUse
     };
 
     await repo.AddAsync(user);
+
+    // Se se registar como Cliente, criar automaticamente o registo na tabela Clientes
+    if (request.TipoUtilizador == TipoUtilizador.Cliente)
+    {
+        var cliente = new Cliente
+        {
+            Nome = user.Username,
+            Email = "",
+            IdCriador = user.Id,
+            IdMinhaConta = user.Id
+        };
+        await clienteRepo.AddAsync(cliente);
+    }
+
     return Results.Created($"/users/{user.Id}", new { user.Id, user.Username, user.Role });
 });
 
