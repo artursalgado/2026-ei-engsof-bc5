@@ -1,0 +1,83 @@
+@page "/login"
+@layout GestaoTalentos.Client.Layout.EmptyLayout
+@inject HttpClient Http
+@inject CustomAuthStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<PageTitle>Entrar - Gestão de Talentos</PageTitle>
+
+<div class="auth-card card">
+    <div class="auth-header">
+        <div class="brand-mark">GT</div>
+        <p class="brand-name">Gestão de Talentos</p>
+        <h2>Bem-vindo de volta</h2>
+        <p class="auth-subtitle">Entra na tua conta para continuar</p>
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger">@errorMessage</div>
+    }
+
+    <div class="mb-3">
+        <label class="form-label">Username</label>
+        <input @bind="loginModel.Username" class="form-control" placeholder="o teu username" @onkeydown="HandleKey" />
+    </div>
+    <div class="mb-4">
+        <label class="form-label">Password</label>
+        <input @bind="loginModel.Password" type="password" class="form-control" placeholder="••••••••" @onkeydown="HandleKey" />
+    </div>
+    <button class="btn btn-primary w-100" @onclick="HandleLogin">Entrar</button>
+    <p class="auth-footer">
+        Ainda não tens conta? <a href="/register">Cria uma aqui</a>
+    </p>
+</div>
+
+@code {
+    private LoginModel loginModel = new();
+    private string errorMessage = "";
+
+    private async Task HandleKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await HandleLogin();
+    }
+
+    private async Task HandleLogin()
+    {
+        errorMessage = "";
+        try
+        {
+            var response = await Http.PostAsJsonAsync("/login", loginModel);
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<LoginResult>();
+                if (result != null && !string.IsNullOrEmpty(result.Token))
+                {
+                    await JS.InvokeVoidAsync("localStorage.setItem", "authToken", result.Token);
+                    AuthStateProvider.MarkUserAsAuthenticated(result.Token);
+                    Navigation.NavigateTo("/");
+                }
+            }
+            else
+            {
+                errorMessage = "Username ou password inválidos.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Falha no login: {ex.Message}";
+        }
+    }
+
+    public class LoginModel
+    {
+        public string Username { get; set; } = "";
+        public string Password { get; set; } = "";
+    }
+
+    public class LoginResult
+    {
+        public string Token { get; set; } = "";
+    }
+}

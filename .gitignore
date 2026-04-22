@@ -480,4 +480,6 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
-GestaoTalentos.API/appsettings.json
+
+# Ignorar configuracoes locais de Base de Dados
+appsettings.Development.json
