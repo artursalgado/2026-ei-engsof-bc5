@@ -58,6 +58,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection") ?? "Host=localhost;Port=5432;Database=gestaotalentos;Username=postgres;Password=postgres123"));
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IClienteRepository, ClienteRepository>();
 builder.Services.AddScoped<IPerfilRepository, PerfilRepository>();
 builder.Services.AddScoped<ISkillRepository, SkillRepository>();
 builder.Services.AddScoped<IAreaRepository, AreaRepository>();
@@ -499,3 +500,88 @@ static string? ValidarSobreposicaoExperiencias(List<ExperienciaCreateDto> experi
     }
     return null;
 }
+
+// --- CLIENTES ---
+
+app.MapGet("/clientes", async (ClaimsPrincipal user, IClienteRepository repo, IUserRepository userRepo) =>
+{
+    var userId = int.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : 0;
+    var current = await userRepo.GetByIdAsync(userId);
+    if (current == null) return Results.Unauthorized();
+
+    var clientes = current.Role == UserRole.User
+        ? await repo.GetByCriadorIdAsync(userId)
+        : await repo.GetAllAsync();
+
+    return Results.Ok(clientes.Select(c => new ClienteDto(c.Id, c.Nome, c.Email, c.IdCriador, c.IdMinhaConta)));
+}).RequireAuthorization("UserPolicy");
+
+app.MapGet("/clientes/{id}", async (int id, ClaimsPrincipal user, IClienteRepository repo, IUserRepository userRepo) =>
+{
+    var cliente = await repo.GetByIdAsync(id);
+    if (cliente == null) return Results.NotFound();
+
+    var userId = int.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var uid) ? uid : 0;
+    var current = await userRepo.GetByIdAsync(userId);
+    if (current == null) return Results.Unauthorized();
+
+    if (current.Role == UserRole.User && cliente.IdCriador != userId)
+        return Results.Forbid();
+
+    return Results.Ok(new ClienteDto(cliente.Id, cliente.Nome, cliente.Email, cliente.IdCriador, cliente.IdMinhaConta));
+}).RequireAuthorization("UserPolicy");
+
+app.MapPost("/clientes", async (ClienteCreateDto request, ClaimsPrincipal user, IClienteRepository repo) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Nome)) return Results.BadRequest("Nome é obrigatório.");
+    if (string.IsNullOrWhiteSpace(request.Email)) return Results.BadRequest("Email é obrigatório.");
+
+    var userId = int.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : 0;
+    var cliente = new GestaoTalentos.Domain.Cliente
+    {
+        Nome = request.Nome.Trim(),
+        Email = request.Email.Trim(),
+        IdCriador = userId,
+        IdMinhaConta = request.IdMinhaConta == 0 ? null : request.IdMinhaConta
+    };
+    await repo.AddAsync(cliente);
+    return Results.Created($"/clientes/{cliente.Id}", new ClienteDto(cliente.Id, cliente.Nome, cliente.Email, cliente.IdCriador, cliente.IdMinhaConta));
+}).RequireAuthorization("UserPolicy");
+
+app.MapPut("/clientes/{id}", async (int id, ClienteUpdateDto request, ClaimsPrincipal user, IClienteRepository repo, IUserRepository userRepo) =>
+{
+    var cliente = await repo.GetByIdAsync(id);
+    if (cliente == null) return Results.NotFound();
+
+    var userId = int.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var uid) ? uid : 0;
+    var current = await userRepo.GetByIdAsync(userId);
+    if (current == null) return Results.Unauthorized();
+
+    if (current.Role == UserRole.User && cliente.IdCriador != userId)
+        return Results.Forbid();
+
+    if (string.IsNullOrWhiteSpace(request.Nome)) return Results.BadRequest("Nome é obrigatório.");
+    if (string.IsNullOrWhiteSpace(request.Email)) return Results.BadRequest("Email é obrigatório.");
+
+    cliente.Nome = request.Nome.Trim();
+    cliente.Email = request.Email.Trim();
+    cliente.IdMinhaConta = request.IdMinhaConta == 0 ? null : request.IdMinhaConta;
+    await repo.UpdateAsync(cliente);
+    return Results.NoContent();
+}).RequireAuthorization("UserPolicy");
+
+app.MapDelete("/clientes/{id}", async (int id, ClaimsPrincipal user, IClienteRepository repo, IUserRepository userRepo) =>
+{
+    var cliente = await repo.GetByIdAsync(id);
+    if (cliente == null) return Results.NotFound();
+
+    var userId = int.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var uid) ? uid : 0;
+    var current = await userRepo.GetByIdAsync(userId);
+    if (current == null) return Results.Unauthorized();
+
+    if (current.Role == UserRole.User && cliente.IdCriador != userId)
+        return Results.Forbid();
+
+    await repo.DeleteAsync(id);
+    return Results.NoContent();
+}).RequireAuthorization("UserPolicy");
