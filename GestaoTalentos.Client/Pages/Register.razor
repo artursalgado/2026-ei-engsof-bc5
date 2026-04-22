@@ -7,18 +7,6 @@
 <PageTitle>Criar Conta - Gestão de Talentos</PageTitle>
 
 <div class="auth-card card">
-    <div class="auth-header">
-        <div class="brand-mark">GT</div>
-        <p class="brand-name">Gestão de Talentos</p>
-        <h2>Criar nova conta</h2>
-        <p class="auth-subtitle">Junta-te à plataforma em poucos segundos</p>
-    </div>
-
-    @if (!string.IsNullOrEmpty(errorMessage))
-    {
-        <div class="alert alert-danger">@errorMessage</div>
-    }
-
     @if (registoSucesso)
     {
         <div class="success-state">
@@ -30,6 +18,17 @@
     }
     else
     {
+        <div class="auth-header">
+            <div class="brand-mark">GT</div>
+            <p class="brand-name">Gestão de Talentos</p>
+            <h2>Criar nova conta</h2>
+            <p class="auth-subtitle">Junta-te à plataforma em poucos segundos</p>
+        </div>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger">@errorMessage</div>
+        }
         <div class="mb-3">
             <label class="form-label">Username</label>
             <input @bind="username" class="form-control" placeholder="escolhe um username" />
