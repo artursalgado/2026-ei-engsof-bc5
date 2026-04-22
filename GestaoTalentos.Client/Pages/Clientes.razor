@@ -1,300 +1,178 @@
 @page "/clientes"
 @using GestaoTalentos.Client.Services
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
 @inject IClienteService ClienteService
 @inject IJSRuntime JS
 
-<div class="container mt-5">
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h1><i class="oi oi-person"></i> Gerir Clientes</h1>
-        </div>
-        <div class="col-md-4 text-end">
-            <button class="btn btn-success btn-lg" @onclick="OpenCreateModal" disabled="@isBusy">
-                <i class="oi oi-plus"></i> Criar Cliente
-            </button>
-        </div>
-    </div>
+<PageTitle>Clientes - Gestão de Talentos</PageTitle>
 
-    @if (clientes == null)
-    {
-        <div class="spinner-border" role="status">
-            <span class="visually-hidden">A carregar...</span>
-        </div>
-    }
-    else if (clientes.Count == 0)
-    {
-        <div class="alert alert-info">
-            <i class="oi oi-info"></i> Nenhum cliente inserido. Clique em "Criar Cliente" para adicionar um novo.
-        </div>
-    }
-    else
-    {
-        <div class="table-responsive">
-            <table class="table table-striped table-hover">
-                <thead class="table-dark">
-                    <tr>
-                        <th>Nome</th>
-                        <th>Email</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var cliente in clientes)
-                    {
-                        <tr>
-                            <td><i class="oi oi-check"></i> @cliente.Nome</td>
-                            <td>@cliente.Email</td>
-                            <td>
-                                <button class="btn btn-sm btn-primary"
-                                        @onclick="() => OpenEditModal(cliente)"
-                                        disabled="@isBusy"
-                                        title="Editar">
-                                    <i class="oi oi-pencil"></i> Editar
-                                </button>
-                                <button class="btn btn-sm btn-danger"
-                                        @onclick="() => ConfirmDelete(cliente)"
-                                        disabled="@isBusy"
-                                        title="Apagar">
-                                    <i class="oi oi-trash"></i> Apagar
-                                </button>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-    }
+<div class="page-header">
+    <div>
+        <h1>Clientes</h1>
+        <p class="page-subtitle">Gere os clientes da plataforma</p>
+    </div>
+    <button class="btn btn-primary" @onclick="OpenCreateModal" disabled="@isBusy">
+        + Novo Cliente
+    </button>
 </div>
+
+@if (!string.IsNullOrEmpty(mensagemSucesso))
+{
+    <div class="alert alert-success mb-4">@mensagemSucesso</div>
+}
+
+@if (clientes == null)
+{
+    <div class="loading-state">A carregar clientes...</div>
+}
+else if (clientes.Count == 0)
+{
+    <div class="empty-state">
+        <div class="empty-ico">💼</div>
+        <h3>Ainda não há clientes</h3>
+        <p>Adiciona o primeiro cliente à plataforma.</p>
+        <button class="btn btn-primary" @onclick="OpenCreateModal">Criar primeiro cliente</button>
+    </div>
+}
+else
+{
+    <div class="card table-card">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Email</th>
+                    <th class="text-end">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var c in clientes)
+                {
+                    <tr>
+                        <td class="cell-name">@c.Nome</td>
+                        <td class="cell-muted">@c.Email</td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-secondary" @onclick="() => OpenEditModal(c)" disabled="@isBusy">Editar</button>
+                            <button class="btn btn-sm btn-danger" @onclick="() => ConfirmDelete(c)" disabled="@isBusy">Apagar</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
 
 @if (showModal)
 {
-    <div class="modal show d-block" style="background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">
-                        <i class="oi oi-@(isEditMode ? "pencil" : "plus")"></i>
-                        @(isEditMode ? "Editar Cliente" : "Criar Novo Cliente")
-                    </h5>
-                    <button type="button" class="btn-close" @onclick="CloseModal" disabled="@isBusy"></button>
-                </div>
-
-                <div class="modal-body">
-                    @if (!string.IsNullOrWhiteSpace(formError))
-                    {
-                        <div class="alert alert-danger">@formError</div>
-                    }
-
-                    @if (isEditMode)
-                    {
-                        <EditForm Model="@updateCliente" OnValidSubmit="@HandleUpdateSubmit">
-                            <DataAnnotationsValidator />
-                            <ValidationSummary />
-
-                            <div class="mb-3">
-                                <label class="form-label">Nome do Cliente *</label>
-                                <InputText class="form-control" @bind-Value="updateCliente.Nome" />
-                                <ValidationMessage For="@(() => updateCliente.Nome)" />
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label">Email *</label>
-                                <InputText class="form-control" @bind-Value="updateCliente.Email" />
-                                <ValidationMessage For="@(() => updateCliente.Email)" />
-                            </div>
-
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" @onclick="CloseModal" disabled="@isBusy">Cancelar</button>
-                                <button type="submit" class="btn btn-primary" disabled="@isBusy">
-                                    <i class="oi oi-pencil"></i> @(isBusy ? "A atualizar..." : "Atualizar")
-                                </button>
-                            </div>
-                        </EditForm>
-                    }
-                    else
-                    {
-                        <EditForm Model="@createCliente" OnValidSubmit="@HandleCreateSubmit">
-                            <DataAnnotationsValidator />
-                            <ValidationSummary />
-
-                            <div class="mb-3">
-                                <label class="form-label">Nome do Cliente *</label>
-                                <InputText class="form-control" @bind-Value="createCliente.Nome" />
-                                <ValidationMessage For="@(() => createCliente.Nome)" />
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label">Email do Cliente *</label>
-                                <InputText class="form-control" @bind-Value="createCliente.Email" />
-                                <ValidationMessage For="@(() => createCliente.Email)" />
-                            </div>
-
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" @onclick="CloseModal" disabled="@isBusy">Cancelar</button>
-                                <button type="submit" class="btn btn-success" disabled="@isBusy">
-                                    <i class="oi oi-plus"></i> @(isBusy ? "A criar..." : "Criar")
-                                </button>
-                            </div>
-                        </EditForm>
-                    }
-                </div>
+    <div class="modal-backdrop-custom" @onclick="CloseModal"></div>
+    <div class="modal-custom" @onclick:stopPropagation>
+        <div class="modal-head">
+            <h3>@(isEditMode ? "Editar Cliente" : "Novo Cliente")</h3>
+            <button class="modal-close" @onclick="CloseModal" disabled="@isBusy">×</button>
+        </div>
+        <div class="modal-body-custom">
+            @if (!string.IsNullOrEmpty(formError))
+            {
+                <div class="alert alert-danger">@formError</div>
+            }
+            <div class="mb-3">
+                <label class="form-label">Nome *</label>
+                <input @bind="formNome" class="form-control" placeholder="Nome do cliente" />
+            </div>
+            <div class="mb-4">
+                <label class="form-label">Email *</label>
+                <input @bind="formEmail" class="form-control" type="email" placeholder="email@exemplo.com" />
+            </div>
+            <div class="modal-foot">
+                <button type="button" class="btn btn-secondary" @onclick="CloseModal" disabled="@isBusy">Cancelar</button>
+                <button type="button" class="btn btn-primary" @onclick="HandleSubmit" disabled="@isBusy">
+                    @(isBusy ? "A guardar..." : (isEditMode ? "Guardar" : "Criar Cliente"))
+                </button>
             </div>
         </div>
     </div>
 }
 
+@if (toastVisible)
+{
+    <div class="toast-sucesso">@toastMensagem</div>
+}
+
 @code {
     private List<ClienteDto>? clientes;
-    private CreateClienteDto createCliente = new();
-    private UpdateClienteDto updateCliente = new();
-
     private bool showModal = false;
     private bool isEditMode = false;
-    private int editingIdCliente = 0;
-
+    private int editingId = 0;
+    private string formNome = "";
+    private string formEmail = "";
     private bool isBusy = false;
-    private string? formError = null;
+    private string? formError;
+    private string? mensagemSucesso;
+    private bool toastVisible = false;
+    private string toastMensagem = "";
 
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadClientes();
-    }
+    protected override async Task OnInitializedAsync() => await LoadClientes();
 
-    private async Task LoadClientes()
-    {
-        clientes = await ClienteService.GetAllClientesAsync();
-    }
+    private async Task LoadClientes() => clientes = await ClienteService.GetAllClientesAsync();
 
     private void OpenCreateModal()
     {
-        formError = null;
-        isEditMode = false;
-        createCliente = new CreateClienteDto();
+        formNome = ""; formEmail = ""; formError = null;
+        isEditMode = false; editingId = 0;
         showModal = true;
     }
 
-    private Task OpenEditModal(ClienteDto cliente)
+    private void OpenEditModal(ClienteDto c)
     {
-        formError = null;
-        isEditMode = true;
-        editingIdCliente = cliente.Id;
-
-        updateCliente = new UpdateClienteDto
-        {
-            Nome = cliente.Nome,
-            Email = cliente.Email
-        };
-
+        formNome = c.Nome; formEmail = c.Email; formError = null;
+        isEditMode = true; editingId = c.Id;
         showModal = true;
-        return Task.CompletedTask;
     }
 
-    private async Task HandleCreateSubmit()
+    private async Task HandleSubmit()
     {
+        if (string.IsNullOrWhiteSpace(formNome)) { formError = "Nome é obrigatório."; return; }
+        if (string.IsNullOrWhiteSpace(formEmail)) { formError = "Email é obrigatório."; return; }
+
+        isBusy = true; formError = null;
         try
         {
-            isBusy = true;
-            formError = null;
+            bool ok = isEditMode
+                ? await ClienteService.UpdateClienteAsync(editingId, new UpdateClienteDto { Nome = formNome, Email = formEmail })
+                : await ClienteService.AddClienteAsync(new CreateClienteDto { Nome = formNome, Email = formEmail }) != null;
 
-            var result = await ClienteService.AddClienteAsync(new CreateClienteDto
-            {
-                Nome = createCliente.Nome,
-                Email = createCliente.Email
-            });
-
-            if (result != null)
+            if (ok)
             {
                 await LoadClientes();
                 CloseModal();
-                await JS.InvokeVoidAsync("alert", "Cliente criado com sucesso!");
+                await ShowToast(isEditMode ? "Cliente atualizado." : "Cliente criado com sucesso.");
             }
             else
             {
-                formError = "Não foi possível criar o cliente.";
+                formError = "Não foi possível guardar. Tenta novamente.";
             }
         }
-        catch (Exception ex)
-        {
-            formError = $"Erro ao criar cliente: {ex.Message}";
-        }
-        finally
-        {
-            isBusy = false;
-        }
+        catch (Exception ex) { formError = $"Erro: {ex.Message}"; }
+        finally { isBusy = false; }
     }
 
-    private async Task HandleUpdateSubmit()
+    private async Task ConfirmDelete(ClienteDto c)
     {
-        try
-        {
-            isBusy = true;
-            formError = null;
-
-            var success = await ClienteService.UpdateClienteAsync(editingIdCliente, updateCliente);
-            if (success)
-            {
-                await LoadClientes();
-                CloseModal();
-                await JS.InvokeVoidAsync("alert", "Cliente atualizado com sucesso!");
-            }
-            else
-            {
-                formError = "Não foi possível atualizar o cliente (verifica se és o criador ou Admin).";
-            }
-        }
-        catch (Exception ex)
-        {
-            formError = $"Erro ao atualizar cliente: {ex.Message}";
-        }
-        finally
-        {
-            isBusy = false;
-        }
+        var ok = await JS.InvokeAsync<bool>("confirm", $"Queres mesmo apagar o cliente '{c.Nome}'?");
+        if (!ok) return;
+        isBusy = true;
+        var success = await ClienteService.DeleteClienteAsync(c.Id);
+        isBusy = false;
+        if (success) { await LoadClientes(); await ShowToast("Cliente apagado."); }
     }
 
-    private async Task ConfirmDelete(ClienteDto cliente)
+    private async Task ShowToast(string msg)
     {
-        var confirmed = await JS.InvokeAsync<bool>("confirm", $"Tens a certeza que queres apagar o cliente '{cliente.Nome}'?");
-        if (confirmed)
-        {
-            await DeleteCliente(cliente.Id);
-        }
+        toastMensagem = msg; toastVisible = true; StateHasChanged();
+        await Task.Delay(3000);
+        toastVisible = false; StateHasChanged();
     }
 
-    private async Task DeleteCliente(int id)
-    {
-        try
-        {
-            isBusy = true;
-
-            var success = await ClienteService.DeleteClienteAsync(id);
-            if (success)
-            {
-                await LoadClientes();
-                await JS.InvokeVoidAsync("alert", "Cliente apagado com sucesso!");
-            }
-            else
-            {
-                await JS.InvokeVoidAsync("alert", "Não foi possível apagar (verifica se és o criador ou Admin).");
-            }
-        }
-        catch (Exception ex)
-        {
-            await JS.InvokeVoidAsync("alert", $"Erro ao apagar: {ex.Message}");
-        }
-        finally
-        {
-            isBusy = false;
-        }
-    }
-
-    private void CloseModal()
-    {
-        showModal = false;
-        formError = null;
-        createCliente = new CreateClienteDto();
-        updateCliente = new UpdateClienteDto();
-        editingIdCliente = 0;
-        isEditMode = false;
-    }
+    private void CloseModal() { showModal = false; formError = null; }
 }
