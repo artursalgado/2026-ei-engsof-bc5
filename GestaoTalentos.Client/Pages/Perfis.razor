@@ -56,7 +56,7 @@ else
     <div class="perfis-grid">
         @foreach (var p in perfis)
         {
-            <div class="perfil-card">
+            <div class="perfil-card @(isCliente ? "perfil-card-clickable" : "")" @onclick="() => { if (isCliente) AbrirDetalhe(p); }">
                 <div class="perfil-card-head">
                     <div class="perfil-avatar">@(p.Nome.Length > 0 ? p.Nome[0].ToString().ToUpper() : "?")</div>
                     <div class="perfil-info">
@@ -93,7 +93,7 @@ else
                     }
                 </div>
 
-                <div class="perfil-card-foot">
+                <div class="perfil-card-foot" @onclick:stopPropagation>
                     <button class="btn btn-sm btn-outline" @onclick="() => AbrirDetalhe(p)">Ver Detalhe</button>
                     @if (!isCliente)
                     {

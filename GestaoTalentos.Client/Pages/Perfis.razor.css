@@ -64,6 +64,10 @@
     box-shadow: var(--shadow-md);
 }
 
+.perfil-card-clickable {
+    cursor: pointer;
+}
+
 .perfil-card-head {
     display: flex;
     align-items: center;
