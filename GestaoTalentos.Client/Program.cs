@@ -22,5 +22,5 @@ builder.Services.AddHttpClient("Api", client =>
 builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().CreateClient("Api"));
 
 builder.Services.AddScoped<ISkillService, SkillService>();
-
+builder.Services.AddScoped<IPropostaService, PropostaService>();
 await builder.Build().RunAsync();

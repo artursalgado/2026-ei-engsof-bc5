@@ -189,7 +189,7 @@ else
     {
         formError = null;
         createDto = new CreatePropostaDto();
-        createDto.SkillsNecessarias.Add(new PropostaSkillNecessariaDto());
+        createDto.SkillsNecessarias.Add(new SkillNecessariaDto());
         showModal = true;
     }
 
@@ -199,7 +199,7 @@ else
         formError = null;
     }
 
-    private void AddSkill() => createDto.SkillsNecessarias.Add(new PropostaSkillNecessariaDto());
+    private void AddSkill() => createDto.SkillsNecessarias.Add(new SkillNecessariaDto());
     private void RemoveSkill(int idx) => createDto.SkillsNecessarias.RemoveAt(idx);
 
     private async Task HandleCreate()
