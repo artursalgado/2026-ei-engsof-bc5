@@ -1,56 +1,40 @@
-using GestaoTalentos.Shared.DTOs;
-using System;
+using GestaoTalentos.Domain;
 using System.Collections.Generic;
-using System.Net.Http.Json;
 using System.Threading.Tasks;
 
-namespace GestaoTalentos.Client.Services;
-
-public interface IPropostaService
-{
-    Task<List<object>> GetAllAsync();
-    Task<HttpResponseMessage> CreateAsync(CreatePropostaDto dto);
-    Task<HttpResponseMessage> UpdateAsync(int id, UpdatePropostaDto dto);
-    Task<bool> DeleteAsync(int id);
-}
+namespace GestaoTalentos.API.Services;
 
 public class PropostaService : IPropostaService
 {
-    private readonly HttpClient _httpClient;
+    private readonly IPropostaRepository _propostaRepository;
 
-    public PropostaService(HttpClient httpClient)
+    public PropostaService(IPropostaRepository propostaRepository)
     {
-        _httpClient = httpClient;
+        _propostaRepository = propostaRepository;
     }
 
-    public async Task<List<object>> GetAllAsync()
+    public async Task<IEnumerable<Proposta>> GetAllPropostasAsync()
     {
-        try
-        {
-            return await _httpClient.GetFromJsonAsync<List<object>>("propostas") ?? new List<object>();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Erro ao obter propostas: {ex.Message}");
-            return new List<object>();
-        }
+        return await _propostaRepository.GetAllWithSkillsAsync();
     }
 
-    public async Task<HttpResponseMessage> CreateAsync(CreatePropostaDto dto)
+    public async Task<Proposta?> GetPropostaByIdAsync(int id)
     {
-        var response = await _httpClient.PostAsJsonAsync("propostas", dto);
-        return response;
+        return await _propostaRepository.GetByIdWithSkillsAsync(id);
     }
 
-    public async Task<HttpResponseMessage> UpdateAsync(int id, UpdatePropostaDto dto)
+    public async Task CreatePropostaAsync(Proposta proposta)
     {
-        var response = await _httpClient.PutAsJsonAsync($"propostas/{id}", dto);
-        return response;
+        await _propostaRepository.AddAsync(proposta);
     }
 
-    public async Task<bool> DeleteAsync(int id)
+    public async Task UpdatePropostaAsync(Proposta proposta)
     {
-        var response = await _httpClient.DeleteAsync($"propostas/{id}");
-        return response.IsSuccessStatusCode;
+        await _propostaRepository.UpdateAsync(proposta);
+    }
+
+    public async Task DeletePropostaAsync(int id)
+    {
+        await _propostaRepository.DeleteAsync(id);
     }
 }
