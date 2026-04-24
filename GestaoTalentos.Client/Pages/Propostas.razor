@@ -1,0 +1,261 @@
+
+@page "/propostas"
+@using System.Net.Http.Json
+@using GestaoTalentos.Shared.DTOs
+@using GestaoTalentos.Client.Services
+@using Microsoft.AspNetCore.Authorization
+@inject IPropostaService PropostaService
+@inject HttpClient Http
+@inject IJSRuntime JS
+@inject AuthenticationStateProvider AuthStateProvider
+@attribute [Authorize]
+
+<h1>Propostas</h1>
+
+@if (!string.IsNullOrWhiteSpace(error))
+{
+    <div class="alert alert-danger">@error</div>
+}
+
+<div class="mb-3">
+    <button class="btn btn-primary" @onclick="OpenCreateModal" disabled="@busy">+ Nova Proposta</button>
+</div>
+
+@if (propostas == null)
+{
+    <p>A carregar...</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Nome</th>
+                <th>AreaId</th>
+                <th>Horas</th>
+                <th>Preço/h</th>
+                <th class="text-end">Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var p in propostas)
+            {
+                <tr>
+                    <td>@p.Id</td>
+                    <td>@p.Nome</td>
+                    <td>@p.AreaId</td>
+                    <td>@p.NumeroTotalHoras</td>
+                    <td>@p.PrecoHoraMedio</td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-danger" @onclick="() => ConfirmDelete(p.Id)" disabled="@busy">Apagar</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@if (showModal)
+{
+    <div class="modal-backdrop-custom" @onclick="CloseModal"></div>
+    <div class="modal-custom" @onclick:stopPropagation>
+        <div class="modal-head">
+            <h3>Nova Proposta</h3>
+            <button class="modal-close" @onclick="CloseModal" disabled="@busy">×</button>
+        </div>
+
+        <div class="modal-body-custom">
+            @if (!string.IsNullOrWhiteSpace(formError))
+            {
+                <div class="alert alert-danger">@formError</div>
+            }
+
+            <EditForm Model="createDto" OnValidSubmit="HandleCreate">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="mb-3">
+                    <label class="form-label">Nome</label>
+                    <InputText class="form-control" @bind-Value="createDto.Nome" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Área</label>
+                    <InputSelect class="form-select" @bind-Value="createDto.AreaId">
+                        <option value="0">Seleciona uma área</option>
+                        @foreach (var a in areas)
+                        {
+                            <option value="@a.Id">@a.Nome</option>
+                        }
+                    </InputSelect>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Descrição</label>
+                    <InputTextArea class="form-control" @bind-Value="createDto.DescricaoTrabalho" />
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Horas</label>
+                        <InputNumber class="form-control" @bind-Value="createDto.NumeroTotalHoras" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Preço/h</label>
+                        <InputNumber class="form-control" @bind-Value="createDto.PrecoHoraMedio" />
+                    </div>
+                </div>
+
+                <hr />
+                <h5>Skills necessárias</h5>
+
+                @for (int i = 0; i < createDto.SkillsNecessarias.Count; i++)
+                {
+                    <div class="row align-items-end mb-2">
+                        <div class="col-md-7">
+                            <label class="form-label">Skill</label>
+                            <InputSelect class="form-select" @bind-Value="createDto.SkillsNecessarias[i].SkillId">
+                                <option value="0">Seleciona uma skill</option>
+                                @foreach (var s in skills)
+                                {
+                                    <option value="@s.Id">@s.Nome</option>
+                                }
+                            </InputSelect>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Anos mínimos</label>
+                            <InputNumber class="form-control" @bind-Value="createDto.SkillsNecessarias[i].AnosExperienciaMinimo" />
+                        </div>
+                        <div class="col-md-2 text-end">
+                            <button type="button" class="btn btn-outline-danger" @onclick="() => RemoveSkill(i)">Remover</button>
+                        </div>
+                    </div>
+                }
+
+                <button type="button" class="btn btn-outline-secondary" @onclick="AddSkill">+ Adicionar skill</button>
+
+                <div class="modal-foot mt-4">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseModal" disabled="@busy">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" disabled="@busy">@(busy ? "A criar..." : "Criar")</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@code {
+    // ViewModel para leitura (como o GET /propostas devolve um "anonymous object",
+    // aqui tipamos só os campos que precisamos)
+    public class PropostaReadVm
+    {
+        public int Id { get; set; }
+        public string Nome { get; set; } = "";
+        public int AreaId { get; set; }
+        public string DescricaoTrabalho { get; set; } = "";
+        public int NumeroTotalHoras { get; set; }
+        public decimal PrecoHoraMedio { get; set; }
+    }
+
+    private List<PropostaReadVm>? propostas;
+    private List<AreaDto> areas = new();
+    private List<SkillDto> skills = new();
+
+    private bool showModal;
+    private bool busy;
+    private string? error;
+    private string? formError;
+
+    private CreatePropostaDto createDto = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAll();
+    }
+
+    private async Task LoadAll()
+    {
+        error = null;
+
+        // carrega propostas
+        propostas = await Http.GetFromJsonAsync<List<PropostaReadVm>>("propostas") ?? new();
+
+        // carrega areas e skills para o modal
+        areas = await Http.GetFromJsonAsync<List<AreaDto>>("areas") ?? new();
+        skills = await Http.GetFromJsonAsync<List<SkillDto>>("skills") ?? new();
+    }
+
+    private void OpenCreateModal()
+    {
+        formError = null;
+        createDto = new CreatePropostaDto();
+        createDto.SkillsNecessarias.Add(new PropostaSkillNecessariaDto());
+        showModal = true;
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        formError = null;
+    }
+
+    private void AddSkill() => createDto.SkillsNecessarias.Add(new PropostaSkillNecessariaDto());
+    private void RemoveSkill(int idx) => createDto.SkillsNecessarias.RemoveAt(idx);
+
+    private async Task HandleCreate()
+    {
+        try
+        {
+            busy = true;
+            formError = null;
+
+            // limpar linhas vazias
+            createDto.SkillsNecessarias = createDto.SkillsNecessarias
+                .Where(x => x.SkillId > 0 && x.AnosExperienciaMinimo > 0)
+                .ToList();
+
+            var resp = await PropostaService.CreateAsync(createDto);
+            if (!resp.IsSuccessStatusCode)
+            {
+                var body = await resp.Content.ReadAsStringAsync();
+                formError = $"Erro ao criar proposta: {(int)resp.StatusCode} {resp.ReasonPhrase}\n{body}";
+                return;
+            }
+
+            CloseModal();
+            await LoadAll();
+        }
+        catch (Exception ex)
+        {
+            formError = ex.Message;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private async Task ConfirmDelete(int id)
+    {
+        var ok = await JS.InvokeAsync<bool>("confirm", $"Queres mesmo apagar a proposta #{id}?");
+        if (!ok) return;
+
+        busy = true;
+        try
+        {
+            var resp = await PropostaService.DeleteAsync(id);
+            if (!resp.IsSuccessStatusCode)
+            {
+                var body = await resp.Content.ReadAsStringAsync();
+                await JS.InvokeVoidAsync("alert", $"Erro ao apagar: {(int)resp.StatusCode} {resp.ReasonPhrase}\n{body}");
+                return;
+            }
+
+            await LoadAll();
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+}
