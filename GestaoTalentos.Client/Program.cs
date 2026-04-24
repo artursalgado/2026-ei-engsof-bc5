@@ -15,7 +15,7 @@ builder.Services.AddScoped<CustomAuthStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<CustomAuthStateProvider>());
 builder.Services.AddScoped<CustomHttpHandler>();
 
-builder.Services.AddHttpClient("Api", client => 
+builder.Services.AddHttpClient("Api", client =>
     client.BaseAddress = new Uri("http://localhost:5193"))
     .AddHttpMessageHandler<CustomHttpHandler>();
 
@@ -23,4 +23,5 @@ builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().Cre
 
 builder.Services.AddScoped<ISkillService, SkillService>();
 builder.Services.AddScoped<IPropostaService, PropostaService>();
+
 await builder.Build().RunAsync();

@@ -1,4 +1,5 @@
 using GestaoTalentos.Domain;
+using GestaoTalentos.Infrastructure;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 

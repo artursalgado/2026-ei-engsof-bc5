@@ -1,6 +1,8 @@
-using Microsoft.AspNetCore.Mvc;
-using GestaoTalentos.Domain;
 using GestaoTalentos.API.Services;
+using GestaoTalentos.Domain;
+using Microsoft.AspNetCore.Mvc;
+using System;
+using System.Threading.Tasks;
 
 namespace GestaoTalentos.API.Controllers;
 
@@ -41,6 +43,7 @@ public class PropostasController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = proposta.Id }, proposta);
     }
 
+
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, [FromBody] Proposta proposta)
     {
@@ -54,7 +57,15 @@ public class PropostasController : ControllerBase
         if (existing == null)
             return NotFound();
 
-        await _service.UpdatePropostaAsync(proposta);
+        existing.Nome = proposta.Nome;
+        existing.AreaId = proposta.AreaId;
+        existing.DescricaoTrabalho = proposta.DescricaoTrabalho;
+        existing.NumeroTotalHoras = proposta.NumeroTotalHoras;
+        existing.PrecoHoraMedio = proposta.PrecoHoraMedio;
+        existing.AtualizadoEm = DateTime.UtcNow;
+        existing.SkillsNecessarias = proposta.SkillsNecessarias;
+
+        await _service.UpdatePropostaAsync(existing);
         return NoContent();
     }
 
