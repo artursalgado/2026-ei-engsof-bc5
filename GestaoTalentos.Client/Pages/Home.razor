@@ -13,7 +13,7 @@
         </div>
 
         <div class="quick-grid">
-            @if (context.User.FindFirst("TipoUtilizador")?.Value == "Cliente")
+            @if (context.User.FindFirst("tipo")?.Value == "Cliente")
             {
                 <a href="perfis" class="quick-card">
                     <div class="quick-ico">🔍</div>
@@ -49,7 +49,7 @@
             </div>
             <div class="session-row">
                 <span class="session-label">Tipo de conta</span>
-                <span class="badge badge-role">@context.User.FindFirst("TipoUtilizador")?.Value</span>
+                <span class="badge badge-role">@context.User.FindFirst("tipo")?.Value</span>
             </div>
         </div>
     </Authorized>

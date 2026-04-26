@@ -534,8 +534,6 @@ app.MapDelete("/areas/{id:int}", async (int id, IAreaRepository repo, AppDbConte
     }
 }).RequireAuthorization("UserManagerPolicy");
 
-app.Run();
-
 // ====================================
 // FUNÇÕES AUXILIARES
 // ====================================
@@ -670,3 +668,5 @@ app.MapDelete("/clientes/{id}", async (int id, ClaimsPrincipal user, IClienteRep
     await repo.DeleteAsync(id);
     return Results.NoContent();
 }).RequireAuthorization("UserPolicy");
+
+app.Run();
