@@ -28,5 +28,6 @@ builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().Cre
 
 builder.Services.AddScoped<ISkillService, SkillService>();
 builder.Services.AddScoped<IClienteService, ClienteService>();
+builder.Services.AddScoped<IAreaService, AreaService>();
 
 await builder.Build().RunAsync();

@@ -1,0 +1,240 @@
+@page "/areas"
+@using GestaoTalentos.Shared.DTOs
+@using GestaoTalentos.Client.Services
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@inject IAreaService AreaService
+@inject IJSRuntime JS
+@inject AuthenticationStateProvider AuthStateProvider
+@attribute [Authorize]
+
+<PageTitle>Áreas - Gestão de Talentos</PageTitle>
+
+<div class="page-header">
+    <div>
+        <h1>Áreas Profissionais</h1>
+        <p class="page-subtitle">@(podeGerir ? "Gere as áreas disponíveis na plataforma" : "Áreas profissionais disponíveis na plataforma")</p>
+    </div>
+    @if (podeGerir)
+    {
+        <button class="btn btn-primary" @onclick="OpenCreateModal" disabled="@isBusy">
+            + Nova Área
+        </button>
+    }
+</div>
+
+@if (areas == null)
+{
+    <div class="loading-state">A carregar...</div>
+}
+else if (areas.Count == 0)
+{
+    <div class="empty-state">
+        <div class="empty-ico">🗂️</div>
+        <h3>Ainda não há áreas</h3>
+        @if (podeGerir)
+        {
+            <p>Começa por adicionar a primeira área profissional.</p>
+            <button class="btn btn-primary" @onclick="OpenCreateModal">Criar primeira área</button>
+        }
+        else
+        {
+            <p>Ainda não foram adicionadas áreas profissionais.</p>
+        }
+    </div>
+}
+else
+{
+    <div class="card table-card">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Skills associadas</th>
+                    <th>Criado em</th>
+                    @if (podeGerir)
+                    {
+                        <th class="text-end">Ações</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var area in areas)
+                {
+                    <tr>
+                        <td class="cell-name">@area.Nome</td>
+                        <td><span class="badge badge-area">@area.TotalSkills skill@(area.TotalSkills != 1 ? "s" : "")</span></td>
+                        <td class="cell-muted">@area.CriadoEm.ToString("dd/MM/yyyy")</td>
+                        @if (podeGerir)
+                        {
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-secondary" @onclick="() => OpenEditModal(area)" disabled="@isBusy">Editar</button>
+                                <button class="btn btn-sm btn-danger" @onclick="() => ConfirmDelete(area)" disabled="@isBusy">Apagar</button>
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@if (showModal)
+{
+    <div class="modal-backdrop-custom" @onclick="CloseModal"></div>
+    <div class="modal-custom" @onclick:stopPropagation>
+        <div class="modal-head">
+            <h3>@(isEditMode ? "Editar Área" : "Nova Área")</h3>
+            <button class="modal-close" @onclick="CloseModal" disabled="@isBusy">×</button>
+        </div>
+
+        <div class="modal-body-custom">
+            @if (!string.IsNullOrWhiteSpace(formError))
+            {
+                <div class="alert alert-danger">@formError</div>
+            }
+
+            <EditForm Model="@formArea" OnValidSubmit="@HandleSubmit">
+                <DataAnnotationsValidator />
+                <div class="mb-4">
+                    <label class="form-label">Nome da Área</label>
+                    <InputText class="form-control" @bind-Value="formArea.Nome" placeholder="ex: Developer, Designer, Product Manager" />
+                    <ValidationMessage For="@(() => formArea.Nome)" />
+                </div>
+                <div class="modal-foot">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseModal" disabled="@isBusy">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" disabled="@isBusy">
+                        @(isBusy ? "A guardar..." : (isEditMode ? "Guardar" : "Criar Área"))
+                    </button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@if (toastVisible)
+{
+    <div class="toast-sucesso">@toastMensagem</div>
+}
+
+@code {
+    private List<AreaDto>? areas;
+    private AreaCreateDto formArea = new();
+
+    private bool showModal = false;
+    private bool isEditMode = false;
+    private int editingAreaId = 0;
+
+    private bool isBusy = false;
+    private string? formError = null;
+    private bool toastVisible = false;
+    private string toastMensagem = "";
+    private bool podeGerir = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var role = authState.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+        podeGerir = role == "UserManager" || role == "Admin";
+
+        await LoadAreas();
+    }
+
+    private async Task LoadAreas()
+    {
+        areas = await AreaService.GetAllAreasAsync();
+    }
+
+    private void OpenCreateModal()
+    {
+        formError = null;
+        isEditMode = false;
+        formArea = new AreaCreateDto();
+        showModal = true;
+    }
+
+    private void OpenEditModal(AreaDto area)
+    {
+        formError = null;
+        isEditMode = true;
+        editingAreaId = area.Id;
+        formArea = new AreaCreateDto { Nome = area.Nome };
+        showModal = true;
+    }
+
+    private async Task HandleSubmit()
+    {
+        try
+        {
+            isBusy = true;
+            formError = null;
+
+            if (isEditMode)
+            {
+                await AreaService.UpdateAreaAsync(editingAreaId, formArea);
+                await LoadAreas();
+                CloseModal();
+                await ShowToast("Área atualizada com sucesso.");
+            }
+            else
+            {
+                await AreaService.CreateAreaAsync(formArea);
+                await LoadAreas();
+                CloseModal();
+                await ShowToast("Área criada com sucesso.");
+            }
+        }
+        catch (Exception ex)
+        {
+            formError = ex.Message;
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private async Task ConfirmDelete(AreaDto area)
+    {
+        var confirmed = await JS.InvokeAsync<bool>("confirm", $"Queres mesmo apagar a área '{area.Nome}'?");
+        if (!confirmed) return;
+
+        try
+        {
+            isBusy = true;
+            var (success, error) = await AreaService.DeleteAreaAsync(area.Id);
+            if (success)
+            {
+                await LoadAreas();
+                await ShowToast("Área apagada com sucesso.");
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("alert", error ?? "Erro ao apagar a área.");
+            }
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private async Task ShowToast(string mensagem)
+    {
+        toastMensagem = mensagem;
+        toastVisible = true;
+        StateHasChanged();
+        await Task.Delay(3000);
+        toastVisible = false;
+        StateHasChanged();
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        formError = null;
+        formArea = new AreaCreateDto();
+        editingAreaId = 0;
+        isEditMode = false;
+    }
+}
