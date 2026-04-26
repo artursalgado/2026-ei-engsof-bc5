@@ -10,6 +10,10 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Json.Serialization;
 using Microsoft.OpenApi.Models;
+using System.IdentityModel.Tokens.Jwt;
+
+// Evitar o mapeamento de nomes de claims para schemas SOAP
+JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,9 +24,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
     {
-        policy.AllowAnyOrigin()
+        policy.WithOrigins("http://localhost:5025", "https://localhost:5025")
               .AllowAnyHeader()
-              .AllowAnyMethod();
+              .AllowAnyMethod()
+              .AllowCredentials();
     });
 });
 
@@ -77,24 +82,20 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuerSigningKey = true,
             ValidIssuer = jwtIssuer,
             ValidAudience = jwtIssuer,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+            RoleClaimType = "role",
+            NameClaimType = "name"
         };
     });
 
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("UserPolicy", policy => policy.RequireRole(UserRole.User.ToString(), UserRole.UserManager.ToString(), UserRole.Admin.ToString()));
-    options.AddPolicy("UserManagerPolicy", policy => policy.RequireRole(UserRole.UserManager.ToString(), UserRole.Admin.ToString()));
-    options.AddPolicy("AdminPolicy", policy => policy.RequireRole(UserRole.Admin.ToString()));
+    options.AddPolicy("UserPolicy", policy => policy.RequireClaim("role", "User", "UserManager", "Admin"));
+    options.AddPolicy("UserManagerPolicy", policy => policy.RequireClaim("role", "UserManager", "Admin"));
+    options.AddPolicy("AdminPolicy", policy => policy.RequireClaim("role", "Admin"));
 });
 // erro cors
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("ClientCors", policy =>
-        policy.WithOrigins("http://localhost:5025", "https://localhost:5025")
-              .AllowAnyHeader()
-              .AllowAnyMethod());
-});
+// builder.Services.AddCors removido (consolidado acima)
 //
 var app = builder.Build();
 
@@ -105,7 +106,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 app.UseCors("AllowAll");
-app.UseHttpsRedirection();
+// app.UseHttpsRedirection(); // Comentado para evitar perda de token em redirecionamentos locais
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -177,7 +178,7 @@ app.MapPost("/login", async (GestaoTalentos.API.UserLoginDto request, IUserRepos
 
 app.MapGet("/users/me", async (ClaimsPrincipal user, IUserRepository repo) =>
 {
-    var userId = int.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : 0;
+    var userId = int.TryParse(user.FindFirstValue("sub"), out var id) ? id : 0;
     var current = await repo.GetByIdAsync(userId);
     return current is null ? Results.NotFound() : Results.Ok(new { current.Id, current.Username, current.Role, current.TipoUtilizador });
 }).RequireAuthorization();
@@ -185,7 +186,9 @@ app.MapGet("/users/me", async (ClaimsPrincipal user, IUserRepository repo) =>
 // Endpoints de Utilizadores (Focado apenas no Login/Me)
 app.MapGet("/perfis", async (ClaimsPrincipal user, IPerfilRepository repo, IUserRepository userRepo) =>
 {
-    var userId = int.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : 0;
+    var userIdStr = user.FindFirstValue("sub");
+    var userId = int.TryParse(userIdStr, out var id) ? id : 0;
+    
     var current = await userRepo.GetByIdAsync(userId);
     if (current == null) return Results.Unauthorized();
 
@@ -216,7 +219,7 @@ app.MapGet("/perfis/{id}", async (int id, ClaimsPrincipal user, IPerfilRepositor
     var perfil = await repo.GetByIdAsync(id);
     if (perfil == null) return Results.NotFound();
 
-    var userId = int.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var uid) ? uid : 0;
+    var userId = int.TryParse(user.FindFirstValue("sub"), out var uid) ? uid : 0;
     var current = await userRepo.GetByIdAsync(userId);
     if (current == null) return Results.Unauthorized();
 
@@ -228,7 +231,7 @@ app.MapGet("/perfis/{id}", async (int id, ClaimsPrincipal user, IPerfilRepositor
 
 app.MapPost("/perfis", async (PerfilCreateDto request, ClaimsPrincipal user, IPerfilRepository repo) =>
 {
-    var userId = int.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var uid) ? uid : 0;
+    var userId = int.TryParse(user.FindFirstValue("sub"), out var uid) ? uid : 0;
 
     // Validações básicas
     if (string.IsNullOrWhiteSpace(request.Nome))
@@ -284,7 +287,7 @@ app.MapPut("/perfis/{id}", async (int id, PerfilUpdateDto request, ClaimsPrincip
     var perfil = await repo.GetByIdAsync(id);
     if (perfil == null) return Results.NotFound();
 
-    var userId = int.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var uid) ? uid : 0;
+    var userId = int.TryParse(user.FindFirstValue("sub"), out var uid) ? uid : 0;
     var current = await userRepo.GetByIdAsync(userId);
     if (current == null) return Results.Unauthorized();
 
@@ -344,7 +347,7 @@ app.MapDelete("/perfis/{id}", async (int id, ClaimsPrincipal user, IPerfilReposi
     var perfil = await repo.GetByIdAsync(id);
     if (perfil == null) return Results.NotFound();
 
-    var userId = int.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var uid) ? uid : 0;
+    var userId = int.TryParse(user.FindFirstValue("sub"), out var uid) ? uid : 0;
     var current = await userRepo.GetByIdAsync(userId);
     if (current == null) return Results.Unauthorized();
 
@@ -459,9 +462,77 @@ app.MapDelete("/skills/{id:int}", async (int id, ISkillRepository repo, AppDbCon
 // ======================
 app.MapGet("/areas", async (IAreaRepository repo) =>
 {
-    var areas = await repo.GetAllAsync();
-    return Results.Ok(areas.Select(a => new GestaoTalentos.Shared.DTOs.AreaDto { Id = a.Id, Nome = a.Nome }));
+    var areas = await repo.GetAllWithSkillsAsync();
+    return Results.Ok(areas.Select(a => new GestaoTalentos.Shared.DTOs.AreaDto
+    {
+        Id = a.Id,
+        Nome = a.Nome,
+        CriadoEm = a.CriadoEm,
+        TotalSkills = a.Skills.Count
+    }));
 }).RequireAuthorization("UserPolicy");
+
+app.MapPost("/areas", async (AreaCreateDto dto, IAreaRepository repo) =>
+{
+    var nome = (dto.Nome ?? "").Trim();
+
+    if (nome.Length < 2 || nome.Length > 100)
+        return Results.BadRequest("O nome deve ter entre 2 e 100 caracteres.");
+
+    if (await repo.GetByNomeAsync(nome) != null)
+        return Results.Conflict("Já existe uma área com esse nome.");
+
+    var area = new Area
+    {
+        Nome = nome,
+        CriadoEm = DateTime.UtcNow
+    };
+
+    await repo.AddAsync(area);
+
+    return Results.Created($"/areas/{area.Id}", new GestaoTalentos.Shared.DTOs.AreaDto { Id = area.Id, Nome = area.Nome, CriadoEm = area.CriadoEm });
+}).RequireAuthorization("UserManagerPolicy");
+
+app.MapPut("/areas/{id:int}", async (int id, AreaCreateDto dto, IAreaRepository repo) =>
+{
+    var area = await repo.GetByIdAsync(id);
+    if (area == null) return Results.NotFound();
+
+    var nome = (dto.Nome ?? "").Trim();
+
+    if (nome.Length < 2 || nome.Length > 100)
+        return Results.BadRequest("O nome deve ter entre 2 e 100 caracteres.");
+
+    var existing = await repo.GetByNomeAsync(nome);
+    if (existing != null && existing.Id != id)
+        return Results.Conflict("Já existe uma área com esse nome.");
+
+    area.Nome = nome;
+
+    await repo.UpdateAsync(area);
+
+    return Results.NoContent();
+}).RequireAuthorization("UserManagerPolicy");
+
+app.MapDelete("/areas/{id:int}", async (int id, IAreaRepository repo, AppDbContext context) =>
+{
+    var area = await repo.GetByIdAsync(id);
+    if (area == null) return Results.NotFound();
+
+    bool temSkills = await context.Skills.AnyAsync(s => s.AreaId == id);
+    if (temSkills)
+        return Results.BadRequest("Não é possível apagar a área pois tem skills associadas.");
+
+    try
+    {
+        await repo.DeleteAsync(id);
+        return Results.NoContent();
+    }
+    catch (Microsoft.EntityFrameworkCore.DbUpdateException)
+    {
+        return Results.BadRequest("Não é possível apagar a área pois tem skills associadas.");
+    }
+}).RequireAuthorization("UserManagerPolicy");
 
 app.Run();
 
@@ -519,7 +590,7 @@ static string? ValidarSobreposicaoExperiencias(List<ExperienciaCreateDto> experi
 
 app.MapGet("/clientes", async (ClaimsPrincipal user, IClienteRepository repo, IUserRepository userRepo) =>
 {
-    var userId = int.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : 0;
+    var userId = int.TryParse(user.FindFirstValue("sub"), out var id) ? id : 0;
     var current = await userRepo.GetByIdAsync(userId);
     if (current == null) return Results.Unauthorized();
 
@@ -535,7 +606,7 @@ app.MapGet("/clientes/{id}", async (int id, ClaimsPrincipal user, IClienteReposi
     var cliente = await repo.GetByIdAsync(id);
     if (cliente == null) return Results.NotFound();
 
-    var userId = int.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var uid) ? uid : 0;
+    var userId = int.TryParse(user.FindFirstValue("sub"), out var uid) ? uid : 0;
     var current = await userRepo.GetByIdAsync(userId);
     if (current == null) return Results.Unauthorized();
 
@@ -550,7 +621,7 @@ app.MapPost("/clientes", async (ClienteCreateDto request, ClaimsPrincipal user, 
     if (string.IsNullOrWhiteSpace(request.Nome)) return Results.BadRequest("Nome é obrigatório.");
     if (string.IsNullOrWhiteSpace(request.Email)) return Results.BadRequest("Email é obrigatório.");
 
-    var userId = int.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : 0;
+    var userId = int.TryParse(user.FindFirstValue("sub"), out var id) ? id : 0;
     var cliente = new GestaoTalentos.Domain.Cliente
     {
         Nome = request.Nome.Trim(),
@@ -567,7 +638,7 @@ app.MapPut("/clientes/{id}", async (int id, ClienteUpdateDto request, ClaimsPrin
     var cliente = await repo.GetByIdAsync(id);
     if (cliente == null) return Results.NotFound();
 
-    var userId = int.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var uid) ? uid : 0;
+    var userId = int.TryParse(user.FindFirstValue("sub"), out var uid) ? uid : 0;
     var current = await userRepo.GetByIdAsync(userId);
     if (current == null) return Results.Unauthorized();
 
@@ -589,7 +660,7 @@ app.MapDelete("/clientes/{id}", async (int id, ClaimsPrincipal user, IClienteRep
     var cliente = await repo.GetByIdAsync(id);
     if (cliente == null) return Results.NotFound();
 
-    var userId = int.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var uid) ? uid : 0;
+    var userId = int.TryParse(user.FindFirstValue("sub"), out var uid) ? uid : 0;
     var current = await userRepo.GetByIdAsync(userId);
     if (current == null) return Results.Unauthorized();
 
