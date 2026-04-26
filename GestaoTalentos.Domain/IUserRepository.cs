@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using System.Threading.Tasks;
+
 namespace GestaoTalentos.Domain;
 
 /// Interface para repositório de utilizadores, definindo operações CRUD básicas.
@@ -22,6 +25,8 @@ public interface IPerfilRepository
     Task<Perfil?> GetByIdAsync(int id);
     
     Task<List<Perfil>> GetAllAsync();
+    Task<List<Perfil>> GetByOwnerAsync(int userId);
+    Task<List<Perfil>> GetPublicAsync();
     Task<List<Perfil>> GetVisibleForUserAsync(int userId);
     Task<IEnumerable<Perfil>> GetByPaisIdAsync(int paisId);
     

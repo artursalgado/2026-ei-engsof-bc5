@@ -16,9 +16,8 @@ public class User
     //public UserRole Role { get; set; }
 }
 
-/*public enum UserRole
+/*public enum TipoUtilizador
 {
-    User,
-    UserManager,
-    Admin
-}*/
+    Talento,
+    Cliente
+}
