@@ -1,0 +1,121 @@
+@page "/register"
+@layout GestaoTalentos.Client.Layout.EmptyLayout
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<PageTitle>Criar Conta - Gestão de Talentos</PageTitle>
+
+<div class="auth-card card">
+    @if (registoSucesso)
+    {
+        <div class="success-state">
+            <div class="success-ico">✓</div>
+            <h3>Conta criada!</h3>
+            <p>A tua conta foi criada com sucesso.<br />Já podes entrar na plataforma.</p>
+            <a href="/login" class="btn btn-primary w-100">Ir para o login</a>
+        </div>
+    }
+    else
+    {
+        <div class="auth-header">
+            <div class="brand-mark">GT</div>
+            <p class="brand-name">Gestão de Talentos</p>
+            <h2>Criar nova conta</h2>
+            <p class="auth-subtitle">Junta-te à plataforma em poucos segundos</p>
+        </div>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger">@errorMessage</div>
+        }
+        <div class="mb-3">
+            <label class="form-label">Username</label>
+            <input @bind="username" class="form-control" placeholder="escolhe um username" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Password</label>
+            <input @bind="password" type="password" class="form-control" placeholder="mínimo 4 caracteres" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Confirmar Password</label>
+            <input @bind="confirmPassword" type="password" class="form-control" placeholder="repete a password" />
+        </div>
+
+        <label class="form-label">Tipo de Conta</label>
+        <div class="type-grid mb-4">
+            <button type="button"
+                    class="type-card @(tipoUtilizador == "Talento" ? "active" : "")"
+                    @onclick='() => tipoUtilizador = "Talento"'>
+                <div class="type-ico">🎯</div>
+                <div class="type-title">Talento</div>
+                <div class="type-desc">Sou um profissional</div>
+            </button>
+            <button type="button"
+                    class="type-card @(tipoUtilizador == "Cliente" ? "active" : "")"
+                    @onclick='() => tipoUtilizador = "Cliente"'>
+                <div class="type-ico">💼</div>
+                <div class="type-title">Cliente</div>
+                <div class="type-desc">Quero contratar</div>
+            </button>
+        </div>
+
+        <button class="btn btn-primary w-100" @onclick="HandleRegister">Criar Conta</button>
+        <p class="auth-footer">
+            Já tens conta? <a href="/login">Faz login</a>
+        </p>
+    }
+</div>
+
+@code {
+    private string username = "";
+    private string password = "";
+    private string confirmPassword = "";
+    private string tipoUtilizador = "Talento";
+    private string errorMessage = "";
+    private bool registoSucesso = false;
+
+    private async Task HandleRegister()
+    {
+        errorMessage = "";
+
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            errorMessage = "O username é obrigatório.";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(password) || password.Length < 4)
+        {
+            errorMessage = "A password deve ter pelo menos 4 caracteres.";
+            return;
+        }
+        if (password != confirmPassword)
+        {
+            errorMessage = "As passwords não coincidem.";
+            return;
+        }
+
+        try
+        {
+            var payload = new { Username = username, Password = password, TipoUtilizador = tipoUtilizador };
+            var response = await Http.PostAsJsonAsync("/register", payload);
+
+            if (response.IsSuccessStatusCode)
+            {
+                registoSucesso = true;
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+            {
+                errorMessage = "Esse username já existe. Escolhe outro.";
+            }
+            else
+            {
+                errorMessage = "Erro ao criar conta. Tenta novamente.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erro: {ex.Message}";
+        }
+    }
+}

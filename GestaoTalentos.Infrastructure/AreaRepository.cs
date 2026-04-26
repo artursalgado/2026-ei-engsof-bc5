@@ -1,4 +1,4 @@
-﻿using GestaoTalentos.Domain;
+using GestaoTalentos.Domain;
 using Microsoft.EntityFrameworkCore;
 
 namespace GestaoTalentos.Infrastructure;
