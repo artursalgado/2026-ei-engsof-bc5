@@ -54,7 +54,7 @@
                 var result = await response.Content.ReadFromJsonAsync<LoginResult>();
                 if (result != null && !string.IsNullOrEmpty(result.Token))
                 {
-                    await JS.InvokeVoidAsync("localStorage.setItem", "authToken", result.Token);
+                    await JS.InvokeVoidAsync("sessionStorage.setItem", "authToken", result.Token);
                     AuthStateProvider.MarkUserAsAuthenticated(result.Token);
                     Navigation.NavigateTo("/");
                 }

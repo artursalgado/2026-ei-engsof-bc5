@@ -18,7 +18,7 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
     {
         try
         {
-            var token = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", "authToken");
+            var token = await _jsRuntime.InvokeAsync<string>("sessionStorage.getItem", "authToken");
 
             if (string.IsNullOrWhiteSpace(token) || !token.Contains("."))
             {

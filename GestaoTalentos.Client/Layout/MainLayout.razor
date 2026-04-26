@@ -30,7 +30,7 @@
 @code {
     private async Task Logout()
     {
-        await JS.InvokeVoidAsync("localStorage.removeItem", "authToken");
+        await JS.InvokeVoidAsync("sessionStorage.removeItem", "authToken");
         AuthStateProvider.MarkUserAsLoggedOut();
         Navigation.NavigateTo("/login");
     }
