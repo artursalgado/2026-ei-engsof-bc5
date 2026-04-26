@@ -15,6 +15,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="8.0.25" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.5" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
   </ItemGroup>
@@ -22,6 +23,7 @@
   <ItemGroup>
     <ProjectReference Include="..\GestaoTalentos.Domain\GestaoTalentos.Domain.csproj" />
     <ProjectReference Include="..\GestaoTalentos.Infrastructure\GestaoTalentos.Infrastructure.csproj" />
+	  <ProjectReference Include="..\GestaoTalentos.Shared\GestaoTalentos.Shared.csproj" />
   </ItemGroup>
 
 </Project>

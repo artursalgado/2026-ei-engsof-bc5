@@ -1,4 +1,8 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
+@inject CustomAuthStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
 <div class="page">
     <div class="sidebar">
         <NavMenu />
@@ -6,7 +10,15 @@
 
     <main>
         <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+            <AuthorizeView>
+                <Authorized>
+                    <span class="user-info">
+                        <span class="user-dot"></span>
+                        @context.User.Identity?.Name
+                    </span>
+                    <button class="btn btn-secondary btn-sm" @onclick="Logout">Sair</button>
+                </Authorized>
+            </AuthorizeView>
         </div>
 
         <article class="content px-4">
@@ -14,3 +26,12 @@
         </article>
     </main>
 </div>
+
+@code {
+    private async Task Logout()
+    {
+        await JS.InvokeVoidAsync("localStorage.removeItem", "authToken");
+        AuthStateProvider.MarkUserAsLoggedOut();
+        Navigation.NavigateTo("/login");
+    }
+}

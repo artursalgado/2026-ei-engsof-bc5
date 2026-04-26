@@ -1,0 +1,336 @@
+@page "/skills"
+@using GestaoTalentos.Shared.DTOs
+@using GestaoTalentos.Client.Services
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@inject ISkillService SkillService
+@inject IJSRuntime JS
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+@attribute [Authorize]
+
+<PageTitle>Skills - Gestão de Talentos</PageTitle>
+
+<div class="page-header">
+    <div>
+        <h1>Catálogo de Skills</h1>
+        <p class="page-subtitle">@(podeGerir ? "Gere as competências disponíveis na plataforma" : "Competências disponíveis na plataforma")</p>
+    </div>
+    @if (podeGerir)
+    {
+        <button class="btn btn-primary" @onclick="OpenCreateModal" disabled="@isBusy">
+            + Nova Skill
+        </button>
+    }
+</div>
+
+@if (skills == null)
+{
+    <div class="loading-state">A carregar...</div>
+}
+else if (skills.Count == 0)
+{
+    <div class="empty-state">
+        <div class="empty-ico">⚡</div>
+        <h3>Ainda não há skills</h3>
+        @if (podeGerir)
+        {
+            <p>Começa por adicionar a primeira competência ao catálogo.</p>
+            <button class="btn btn-primary" @onclick="OpenCreateModal">Criar primeira skill</button>
+        }
+        else
+        {
+            <p>Ainda não foram adicionadas competências ao catálogo.</p>
+        }
+    </div>
+}
+else
+{
+    <div class="card table-card">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Área</th>
+                    <th>Criado em</th>
+                    @if (podeGerir)
+                    {
+                        <th class="text-end">Ações</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var skill in skills)
+                {
+                    <tr>
+                        <td class="cell-name">@skill.Nome</td>
+                        <td><span class="badge badge-area">@skill.AreaNome</span></td>
+                        <td class="cell-muted">@skill.CriadoEm.ToString("dd/MM/yyyy")</td>
+                        @if (podeGerir)
+                        {
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-secondary" @onclick="() => OpenEditModal(skill)" disabled="@isBusy">Editar</button>
+                                <button class="btn btn-sm btn-danger" @onclick="() => ConfirmDelete(skill)" disabled="@isBusy">Apagar</button>
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@if (showModal)
+{
+    <div class="modal-backdrop-custom" @onclick="CloseModal"></div>
+    <div class="modal-custom" @onclick:stopPropagation>
+        <div class="modal-head">
+            <h3>@(isEditMode ? "Editar Skill" : "Nova Skill")</h3>
+            <button class="modal-close" @onclick="CloseModal" disabled="@isBusy">×</button>
+        </div>
+
+        <div class="modal-body-custom">
+            @if (!string.IsNullOrWhiteSpace(formError))
+            {
+                <div class="alert alert-danger">@formError</div>
+            }
+
+            @if (isEditMode)
+            {
+                <EditForm Model="@updateSkill" OnValidSubmit="@HandleUpdateSubmit">
+                    <DataAnnotationsValidator />
+                    <div class="mb-3">
+                        <label class="form-label">Nome da Skill</label>
+                        <InputText class="form-control" @bind-Value="updateSkill.Nome" placeholder="ex: React, C#, SQL" />
+                        <ValidationMessage For="@(() => updateSkill.Nome)" />
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label">Área Profissional</label>
+                        <InputSelect class="form-select" @bind-Value="updateSkill.AreaId">
+                            <option value="0">Seleciona uma área</option>
+                            @if (areas != null)
+                            {
+                                foreach (var area in areas)
+                                {
+                                    <option value="@area.Id">@area.Nome</option>
+                                }
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="@(() => updateSkill.AreaId)" />
+                    </div>
+                    <div class="modal-foot">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseModal" disabled="@isBusy">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" disabled="@isBusy">@(isBusy ? "A guardar..." : "Guardar")</button>
+                    </div>
+                </EditForm>
+            }
+            else
+            {
+                <EditForm Model="@createSkill" OnValidSubmit="@HandleCreateSubmit">
+                    <DataAnnotationsValidator />
+                    <div class="mb-3">
+                        <label class="form-label">Nome da Skill</label>
+                        <InputText class="form-control" @bind-Value="createSkill.Nome" placeholder="ex: React, C#, SQL" />
+                        <ValidationMessage For="@(() => createSkill.Nome)" />
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label">Área Profissional</label>
+                        <InputSelect class="form-select" @bind-Value="createSkill.AreaId">
+                            <option value="0">Seleciona uma área</option>
+                            @if (areas != null)
+                            {
+                                foreach (var area in areas)
+                                {
+                                    <option value="@area.Id">@area.Nome</option>
+                                }
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="@(() => createSkill.AreaId)" />
+                    </div>
+                    <div class="modal-foot">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseModal" disabled="@isBusy">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" disabled="@isBusy">@(isBusy ? "A criar..." : "Criar Skill")</button>
+                    </div>
+                </EditForm>
+            }
+        </div>
+    </div>
+}
+
+@if (toastVisible)
+{
+    <div class="toast-sucesso">@toastMensagem</div>
+}
+
+@code {
+    private List<SkillDto>? skills;
+    private List<AreaDto>? areas;
+    private CreateSkillDto createSkill = new();
+    private UpdateSkillDto updateSkill = new();
+
+    private bool showModal = false;
+    private bool isEditMode = false;
+    private int editingSkillId = 0;
+
+    private bool isBusy = false;
+    private string? formError = null;
+    private bool toastVisible = false;
+    private string toastMensagem = "";
+    private bool podeGerir = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var role = authState.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+        podeGerir = role == "UserManager" || role == "Admin";
+
+        await LoadSkills();
+        try {
+            areas = await Http.GetFromJsonAsync<List<AreaDto>>("/areas");
+        } catch (Exception ex) {
+            formError = $"Aviso: não foi possível carregar as áreas: {ex.Message}";
+        }
+    }
+
+    private async Task LoadSkills()
+    {
+        skills = await SkillService.GetAllSkillsAsync();
+    }
+
+    private void OpenCreateModal()
+    {
+        formError = null;
+        isEditMode = false;
+        createSkill = new CreateSkillDto();
+        showModal = true;
+    }
+
+    private Task OpenEditModal(SkillDto skill)
+    {
+        formError = null;
+        isEditMode = true;
+        editingSkillId = skill.Id;
+
+        updateSkill = new UpdateSkillDto
+        {
+            Nome = skill.Nome,
+            AreaId = skill.AreaId
+        };
+
+        showModal = true;
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleCreateSubmit()
+    {
+        try
+        {
+            isBusy = true;
+            formError = null;
+
+            var result = await SkillService.CreateSkillAsync(createSkill);
+            if (result != null)
+            {
+                await LoadSkills();
+                CloseModal();
+                await ShowToast("Skill criada com sucesso.");
+            }
+            else
+            {
+                formError = "Não foi possível criar a skill.";
+            }
+        }
+        catch (Exception ex)
+        {
+            formError = $"Erro ao criar skill: {ex.Message}";
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private async Task HandleUpdateSubmit()
+    {
+        try
+        {
+            isBusy = true;
+            formError = null;
+
+            var success = await SkillService.UpdateSkillAsync(editingSkillId, updateSkill);
+            if (success)
+            {
+                await LoadSkills();
+                CloseModal();
+                await ShowToast("Skill atualizada com sucesso.");
+            }
+            else
+            {
+                formError = "Não foi possível atualizar a skill (verifica se tens permissões).";
+            }
+        }
+        catch (Exception ex)
+        {
+            formError = $"Erro ao atualizar skill: {ex.Message}";
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private async Task ConfirmDelete(SkillDto skill)
+    {
+        var confirmed = await JS.InvokeAsync<bool>("confirm", $"Queres mesmo apagar a skill '{skill.Nome}'?");
+        if (confirmed)
+        {
+            await DeleteSkill(skill.Id);
+        }
+    }
+
+    private async Task DeleteSkill(int id)
+    {
+        try
+        {
+            isBusy = true;
+            var success = await SkillService.DeleteSkillAsync(id);
+            if (success)
+            {
+                await LoadSkills();
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("alert", "Erro ao apagar. Verifica se a Skill não está a ser usada num perfil.");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", $"Erro: {ex.Message}");
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private async Task ShowToast(string mensagem)
+    {
+        toastMensagem = mensagem;
+        toastVisible = true;
+        StateHasChanged();
+        await Task.Delay(3000);
+        toastVisible = false;
+        StateHasChanged();
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        formError = null;
+        createSkill = new CreateSkillDto();
+        updateSkill = new UpdateSkillDto();
+        editingSkillId = 0;
+        isEditMode = false;
+    }
+}

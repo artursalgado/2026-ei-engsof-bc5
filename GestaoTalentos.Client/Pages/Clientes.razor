@@ -1,0 +1,178 @@
+@page "/clientes"
+@using GestaoTalentos.Client.Services
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject IClienteService ClienteService
+@inject IJSRuntime JS
+
+<PageTitle>Clientes - Gestão de Talentos</PageTitle>
+
+<div class="page-header">
+    <div>
+        <h1>Clientes</h1>
+        <p class="page-subtitle">Gere os clientes da plataforma</p>
+    </div>
+    <button class="btn btn-primary" @onclick="OpenCreateModal" disabled="@isBusy">
+        + Novo Cliente
+    </button>
+</div>
+
+@if (!string.IsNullOrEmpty(mensagemSucesso))
+{
+    <div class="alert alert-success mb-4">@mensagemSucesso</div>
+}
+
+@if (clientes == null)
+{
+    <div class="loading-state">A carregar clientes...</div>
+}
+else if (clientes.Count == 0)
+{
+    <div class="empty-state">
+        <div class="empty-ico">💼</div>
+        <h3>Ainda não há clientes</h3>
+        <p>Adiciona o primeiro cliente à plataforma.</p>
+        <button class="btn btn-primary" @onclick="OpenCreateModal">Criar primeiro cliente</button>
+    </div>
+}
+else
+{
+    <div class="card table-card">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Email</th>
+                    <th class="text-end">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var c in clientes)
+                {
+                    <tr>
+                        <td class="cell-name">@c.Nome</td>
+                        <td class="cell-muted">@c.Email</td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-secondary" @onclick="() => OpenEditModal(c)" disabled="@isBusy">Editar</button>
+                            <button class="btn btn-sm btn-danger" @onclick="() => ConfirmDelete(c)" disabled="@isBusy">Apagar</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@if (showModal)
+{
+    <div class="modal-backdrop-custom" @onclick="CloseModal"></div>
+    <div class="modal-custom" @onclick:stopPropagation>
+        <div class="modal-head">
+            <h3>@(isEditMode ? "Editar Cliente" : "Novo Cliente")</h3>
+            <button class="modal-close" @onclick="CloseModal" disabled="@isBusy">×</button>
+        </div>
+        <div class="modal-body-custom">
+            @if (!string.IsNullOrEmpty(formError))
+            {
+                <div class="alert alert-danger">@formError</div>
+            }
+            <div class="mb-3">
+                <label class="form-label">Nome *</label>
+                <input @bind="formNome" class="form-control" placeholder="Nome do cliente" />
+            </div>
+            <div class="mb-4">
+                <label class="form-label">Email *</label>
+                <input @bind="formEmail" class="form-control" type="email" placeholder="email@exemplo.com" />
+            </div>
+            <div class="modal-foot">
+                <button type="button" class="btn btn-secondary" @onclick="CloseModal" disabled="@isBusy">Cancelar</button>
+                <button type="button" class="btn btn-primary" @onclick="HandleSubmit" disabled="@isBusy">
+                    @(isBusy ? "A guardar..." : (isEditMode ? "Guardar" : "Criar Cliente"))
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (toastVisible)
+{
+    <div class="toast-sucesso">@toastMensagem</div>
+}
+
+@code {
+    private List<ClienteDto>? clientes;
+    private bool showModal = false;
+    private bool isEditMode = false;
+    private int editingId = 0;
+    private string formNome = "";
+    private string formEmail = "";
+    private bool isBusy = false;
+    private string? formError;
+    private string? mensagemSucesso;
+    private bool toastVisible = false;
+    private string toastMensagem = "";
+
+    protected override async Task OnInitializedAsync() => await LoadClientes();
+
+    private async Task LoadClientes() => clientes = await ClienteService.GetAllClientesAsync();
+
+    private void OpenCreateModal()
+    {
+        formNome = ""; formEmail = ""; formError = null;
+        isEditMode = false; editingId = 0;
+        showModal = true;
+    }
+
+    private void OpenEditModal(ClienteDto c)
+    {
+        formNome = c.Nome; formEmail = c.Email; formError = null;
+        isEditMode = true; editingId = c.Id;
+        showModal = true;
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (string.IsNullOrWhiteSpace(formNome)) { formError = "Nome é obrigatório."; return; }
+        if (string.IsNullOrWhiteSpace(formEmail)) { formError = "Email é obrigatório."; return; }
+
+        isBusy = true; formError = null;
+        try
+        {
+            bool ok = isEditMode
+                ? await ClienteService.UpdateClienteAsync(editingId, new UpdateClienteDto { Nome = formNome, Email = formEmail })
+                : await ClienteService.AddClienteAsync(new CreateClienteDto { Nome = formNome, Email = formEmail }) != null;
+
+            if (ok)
+            {
+                await LoadClientes();
+                CloseModal();
+                await ShowToast(isEditMode ? "Cliente atualizado." : "Cliente criado com sucesso.");
+            }
+            else
+            {
+                formError = "Não foi possível guardar. Tenta novamente.";
+            }
+        }
+        catch (Exception ex) { formError = $"Erro: {ex.Message}"; }
+        finally { isBusy = false; }
+    }
+
+    private async Task ConfirmDelete(ClienteDto c)
+    {
+        var ok = await JS.InvokeAsync<bool>("confirm", $"Queres mesmo apagar o cliente '{c.Nome}'?");
+        if (!ok) return;
+        isBusy = true;
+        var success = await ClienteService.DeleteClienteAsync(c.Id);
+        isBusy = false;
+        if (success) { await LoadClientes(); await ShowToast("Cliente apagado."); }
+    }
+
+    private async Task ShowToast(string msg)
+    {
+        toastMensagem = msg; toastVisible = true; StateHasChanged();
+        await Task.Delay(3000);
+        toastVisible = false; StateHasChanged();
+    }
+
+    private void CloseModal() { showModal = false; formError = null; }
+}

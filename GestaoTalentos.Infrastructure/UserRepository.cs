@@ -35,7 +35,8 @@ public class UserRepository : IUserRepository
         await _context.Users.AddAsync(user);
         await _context.SaveChangesAsync();
     }
-    public async Task UpdateAsync(User user)    /// Atualiza um utilizador existente na base de dados.
+
+    public async Task UpdateAsync(User user)
     {
         _context.Users.Update(user);
         await _context.SaveChangesAsync();

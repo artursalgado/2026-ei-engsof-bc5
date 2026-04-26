@@ -1,0 +1,56 @@
+.auth-card {
+    padding: 2.75rem 2.5rem;
+    border: 1px solid rgba(99, 102, 241, 0.12);
+    box-shadow: 0 8px 32px rgba(99, 102, 241, 0.08), 0 2px 8px rgba(0, 0, 0, 0.06);
+    border-radius: 20px;
+}
+
+.auth-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.auth-header .brand-mark {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 0.85rem auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #6366f1, #4f46e5);
+    border-radius: 14px;
+    color: #fff;
+    font-weight: 700;
+    font-size: 1.1rem;
+    box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+}
+
+.brand-name {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--color-primary);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+    opacity: 0.8;
+}
+
+.auth-header h2 {
+    font-size: 1.6rem;
+    margin-bottom: 0.35rem;
+    letter-spacing: -0.02em;
+}
+
+.auth-subtitle {
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+.auth-footer {
+    text-align: center;
+    margin-top: 1.25rem;
+    margin-bottom: 0;
+    color: var(--color-text-muted);
+    font-size: 0.88rem;
+}
