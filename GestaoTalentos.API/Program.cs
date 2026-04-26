@@ -12,9 +12,6 @@ using System.Text.Json.Serialization;
 using Microsoft.OpenApi.Models;
 using System.IdentityModel.Tokens.Jwt;
 
-// Evitar o mapeamento de nomes de claims para schemas SOAP
-JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
-
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.ConfigureHttpJsonOptions(options =>
@@ -74,6 +71,7 @@ var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "GestaoTalentosApi";
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        options.MapInboundClaims = false;
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
