@@ -381,3 +381,26 @@ else
 
     private async Task ConfirmDelete(int id)
     {
+        try
+        {
+            busy = true;
+            var resp = await PropostaService.DeleteAsync(id);
+            if (!resp.IsSuccessStatusCode)
+            {
+                var body = await resp.Content.ReadAsStringAsync();
+                error = $"Erro {(int)resp.StatusCode}: {body}";
+                return;
+            }
+            await LoadAll();
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            busy = false;
+            CloseModals();
+        }
+    }
+}

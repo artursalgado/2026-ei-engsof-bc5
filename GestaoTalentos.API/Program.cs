@@ -298,17 +298,19 @@ app.MapDelete("/perfis/{id}", async (int id, ClaimsPrincipal user, GestaoTalento
 
 app.MapGet("/skills", async (ISkillRepository repo) =>
 {
-    var skills = await repo.GetAllWithAreaAsync();
-    return Results.Ok(skills.Select(s => new
-    {
-        s.Id,
-        s.Nome,
-        s.AreaId,
-        Area = s.Area == null ? null : new { s.Area.Id, s.Area.Nome },
-        s.CriadoEm,
-        s.AtualizadoEm
-    }));
+var skills = await repo.GetAllWithAreaAsync();
+return Results.Ok(skills.Select(s => new
+{
+    s.Id,
+    s.Nome,
+    s.AreaId,
+    Area = s.Area == null ? null : new { s.Area.Id, s.Area.Nome },
+    s.CriadoEm,
+    s.AtualizadoEm
+}));
 }).RequireAuthorization("UserPolicy");
+
+
 
 app.MapPost("/skills", async (CreateSkillDto dto, ISkillRepository repo) =>
 {
