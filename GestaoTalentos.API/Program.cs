@@ -125,8 +125,8 @@ await using (var scope = app.Services.CreateAsyncScope())
 {
     var services = scope.ServiceProvider;
     var context = services.GetRequiredService<AppDbContext>();
-    await context.Database.EnsureCreatedAsync();
-
+    // await context.Database.EnsureCreatedAsync();
+    await context.Database.MigrateAsync();
     var userRepository = services.GetRequiredService<IUserRepository>();
     if (!await userRepository.AnyAsync())
     {
