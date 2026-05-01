@@ -69,6 +69,9 @@ public class AppDbContext : DbContext
 
         // Configurar Perfil
         modelBuilder.Entity<Perfil>()
+                .ToTable("Perfil");
+
+        modelBuilder.Entity<Perfil>()
                 .HasOne(pf => pf.Owner)
                 .WithMany()
                 .HasForeignKey(pf => pf.OwnerId)
