@@ -20,6 +20,6 @@ public class Skill
 
     // Relacionamentos
     public Area? Area { get; set; }
-    public ICollection<Abilidade> Abilidades { get; set; } = new List<Abilidade>();
+    //public ICollection<Habilidade> Habilidades { get; set; } = new List<Abilidade>();
     public ICollection<SkillNecessaria> SkillsNecessarias { get; set; } = new List<SkillNecessaria>();
 }

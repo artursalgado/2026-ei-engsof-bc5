@@ -3,15 +3,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace GestaoTalentos.Infrastructure;
 
-// Repositório completo de Perfis com suporte a Experiências e Skills
 public class PerfilRepository : IPerfilRepository
 {
     private readonly AppDbContext _context;
     private DbSet<Perfil> Perfis => _context.Set<Perfil>();
 
-    public PerfilRepository(AppDbContext context) => _context = context;
+    public PerfilRepository(AppDbContext context)
+    {
+        _context = context;
+    }
 
-    // Busca simples por ID (com tudo relacionado incluído)
+    // GET BY ID
     public async Task<Perfil?> GetByIdAsync(int id)
         => await Perfis
             .Include(p => p.Experiencias)
@@ -19,7 +21,7 @@ public class PerfilRepository : IPerfilRepository
                 .ThenInclude(ps => ps.Skill)
             .FirstOrDefaultAsync(p => p.Id == id);
 
-    // Lista todos os perfis com experiências e skills
+    // GET ALL
     public async Task<List<Perfil>> GetAllAsync()
         => await Perfis
             .Include(p => p.Experiencias)
@@ -28,6 +30,7 @@ public class PerfilRepository : IPerfilRepository
             .AsNoTracking()
             .ToListAsync();
 
+    // BY OWNER
     public async Task<List<Perfil>> GetByOwnerAsync(int userId)
         => await Perfis
             .Include(p => p.Experiencias)
@@ -37,6 +40,7 @@ public class PerfilRepository : IPerfilRepository
             .Where(p => p.OwnerId == userId)
             .ToListAsync();
 
+    // PUBLIC
     public async Task<List<Perfil>> GetPublicAsync()
         => await Perfis
             .Include(p => p.Experiencias)
@@ -46,56 +50,56 @@ public class PerfilRepository : IPerfilRepository
             .Where(p => p.IsShared)
             .ToListAsync();
 
-    // Lista apenas os perfis visíveis para um utilizador (os seus + os públicos)
-    public async Task<List<Perfil>> GetVisibleForUserAsync(int userId)
-        => await Perfis.AsNoTracking()
-            .Where(r => r.OwnerId == userId || r.IsShared)//Ou quando user é Cliente e foi Apresentado
+    // VISÍVEIS PARA UTILIZADOR
+    public async Task<IEnumerable<Perfil>> GetVisibleForUserAsync(int userId)
+        => await Perfis
+            .AsNoTracking()
+            .Where(p => p.OwnerId == userId || p.IsShared)
             .ToListAsync();
-    
+
+    // POR PAÍS
     public async Task<IEnumerable<Perfil>> GetByPaisIdAsync(int paisId)
-    {
-        return await _context.Perfis
-            .Where(p => p.PaisId == paisId)
-            .OrderBy(p => p.Id)
         => await Perfis
             .Include(p => p.Experiencias)
             .Include(p => p.PerfilSkills)
                 .ThenInclude(ps => ps.Skill)
             .AsNoTracking()
-            .Where(p => p.OwnerId == userId || p.IsShared)
+            .Where(p => p.PaisId == paisId)
+            .OrderBy(p => p.Id)
             .ToListAsync();
-    }
-    
 
-    // Cria um novo Perfil (com experiências e skills em cascata)
+    // CREATE
     public async Task AddAsync(Perfil perfil)
     {
         await Perfis.AddAsync(perfil);
         await _context.SaveChangesAsync();
     }
 
-    // Atualiza um perfil existente, apagando e recriando experiências e skills
+    // UPDATE
     public async Task UpdateAsync(Perfil perfil)
     {
-        // Remover experiências antigas e associações de skills antes de gravar as novas
         var experienciasAntigas = await _context.ExperienciasProfissionais
             .Where(e => e.PerfilId == perfil.Id)
             .ToListAsync();
+
         _context.ExperienciasProfissionais.RemoveRange(experienciasAntigas);
 
         var skillsAntigas = await _context.PerfilSkills
             .Where(ps => ps.PerfilId == perfil.Id)
             .ToListAsync();
+
         _context.PerfilSkills.RemoveRange(skillsAntigas);
 
-        Perfis.Update(perfil);
+        _context.Update(perfil);
+
         await _context.SaveChangesAsync();
     }
 
-    // Apaga o perfil (as experiências e skills são removidas em cascata pela BD)
+    // DELETE
     public async Task DeleteAsync(int id)
     {
         var entity = await Perfis.FindAsync(id);
+
         if (entity != null)
         {
             Perfis.Remove(entity);

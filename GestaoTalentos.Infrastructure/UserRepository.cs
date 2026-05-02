@@ -23,7 +23,7 @@ public class UserRepository : IUserRepository
     {
         return await _context.Users
             .Where(u => u.RoleId == roleId)
-            .OrderBy(u => u.Nome)
+            .OrderBy(u => u.Username)
             .ToListAsync();
     }
     

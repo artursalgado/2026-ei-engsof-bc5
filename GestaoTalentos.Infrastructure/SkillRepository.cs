@@ -31,7 +31,7 @@ public class SkillRepository : Repository<Skill>, ISkillRepository
 			.OrderBy(s => s.Nome)
 			.ToListAsync();
 	}
-    public async Task UpdateAsync(Skill skill)
+    public override Task UpdateAsync(Skill skill)
     {
         _context.Skills.Update(skill);
         await _context.SaveChangesAsync();
