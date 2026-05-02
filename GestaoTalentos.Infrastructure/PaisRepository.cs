@@ -20,7 +20,7 @@ public class PaisRepository : IPaisRepository
     }
     public async Task<List<Pais>> GetAllAsync() /// Obtém todos os utilizadores.
         => await _context.Paises.AsNoTracking().ToListAsync();
-    public async Task<IEnumerable<Pais>> GetAllWithSkilsAsync()
+    public async Task<IEnumerable<Pais>> GetAllWithPerfisAsync()
     {
         return await _context.Paises
             .Include(p => p.Perfis)

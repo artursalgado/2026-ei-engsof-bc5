@@ -27,7 +27,7 @@ public interface IPerfilRepository
     Task<List<Perfil>> GetAllAsync();
     Task<List<Perfil>> GetByOwnerAsync(int userId);
     Task<List<Perfil>> GetPublicAsync();
-    Task<List<Perfil>> GetVisibleForUserAsync(int userId);
+    Task<IEnumerable<Perfil>> GetVisibleForUserAsync(int userId);
     Task<IEnumerable<Perfil>> GetByPaisIdAsync(int paisId);
     
     Task AddAsync(Perfil perfil);
