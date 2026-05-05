@@ -63,12 +63,6 @@ builder.Services.AddScoped<IPropostaRepository, PropostaRepository>();
 builder.Services.AddScoped<ITalentoElegivelRepository, TalentoElegivelRepository>();
 builder.Services.AddScoped<PropostaMatchingService>();
 
-
-// Repositórios
-
-builder.Services.AddScoped<IPropostaRepository, PropostaRepository>();
-builder.Services.AddScoped<ITalentoElegivelRepository, TalentoElegivelRepository>();
-builder.Services.AddScoped<GestaoTalentos.Infrastructure.IPerfilRepository, PerfilRepository>();
 // Services
 builder.Services.AddScoped<IPropostaService, PropostaService>();
 builder.Services.AddScoped<ITalentoElegiveService, TalentoElegiveService>();
@@ -298,16 +292,16 @@ app.MapDelete("/perfis/{id}", async (int id, ClaimsPrincipal user, GestaoTalento
 
 app.MapGet("/skills", async (ISkillRepository repo) =>
 {
-var skills = await repo.GetAllWithAreaAsync();
-return Results.Ok(skills.Select(s => new
-{
-    s.Id,
-    s.Nome,
-    s.AreaId,
-    Area = s.Area == null ? null : new { s.Area.Id, s.Area.Nome },
-    s.CriadoEm,
-    s.AtualizadoEm
-}));
+    var skills = await repo.GetAllWithAreaAsync();
+    return Results.Ok(skills.Select(s => new
+    {
+        s.Id,
+        s.Nome,
+        s.AreaId,
+        Area = s.Area == null ? null : new { s.Area.Id, s.Area.Nome },
+        s.CriadoEm,
+        s.AtualizadoEm
+    }));
 }).RequireAuthorization("UserPolicy");
 
 
