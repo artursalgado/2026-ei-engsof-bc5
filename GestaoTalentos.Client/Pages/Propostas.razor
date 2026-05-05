@@ -29,6 +29,7 @@ else
     <table class="table">
         <thead>
             <tr>
+                <th></th>
                 <th>Id</th>
                 <th>Nome</th>
                 <th>Área</th>
@@ -41,6 +42,11 @@ else
             @foreach (var p in propostas)
             {
                 <tr>
+                    <td>
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => ToggleDetail(p.Id)" title="Ver talentos elegíveis">
+                            @(expandedPropostaId == p.Id ? "▲" : "▼")
+                        </button>
+                    </td>
                     <td>@p.Id</td>
                     <td>@p.Nome</td>
                     <td>@p.AreaId</td>
@@ -51,6 +57,38 @@ else
                         <button class="btn btn-sm btn-danger" @onclick="() => ConfirmDelete(p.Id)" disabled="@busy">Apagar</button>
                     </td>
                 </tr>
+                @if (expandedPropostaId == p.Id)
+                {
+                    <tr class="table-light">
+                        <td colspan="7">
+                            <strong>Talentos Elegíveis</strong>
+                            @if (!p.TalentosElegiveis.Any())
+                            {
+                                <span class="text-muted ms-2">Nenhum talento elegível encontrado.</span>
+                            }
+                            else
+                            {
+                                <table class="table table-sm mt-2 mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Perfil ID</th>
+                                            <th>Valor Estimado (€)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var t in p.TalentosElegiveis.OrderBy(x => x.ValorEstimado))
+                                        {
+                                            <tr>
+                                                <td>@t.PerfilId</td>
+                                                <td>@t.ValorEstimado.ToString("F2")</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            }
+                        </td>
+                    </tr>
+                }
             }
         </tbody>
     </table>
@@ -231,6 +269,13 @@ else
 }
 
 @code {
+    public class TalentoElegivelVm
+    {
+        public int Id { get; set; }
+        public int PerfilId { get; set; }
+        public decimal ValorEstimado { get; set; }
+    }
+
     public class PropostaReadVm
     {
         public int Id { get; set; }
@@ -240,11 +285,13 @@ else
         public int NumeroTotalHoras { get; set; }
         public decimal PrecoHoraMedio { get; set; }
         public List<SkillNecessariaDto> SkillsNecessarias { get; set; } = new();
+        public List<TalentoElegivelVm> TalentosElegiveis { get; set; } = new();
     }
 
     private List<PropostaReadVm>? propostas;
     private List<AreaDto> areas = new();
     private List<SkillDto> skills = new();
+    private int? expandedPropostaId;
 
     private bool showCreateModal;
     private bool showEditModal;
@@ -306,6 +353,28 @@ else
         showCreateModal = false;
         showEditModal = false;
         formError = null;
+    }
+
+    private async Task ToggleDetail(int propostaId)
+    {
+        if (expandedPropostaId == propostaId)
+        {
+            expandedPropostaId = null;
+            return;
+        }
+        expandedPropostaId = propostaId;
+        // Carrega detalhes (talentos elegíveis) se ainda não carregados
+        var p = propostas?.FirstOrDefault(x => x.Id == propostaId);
+        if (p != null && !p.TalentosElegiveis.Any())
+        {
+            try
+            {
+                var detail = await Http.GetFromJsonAsync<PropostaReadVm>($"propostas/{propostaId}");
+                if (detail != null)
+                    p.TalentosElegiveis = detail.TalentosElegiveis;
+            }
+            catch { /* ignora erros de detalhe */ }
+        }
     }
 
     private void AddCreateSkill() => createDto.SkillsNecessarias.Add(new SkillNecessariaDto());
