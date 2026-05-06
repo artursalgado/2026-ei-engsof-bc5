@@ -18,14 +18,14 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
     {
         try
         {
-            var token = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", "authToken");
+            var token = await _jsRuntime.InvokeAsync<string>("sessionStorage.getItem", "authToken");
 
             if (string.IsNullOrWhiteSpace(token) || !token.Contains("."))
             {
                 return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
             }
 
-            return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity(ParseClaimsFromJwt(token), "jwt")));
+            return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity(ParseClaimsFromJwt(token), "jwt", "name", "role")));
         }
         catch
         {
@@ -35,7 +35,7 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
 
     public void MarkUserAsAuthenticated(string token)
     {
-        var authenticatedUser = new ClaimsPrincipal(new ClaimsIdentity(ParseClaimsFromJwt(token), "jwt"));
+        var authenticatedUser = new ClaimsPrincipal(new ClaimsIdentity(ParseClaimsFromJwt(token), "jwt", "name", "role"));
         var authState = Task.FromResult(new AuthenticationState(authenticatedUser));
         NotifyAuthenticationStateChanged(authState);
     }
