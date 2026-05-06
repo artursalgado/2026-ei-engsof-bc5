@@ -101,7 +101,7 @@ public class AppDbContext : DbContext
 
         // Configurar Perfil
         modelBuilder.Entity<Perfil>()
-                .ToTable("Perfil");
+               .ToTable("Perfis");
 
         modelBuilder.Entity<Perfil>()
                 .HasOne(pf => pf.Owner)
