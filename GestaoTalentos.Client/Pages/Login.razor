@@ -5,32 +5,43 @@
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 
-<PageTitle>Login</PageTitle>
+<PageTitle>Entrar - Gestão de Talentos</PageTitle>
 
-<div class="row justify-content-center mt-5">
-    <div class="col-md-4 card shadow-sm p-4">
-        <h3 class="text-center mb-4">Login Gestão de Talentos - Grupo 5</h3>
-        
-        @if (!string.IsNullOrEmpty(errorMessage))
-        {
-            <div class="alert alert-danger">@errorMessage</div>
-        }
-        
-        <div class="mb-3">
-            <label class="form-label">Username</label>
-            <input @bind="loginModel.Username" class="form-control" placeholder="Enter username" />
-        </div>
-        <div class="mb-4">
-            <label class="form-label">Password</label>
-            <input @bind="loginModel.Password" type="password" class="form-control" placeholder="Enter password" />
-        </div>
-        <button class="btn btn-primary w-100" @onclick="HandleLogin">Login</button>
+<div class="auth-card card">
+    <div class="auth-header">
+        <div class="brand-mark">GT</div>
+        <p class="brand-name">Gestão de Talentos</p>
+        <h2>Bem-vindo de volta</h2>
+        <p class="auth-subtitle">Entra na tua conta para continuar</p>
     </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger">@errorMessage</div>
+    }
+
+    <div class="mb-3">
+        <label class="form-label">Username</label>
+        <input @bind="loginModel.Username" class="form-control" placeholder="o teu username" @onkeydown="HandleKey" />
+    </div>
+    <div class="mb-4">
+        <label class="form-label">Password</label>
+        <input @bind="loginModel.Password" type="password" class="form-control" placeholder="••••••••" @onkeydown="HandleKey" />
+    </div>
+    <button class="btn btn-primary w-100" @onclick="HandleLogin">Entrar</button>
+    <p class="auth-footer">
+        Ainda não tens conta? <a href="/register">Cria uma aqui</a>
+    </p>
 </div>
 
 @code {
     private LoginModel loginModel = new();
     private string errorMessage = "";
+
+    private async Task HandleKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await HandleLogin();
+    }
 
     private async Task HandleLogin()
     {
@@ -43,19 +54,19 @@
                 var result = await response.Content.ReadFromJsonAsync<LoginResult>();
                 if (result != null && !string.IsNullOrEmpty(result.Token))
                 {
-                    await JS.InvokeVoidAsync("localStorage.setItem", "authToken", result.Token);
+                    await JS.InvokeVoidAsync("sessionStorage.setItem", "authToken", result.Token);
                     AuthStateProvider.MarkUserAsAuthenticated(result.Token);
                     Navigation.NavigateTo("/");
                 }
             }
             else
             {
-                errorMessage = "Invalid username or password.";
+                errorMessage = "Username ou password inválidos.";
             }
         }
         catch (Exception ex)
         {
-            errorMessage = $"Login failed: {ex.Message}";
+            errorMessage = $"Falha no login: {ex.Message}";
         }
     }
 

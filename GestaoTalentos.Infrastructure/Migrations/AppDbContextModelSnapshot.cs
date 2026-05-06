@@ -43,6 +43,93 @@ namespace GestaoTalentos.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("Areas");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            CriadoEm = new DateTime(2026, 4, 22, 9, 8, 26, 934, DateTimeKind.Utc).AddTicks(2170),
+                            Nome = "Developer"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            CriadoEm = new DateTime(2026, 4, 22, 9, 8, 26, 934, DateTimeKind.Utc).AddTicks(2180),
+                            Nome = "Designer"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            CriadoEm = new DateTime(2026, 4, 22, 9, 8, 26, 934, DateTimeKind.Utc).AddTicks(2180),
+                            Nome = "Product Manager"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            CriadoEm = new DateTime(2026, 4, 22, 9, 8, 26, 934, DateTimeKind.Utc).AddTicks(2180),
+                            Nome = "Project Manager"
+                        });
+                });
+
+            modelBuilder.Entity("GestaoTalentos.Domain.Cliente", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("IdCriador")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("IdMinhaConta")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IdCriador");
+
+                    b.ToTable("Clientes");
+                });
+
+            modelBuilder.Entity("GestaoTalentos.Domain.ExperienciaProfissional", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("AnoFim")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("AnoInicio")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Empresa")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("PerfilId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Titulo")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PerfilId");
+
+                    b.ToTable("ExperienciasProfissionais");
                 });
 
             modelBuilder.Entity("GestaoTalentos.Domain.Perfil", b =>
@@ -53,65 +140,51 @@ namespace GestaoTalentos.Infrastructure.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("Content")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<bool>("IsShared")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<int>("OwnerId")
                         .HasColumnType("integer");
 
-                    b.HasKey("Id");
-
-                    b.ToTable("Perfil");
-                });
-
-            modelBuilder.Entity("GestaoTalentos.Domain.Proposta", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("AreaId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("AtualizadoEm")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("CriadoEm")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("DescricaoTrabalho")
+                    b.Property<string>("Pais")
                         .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
+                        .HasColumnType("text");
 
-                    b.Property<string>("Nome")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<int>("NumeroTotalHoras")
-                        .HasColumnType("integer");
-
-                    b.Property<decimal>("PrecoHoraMedio")
+                    b.Property<decimal>("PrecoPorHora")
                         .HasColumnType("numeric");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("AreaId");
+                    b.ToTable("Perfis");
+                });
 
-                    b.HasIndex("Nome")
-                        .IsUnique();
+            modelBuilder.Entity("GestaoTalentos.Domain.PerfilSkill", b =>
+                {
+                    b.Property<int>("PerfilId")
+                        .HasColumnType("integer");
 
-                    b.ToTable("Propostas");
+                    b.Property<int>("SkillId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("AnosExperiencia")
+                        .HasColumnType("integer");
+
+                    b.HasKey("PerfilId", "SkillId");
+
+                    b.HasIndex("SkillId");
+
+                    b.ToTable("PerfilSkills");
                 });
 
             modelBuilder.Entity("GestaoTalentos.Domain.Skill", b =>
@@ -168,40 +241,9 @@ namespace GestaoTalentos.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("PropostaId");
-
                     b.HasIndex("SkillId");
 
                     b.ToTable("SkillsNecessarias");
-                });
-
-            modelBuilder.Entity("GestaoTalentos.Domain.TalentoElegivel", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CriadoEm")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("PerfilId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("PropostaId")
-                        .HasColumnType("integer");
-
-                    b.Property<decimal>("ValorEstimado")
-                        .HasColumnType("numeric");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PerfilId");
-
-                    b.HasIndex("PropostaId");
-
-                    b.ToTable("TalentosElegiveis");
                 });
 
             modelBuilder.Entity("GestaoTalentos.Domain.User", b =>
@@ -219,6 +261,9 @@ namespace GestaoTalentos.Infrastructure.Migrations
                     b.Property<int>("Role")
                         .HasColumnType("integer");
 
+                    b.Property<int>("TipoUtilizador")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Username")
                         .IsRequired()
                         .HasColumnType("text");
@@ -228,15 +273,45 @@ namespace GestaoTalentos.Infrastructure.Migrations
                     b.ToTable("Users");
                 });
 
-            modelBuilder.Entity("GestaoTalentos.Domain.Proposta", b =>
+            modelBuilder.Entity("GestaoTalentos.Domain.Cliente", b =>
                 {
-                    b.HasOne("GestaoTalentos.Domain.Area", "Area")
+                    b.HasOne("GestaoTalentos.Domain.User", "User")
                         .WithMany()
-                        .HasForeignKey("AreaId")
+                        .HasForeignKey("IdCriador")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("Area");
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("GestaoTalentos.Domain.ExperienciaProfissional", b =>
+                {
+                    b.HasOne("GestaoTalentos.Domain.Perfil", "Perfil")
+                        .WithMany("Experiencias")
+                        .HasForeignKey("PerfilId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Perfil");
+                });
+
+            modelBuilder.Entity("GestaoTalentos.Domain.PerfilSkill", b =>
+                {
+                    b.HasOne("GestaoTalentos.Domain.Perfil", "Perfil")
+                        .WithMany("PerfilSkills")
+                        .HasForeignKey("PerfilId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("GestaoTalentos.Domain.Skill", "Skill")
+                        .WithMany()
+                        .HasForeignKey("SkillId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Perfil");
+
+                    b.Navigation("Skill");
                 });
 
             modelBuilder.Entity("GestaoTalentos.Domain.Skill", b =>
@@ -252,12 +327,6 @@ namespace GestaoTalentos.Infrastructure.Migrations
 
             modelBuilder.Entity("GestaoTalentos.Domain.SkillNecessaria", b =>
                 {
-                    b.HasOne("GestaoTalentos.Domain.Proposta", null)
-                        .WithMany("SkillsNecessarias")
-                        .HasForeignKey("PropostaId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("GestaoTalentos.Domain.Skill", "Skill")
                         .WithMany("SkillsNecessarias")
                         .HasForeignKey("SkillId")
@@ -267,35 +336,16 @@ namespace GestaoTalentos.Infrastructure.Migrations
                     b.Navigation("Skill");
                 });
 
-            modelBuilder.Entity("GestaoTalentos.Domain.TalentoElegivel", b =>
-                {
-                    b.HasOne("GestaoTalentos.Domain.Perfil", "Perfil")
-                        .WithMany()
-                        .HasForeignKey("PerfilId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("GestaoTalentos.Domain.Proposta", "Proposta")
-                        .WithMany("TalentosElegiveis")
-                        .HasForeignKey("PropostaId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Perfil");
-
-                    b.Navigation("Proposta");
-                });
-
             modelBuilder.Entity("GestaoTalentos.Domain.Area", b =>
                 {
                     b.Navigation("Skills");
                 });
 
-            modelBuilder.Entity("GestaoTalentos.Domain.Proposta", b =>
+            modelBuilder.Entity("GestaoTalentos.Domain.Perfil", b =>
                 {
-                    b.Navigation("SkillsNecessarias");
+                    b.Navigation("Experiencias");
 
-                    b.Navigation("TalentosElegiveis");
+                    b.Navigation("PerfilSkills");
                 });
 
             modelBuilder.Entity("GestaoTalentos.Domain.Skill", b =>

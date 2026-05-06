@@ -8,13 +8,15 @@ public class AppDbContext : DbContext
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
     public DbSet<User> Users { get; set; } = null!;
-   // public DbSet<Record> Records { get; set; } = null!;
+    public DbSet<Cliente> Clientes { get; set; } = null!;
+    public DbSet<Perfil> Perfis { get; set; } = null!;
     public DbSet<Area> Areas { get; set; } = null!;
     public DbSet<Skill> Skills { get; set; } = null!;
     public DbSet<SkillNecessaria> SkillsNecessarias { get; set; } = null!;
+    public DbSet<ExperienciaProfissional> ExperienciasProfissionais { get; set; } = null!;
+    public DbSet<PerfilSkill> PerfilSkills { get; set; } = null!;
     public DbSet<Proposta> Propostas { get; set; } = null!;
     public DbSet<TalentoElegivel> TalentosElegiveis { get; set; } = null!;
-    public DbSet<Perfil> Perfis { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -33,6 +35,36 @@ public class AppDbContext : DbContext
             .HasOne(sn => sn.Skill)
             .WithMany(s => s.SkillsNecessarias)
             .HasForeignKey(sn => sn.SkillId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Perfis - Experiencias (Cascade Delete)
+        modelBuilder.Entity<ExperienciaProfissional>()
+            .HasOne(e => e.Perfil)
+            .WithMany(p => p.Experiencias)
+            .HasForeignKey(e => e.PerfilId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Perfil - Skills (Muitos-para-Muitos)
+        modelBuilder.Entity<PerfilSkill>()
+            .HasKey(ps => new { ps.PerfilId, ps.SkillId });
+
+        modelBuilder.Entity<PerfilSkill>()
+            .HasOne(ps => ps.Perfil)
+            .WithMany(p => p.PerfilSkills)
+            .HasForeignKey(ps => ps.PerfilId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<PerfilSkill>()
+            .HasOne(ps => ps.Skill)
+            .WithMany()
+            .HasForeignKey(ps => ps.SkillId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Cliente → User (criador)
+        modelBuilder.Entity<Cliente>()
+            .HasOne(c => c.User)
+            .WithMany()
+            .HasForeignKey(c => c.IdCriador)
             .OnDelete(DeleteBehavior.Restrict);
 
         // Índices para performance
@@ -77,6 +109,14 @@ public class AppDbContext : DbContext
                 .HasForeignKey(pf => pf.OwnerId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+
+        // SEED DE DADOS PARA TESTE INICIAL (De acordo com o enunciado):
+        modelBuilder.Entity<Area>().HasData(
+            new Area { Id = 1, Nome = "Developer" },
+            new Area { Id = 2, Nome = "Designer" },
+            new Area { Id = 3, Nome = "Product Manager" },
+            new Area { Id = 4, Nome = "Project Manager" }
+        );
     }
    
 }

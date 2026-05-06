@@ -48,6 +48,8 @@ public class AppDbContext : DbContext
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
     public DbSet<User> Users { get; set; } = null!;
     public DbSet<Record> Records { get; set; } = null!;
+    public DbSet<Cliente> Clientes { get; set; } = null!;
+    public DbSet<Apresentacao> Apresentacoes { get; set; } = null!;
 }
 ```
 

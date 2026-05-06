@@ -1,0 +1,158 @@
+.form-page-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.75rem;
+}
+
+.form-page-header h1 {
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+.btn-back {
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 0;
+    white-space: nowrap;
+}
+
+.btn-back:hover {
+    color: var(--color-primary);
+}
+
+.form-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.form-section {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 1.25rem;
+}
+
+.section-ico {
+    font-size: 1.1rem;
+}
+
+.section-header h2 {
+    flex: 1;
+    font-size: 1rem;
+    margin: 0;
+}
+
+.section-empty {
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+    font-style: italic;
+    padding: 0.5rem 0;
+}
+
+.sub-card {
+    background: var(--color-surface-alt);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.sub-card:last-child {
+    margin-bottom: 0;
+}
+
+.optional {
+    color: var(--color-text-soft);
+    font-weight: 400;
+    font-size: 0.8rem;
+}
+
+.toggle-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--color-surface-alt);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 0.85rem 1rem;
+}
+
+.toggle-label {
+    font-weight: 500;
+    font-size: 0.92rem;
+}
+
+.toggle-desc {
+    color: var(--color-text-muted);
+    font-size: 0.82rem;
+    margin-top: 0.1rem;
+}
+
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+    flex-shrink: 0;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-track {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background: var(--color-border-strong);
+    border-radius: 24px;
+    transition: background 0.2s;
+}
+
+.toggle-track::before {
+    content: "";
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    left: 3px;
+    top: 3px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.2s;
+}
+
+.toggle-switch input:checked + .toggle-track {
+    background: var(--color-primary);
+}
+
+.toggle-switch input:checked + .toggle-track::before {
+    transform: translateX(20px);
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding-top: 0.25rem;
+}
+
+.loading-state {
+    padding: 3rem;
+    text-align: center;
+    color: var(--color-text-muted);
+}
