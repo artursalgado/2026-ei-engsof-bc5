@@ -27,7 +27,11 @@ public class PropostaMatchingService
         if (!skillsNecessarias.Any())
             return new List<TalentoElegivel>();
 
-        var perfis = await _context.Set<Perfil>().ToListAsync();
+        // Carregar perfis com as suas skills associadas para poder fazer o matching
+        var perfis = await _context.Set<Perfil>()
+            .Include(p => p.PerfilSkills)
+                .ThenInclude(ps => ps.Skill)
+            .ToListAsync();
 
         var talentosElegiveis = new List<TalentoElegivel>();
 
@@ -48,10 +52,13 @@ public class PropostaMatchingService
         return talentosElegiveis.OrderBy(te => te.ValorEstimado).ToList();
     }
 
-    
     private static bool VerificarSePerfilAtendeRequisitos(Perfil perfil, List<SkillNecessaria> skillsNecessarias)
     {
-        var content = perfil.Content ?? string.Empty;
+        // Obter os nomes das skills que o perfil possui
+        var skillsDoPerfil = perfil.PerfilSkills
+            .Select(ps => ps.Skill?.Nome)
+            .Where(nome => !string.IsNullOrWhiteSpace(nome))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         foreach (var skillNecessaria in skillsNecessarias)
         {
@@ -61,8 +68,8 @@ public class PropostaMatchingService
             if (string.IsNullOrWhiteSpace(nomeSkill))
                 return false;
 
-            // O Content do perfil tem de mencionar a skill (case-insensitive)
-            if (!content.Contains(nomeSkill, StringComparison.OrdinalIgnoreCase))
+            // O perfil tem de ter a skill necessária
+            if (!skillsDoPerfil.Contains(nomeSkill))
                 return false;
         }
 

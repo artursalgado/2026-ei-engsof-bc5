@@ -13,19 +13,22 @@ namespace GestaoTalentos.Infrastructure.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
-                name: "Perfil",
+                name: "Perfis",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Nome = table.Column<string>(type: "text", nullable: false),
+                    Email = table.Column<string>(type: "text", nullable: false),
+                    Pais = table.Column<string>(type: "text", nullable: false),
+                    PrecoPorHora = table.Column<decimal>(type: "numeric", nullable: false),
                     OwnerId = table.Column<int>(type: "integer", nullable: false),
-                    Content = table.Column<string>(type: "text", nullable: false),
                     IsShared = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Perfil", x => x.Id);
+                    table.PrimaryKey("PK_Perfis", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -96,9 +99,9 @@ namespace GestaoTalentos.Infrastructure.Migrations
                 {
                     table.PrimaryKey("PK_TalentosElegiveis", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_TalentosElegiveis_Perfil_PerfilId",
+                        name: "FK_TalentosElegiveis_Perfis_PerfilId",
                         column: x => x.PerfilId,
-                        principalTable: "Perfil",
+                        principalTable: "Perfis",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
@@ -110,12 +113,6 @@ namespace GestaoTalentos.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_Areas_Nome",
-                table: "Areas",
-                column: "Nome",
-                unique: true);
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Propostas_AreaId",
                 table: "Propostas",
                 column: "AreaId");
@@ -123,17 +120,6 @@ namespace GestaoTalentos.Infrastructure.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_Propostas_Nome",
                 table: "Propostas",
-                column: "Nome",
-                unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Skills_AreaId",
-                table: "Skills",
-                column: "AreaId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Skills_Nome",
-                table: "Skills",
                 column: "Nome",
                 unique: true);
 
@@ -163,10 +149,8 @@ namespace GestaoTalentos.Infrastructure.Migrations
         {
             migrationBuilder.DropTable(name: "SkillsNecessarias");
             migrationBuilder.DropTable(name: "TalentosElegiveis");
-            migrationBuilder.DropTable(name: "Skills");
-            migrationBuilder.DropTable(name: "Perfil");
+            migrationBuilder.DropTable(name: "Perfis");
             migrationBuilder.DropTable(name: "Propostas");
-            migrationBuilder.DropTable(name: "Areas");
         }
     }
 }

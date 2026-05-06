@@ -17,15 +17,15 @@ public class PerfilRepository : IPerfilRepository
 
     // Busca simples por ID (com tudo relacionado incluído)
     public async Task<Perfil?> GetByIdAsync(int id)
-        => await Perfis
+        => await _context.Perfis
             .Include(p => p.Experiencias)
             .Include(p => p.PerfilSkills)
                 .ThenInclude(ps => ps.Skill)
             .FirstOrDefaultAsync(p => p.Id == id);
 
     // Lista todos os perfis com experiências e skills
-    public async Task<List<Perfil>> GetAllAsync()
-        => await Perfis
+    public async Task<IEnumerable<Perfil>> GetAllAsync()
+        => await _context.Perfis
             .Include(p => p.Experiencias)
             .Include(p => p.PerfilSkills)
                 .ThenInclude(ps => ps.Skill)
@@ -33,7 +33,7 @@ public class PerfilRepository : IPerfilRepository
             .ToListAsync();
 
     public async Task<List<Perfil>> GetByOwnerAsync(int userId)
-        => await Perfis
+        => await _context.Perfis
             .Include(p => p.Experiencias)
             .Include(p => p.PerfilSkills)
                 .ThenInclude(ps => ps.Skill)
@@ -42,7 +42,7 @@ public class PerfilRepository : IPerfilRepository
             .ToListAsync();
 
     public async Task<List<Perfil>> GetPublicAsync()
-        => await Perfis
+        => await _context.Perfis
             .Include(p => p.Experiencias)
             .Include(p => p.PerfilSkills)
                 .ThenInclude(ps => ps.Skill)
@@ -52,14 +52,13 @@ public class PerfilRepository : IPerfilRepository
 
     // Lista apenas os perfis visíveis para um utilizador (os seus + os públicos)
     public async Task<List<Perfil>> GetVisibleForUserAsync(int userId)
-        => await Perfis
+        => await _context.Perfis
             .Include(p => p.Experiencias)
             .Include(p => p.PerfilSkills)
                 .ThenInclude(ps => ps.Skill)
             .AsNoTracking()
             .Where(p => p.OwnerId == userId || p.IsShared)
             .ToListAsync();
-    }
 
     // Cria um novo Perfil (com experiências e skills em cascata)
     public async Task AddAsync(Perfil perfil)
@@ -81,7 +80,7 @@ public class PerfilRepository : IPerfilRepository
             .ToListAsync();
         _context.PerfilSkills.RemoveRange(skillsAntigas);
 
-        Perfis.Update(perfil);
+        _context.Perfis.Update(perfil);
         await _context.SaveChangesAsync();
     }
 
