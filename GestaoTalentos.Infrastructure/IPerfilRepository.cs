@@ -7,7 +7,9 @@ namespace GestaoTalentos.Infrastructure;
 public interface IPerfilRepository
 {
     Task<Perfil?> GetByIdAsync(int id);
-    Task<IEnumerable<Perfil>> GetAllAsync();
+    Task<List<Perfil>> GetAllAsync();
+    Task<List<Perfil>> GetByOwnerAsync(int userId);
+    Task<List<Perfil>> GetPublicAsync();
     Task<List<Perfil>> GetVisibleForUserAsync(int userId);
     Task AddAsync(Perfil perfil);
     Task UpdateAsync(Perfil perfil);
