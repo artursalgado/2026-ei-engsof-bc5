@@ -194,7 +194,7 @@ else
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-        var tipo = authState.User.FindFirst("TipoUtilizador")?.Value;
+        var tipo = authState.User.FindFirst("tipo")?.Value;
         isCliente = tipo == "Cliente";
 
         await CarregarPerfis();

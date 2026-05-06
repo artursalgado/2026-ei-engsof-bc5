@@ -10,19 +10,12 @@ public static class JwtTokenHelper
 {
     public static string GenerateToken(User user, string key, string issuer, int expiryMinutes = 120)
     {
-        if (user.Role == null)
-            throw new ArgumentException("User role cannot be null");
-
         var claims = new List<Claim>
         {
-            // ID do utilizador (sub é padrão JWT)
             new Claim("sub", user.Id.ToString()),
-
-            // Username
-            new Claim(ClaimTypes.Name, user.Username),
-
-            // Role baseada na entidade Role (NÃO enum)
-            new Claim(ClaimTypes.Role, user.Role.Nome)
+            new Claim("name", user.Username),
+            new Claim("role", user.Role.ToString()),
+            new Claim("tipo", user.TipoUtilizador.ToString())
         };
 
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));
@@ -33,8 +26,7 @@ public static class JwtTokenHelper
             audience: issuer,
             claims: claims,
             expires: DateTime.UtcNow.AddMinutes(expiryMinutes),
-            signingCredentials: credentials
-        );
+            signingCredentials: credentials);
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }

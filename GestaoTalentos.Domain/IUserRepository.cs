@@ -17,6 +17,7 @@ public interface IUserRepository
     Task DeleteAsync(int id);
     
     Task<bool> AnyAsync();
+    Task SaveChangesAsync(); // NOVA LINHA
 }
 
 /// Interface para repositório de perfis, definindo operações CRUD e específicas.
