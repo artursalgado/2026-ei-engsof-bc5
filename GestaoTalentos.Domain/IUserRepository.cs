@@ -12,15 +12,3 @@ public interface IUserRepository
     Task UpdateAsync(User user);
     Task<bool> AnyAsync();
 }
-
-public interface IPerfilRepository
-{
-    Task<Perfil?> GetByIdAsync(int id);
-    Task<List<Perfil>> GetAllAsync();
-    Task<List<Perfil>> GetByOwnerAsync(int userId);
-    Task<List<Perfil>> GetPublicAsync();
-    Task<List<Perfil>> GetVisibleForUserAsync(int userId);
-    Task AddAsync(Perfil perfil);
-    Task UpdateAsync(Perfil perfil);
-    Task DeleteAsync(int id);
-}
