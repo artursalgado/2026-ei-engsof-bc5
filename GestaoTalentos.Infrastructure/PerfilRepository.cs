@@ -1,5 +1,7 @@
 using GestaoTalentos.Domain;
 using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace GestaoTalentos.Infrastructure;
 
@@ -7,9 +9,11 @@ namespace GestaoTalentos.Infrastructure;
 public class PerfilRepository : IPerfilRepository
 {
     private readonly AppDbContext _context;
-    private DbSet<Perfil> Perfis => _context.Set<Perfil>();
 
-    public PerfilRepository(AppDbContext context) => _context = context;
+    public PerfilRepository(AppDbContext context)
+    {
+        _context = context;
+    }
 
     // Busca simples por ID (com tudo relacionado incluído)
     public async Task<Perfil?> GetByIdAsync(int id)
@@ -55,12 +59,12 @@ public class PerfilRepository : IPerfilRepository
             .AsNoTracking()
             .Where(p => p.OwnerId == userId || p.IsShared)
             .ToListAsync();
+    }
 
     // Cria um novo Perfil (com experiências e skills em cascata)
     public async Task AddAsync(Perfil perfil)
     {
-        await Perfis.AddAsync(perfil);
-        await _context.SaveChangesAsync();
+        await _context.Perfis.AddAsync(perfil);
     }
 
     // Atualiza um perfil existente, apagando e recriando experiências e skills
@@ -84,11 +88,15 @@ public class PerfilRepository : IPerfilRepository
     // Apaga o perfil (as experiências e skills são removidas em cascata pela BD)
     public async Task DeleteAsync(int id)
     {
-        var entity = await Perfis.FindAsync(id);
-        if (entity != null)
+        var perfil = await GetByIdAsync(id);
+        if (perfil != null)
         {
-            Perfis.Remove(entity);
-            await _context.SaveChangesAsync();
+            _context.Perfis.Remove(perfil);
         }
+    }
+
+    public async Task SaveChangesAsync()
+    {
+        await _context.SaveChangesAsync();
     }
 }

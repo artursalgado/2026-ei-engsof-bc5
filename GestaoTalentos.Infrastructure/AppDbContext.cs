@@ -15,6 +15,8 @@ public class AppDbContext : DbContext
     public DbSet<SkillNecessaria> SkillsNecessarias { get; set; } = null!;
     public DbSet<ExperienciaProfissional> ExperienciasProfissionais { get; set; } = null!;
     public DbSet<PerfilSkill> PerfilSkills { get; set; } = null!;
+    public DbSet<Proposta> Propostas { get; set; } = null!;
+    public DbSet<TalentoElegivel> TalentosElegiveis { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -73,6 +75,40 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Area>()
             .HasIndex(a => a.Nome)
             .IsUnique();
+    
+        modelBuilder.Entity<Proposta>()
+            .HasOne(p => p.Area)
+            .WithMany()
+            .HasForeignKey(p => p.AreaId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<TalentoElegivel>()
+            .HasOne(te => te.Proposta)
+            .WithMany(p => p.TalentosElegiveis)
+            .HasForeignKey(te => te.PropostaId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<TalentoElegivel>()
+            .HasOne(te => te.Perfil)
+            .WithMany()
+            .HasForeignKey(te => te.PerfilId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Índices para performance
+        modelBuilder.Entity<Proposta>()
+            .HasIndex(p => p.Nome)
+            .IsUnique();
+
+        // Configurar Perfil
+        modelBuilder.Entity<Perfil>()
+                .ToTable("Perfil");
+
+        modelBuilder.Entity<Perfil>()
+                .HasOne(pf => pf.Owner)
+                .WithMany()
+                .HasForeignKey(pf => pf.OwnerId)
+                .OnDelete(DeleteBehavior.Cascade);
+
 
         // SEED DE DADOS PARA TESTE INICIAL (De acordo com o enunciado):
         modelBuilder.Entity<Area>().HasData(
@@ -82,4 +118,5 @@ public class AppDbContext : DbContext
             new Area { Id = 4, Nome = "Project Manager" }
         );
     }
+   
 }

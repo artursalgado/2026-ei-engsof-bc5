@@ -20,13 +20,14 @@ builder.Services.AddScoped<CustomAuthStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<CustomAuthStateProvider>());
 builder.Services.AddScoped<CustomHttpHandler>();
 
-builder.Services.AddHttpClient("Api", client => 
+builder.Services.AddHttpClient("Api", client =>
     client.BaseAddress = new Uri("http://localhost:5193"))
     .AddHttpMessageHandler<CustomHttpHandler>();
 
 builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().CreateClient("Api"));
 
 builder.Services.AddScoped<ISkillService, SkillService>();
+builder.Services.AddScoped<IPropostaService, PropostaService>();
 builder.Services.AddScoped<IClienteService, ClienteService>();
 builder.Services.AddScoped<IAreaService, AreaService>();
 
