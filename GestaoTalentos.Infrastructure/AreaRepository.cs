@@ -1,27 +1,47 @@
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using GestaoTalentos.Domain;
 using Microsoft.EntityFrameworkCore;
 
 namespace GestaoTalentos.Infrastructure;
 
-public class AreaRepository : Repository<Area>, IAreaRepository
+public class AreaRepository : IAreaRepository
 {
-    public AreaRepository(AppDbContext context) : base(context) { }
+    private readonly GestaoTalentos.Infrastructure.AppDbContext _context;
+    
+    /// Construtor que injeta o contexto da base de dados.
+    /// <param name="context">Instância do AppDbContext.</param>
+    public AreaRepository(GestaoTalentos.Infrastructure.AppDbContext context) => _context = context;
 
-    public new async Task<IEnumerable<Area>> GetAllAsync()
+    public async Task<Area?> GetByNomeAsync(string nome) /// Obtém um utilizador pelo nome de utilizador.
     {
-        return await _context.Areas.OrderBy(a => a.Nome).ToListAsync();
+        var nomeNormalizado = nome.Trim().ToLower();
+        return await _context.Areas
+            .Include(a => a.Skills)
+            .FirstOrDefaultAsync(a => a.Nome.ToLower() == nomeNormalizado);
     }
-
-    public async Task<Area?> GetByNomeAsync(string nome)
+    public async Task<List<Area>> GetAllAsync() /// Obtém todos os utilizadores.
+        => await _context.Areas.AsNoTracking().ToListAsync();
+    public async Task<IEnumerable<Area>> GetAllWithSkilsAsync()
     {
-        return await _context.Areas.FirstOrDefaultAsync(a => a.Nome == nome);
+        return await _context.Areas
+            .Include(a => a.Skills)
+            .OrderBy(a => a.Nome)
+            .ToListAsync();
     }
-
-    public async Task<IEnumerable<Area>> GetAllWithSkillsAsync()
+    
+    
+    public async Task AddAsync(Area area)     /// Adiciona um novo utilizador na base de dados.
     {
-        return await _context.Areas.Include(a => a.Skills).OrderBy(a => a.Nome).ToListAsync();
+        await _context.Areas.AddAsync(area);
+        await _context.SaveChangesAsync();
+    }
+    public async Task DeleteAsync(string nome)    /// Exclui um utilizador da base de dados pelo ID.
+    {
+        var area = await _context.Areas
+            .FirstOrDefaultAsync(a => a.Nome.ToLower() == nome.ToLower());
+        if (area != null)
+        {
+            _context.Areas.Remove(area);
+            await _context.SaveChangesAsync();
+        }
     }
 }
