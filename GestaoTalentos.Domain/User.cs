@@ -7,6 +7,7 @@ public class User
     public string Password { get; set; } = string.Empty;
 
     public UserRole Role { get; set; }
+    public TipoUtilizador TipoUtilizador { get; set; }
 }
 
 public enum UserRole
@@ -14,4 +15,10 @@ public enum UserRole
     User,
     UserManager,
     Admin
+}
+
+public enum TipoUtilizador
+{
+    Talento,
+    Cliente
 }

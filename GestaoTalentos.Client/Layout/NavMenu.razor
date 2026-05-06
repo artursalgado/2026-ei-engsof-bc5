@@ -1,8 +1,12 @@
+@using Microsoft.AspNetCore.Authorization
 
-<div class="top-row ps-3 navbar navbar-dark">
+<div class="top-row ps-4 navbar">
     <div class="container-fluid">
-        <a class="navbar-brand" href="">GestaoTalentos.Client</a>
-        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
+        <a class="navbar-brand" href="">
+            <span class="brand-mark">GT</span>
+            <span class="brand-text">Gestão de Talentos</span>
+        </a>
+        <button title="Menu" class="navbar-toggler" @onclick="ToggleNavMenu">
             <span class="navbar-toggler-icon"></span>
         </button>
     </div>
@@ -10,21 +14,56 @@
 
 <div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
     <nav class="flex-column">
+        <div class="nav-section-label">Geral</div>
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+                <span class="nav-ico">🏠</span> Início
             </NavLink>
         </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="skills">
-                <span class="oi oi-star" aria-hidden="true"></span> Skills
-             </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="propostas">
-                <span class="oi oi-briefcase" aria-hidden="true"></span> Propostas
-            </NavLink>
-        </div>
+
+        <AuthorizeView>
+            <Authorized>
+                <div class="nav-section-label">Catálogo</div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="areas">
+                        <span class="nav-ico">🗂️</span> Áreas
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="skills">
+                        <span class="nav-ico">⚡</span> Skills
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="perfis">
+                        <span class="nav-ico">👤</span> Perfis de Talento
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="clientes">
+                        <span class="nav-ico">💼</span> Clientes
+                    </NavLink>
+                </div>
+              <div class="nav-item px-3">
+                 <NavLink class="nav-link" href="propostas">
+                     <span class="nav-ico">📋</span> Propostas
+                </NavLink>
+              </div>
+            </Authorized>
+            <NotAuthorized>
+                <div class="nav-section-label">Conta</div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="login">
+                        <span class="nav-ico">🔑</span> Entrar
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="register">
+                        <span class="nav-ico">✨</span> Criar Conta
+                    </NavLink>
+                </div>
+            </NotAuthorized>
+        </AuthorizeView>
     </nav>
 </div>
 

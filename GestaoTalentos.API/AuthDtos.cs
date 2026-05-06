@@ -1,10 +1,36 @@
 namespace GestaoTalentos.API;
 
-public record UserRegisterDto(string Username, string Password);
+using GestaoTalentos.Shared.DTOs;
+
+public record UserRegisterDto(string Username, string Password, GestaoTalentos.Domain.TipoUtilizador TipoUtilizador);
 public record UserLoginDto(string Username, string Password);
 public record UserRoleUpdateDto(int UserId, string Role);
 public record UserCreateDto(string Username, string Password, string Role);
 
-public record PerfilDto(int Id, int OwnerId, string Content, bool IsShared, DateTime CreatedAt);
-public record PerfilCreateDto(string Content, bool IsShared);
-public record PerfilUpdateDto(string Content, bool IsShared);
+public record ClienteDto(int Id, string Nome, string Email, int IdCriador, int? IdMinhaConta);
+public record ClienteCreateDto(string Nome, string Email, int? IdMinhaConta);
+public record ClienteUpdateDto(string Nome, string Email, int? IdMinhaConta);
+
+// DTO novo para criar um Perfil de Talento completo (US03)
+public class PerfilCreateDto
+{
+    public string Nome { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string Pais { get; set; } = string.Empty;
+    public decimal PrecoPorHora { get; set; }
+    public bool IsShared { get; set; }
+    public List<ExperienciaCreateDto> Experiencias { get; set; } = new();
+    public List<PerfilSkillDto> Skills { get; set; } = new();
+}
+
+// DTO para editar um Perfil de Talento (dados identicos ao criar)
+public class PerfilUpdateDto
+{
+    public string Nome { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string Pais { get; set; } = string.Empty;
+    public decimal PrecoPorHora { get; set; }
+    public bool IsShared { get; set; }
+    public List<ExperienciaCreateDto> Experiencias { get; set; } = new();
+    public List<PerfilSkillDto> Skills { get; set; } = new();
+}

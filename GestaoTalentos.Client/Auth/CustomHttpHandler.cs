@@ -15,8 +15,8 @@ public class CustomHttpHandler : DelegatingHandler
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         // Obtain token from localStorage using IJSRuntime
-        //  var token = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", new object[] { "authToken" }, cancellationToken);
-        var token = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", "authToken");
+        var token = await _jsRuntime.InvokeAsync<string>("sessionStorage.getItem", "authToken");
+
         if (!string.IsNullOrWhiteSpace(token))
         {
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
