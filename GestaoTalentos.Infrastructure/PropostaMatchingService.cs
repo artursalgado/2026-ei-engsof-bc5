@@ -27,8 +27,10 @@ public class PropostaMatchingService
         if (!skillsNecessarias.Any())
             return new List<TalentoElegivel>();
 
-        var perfis = await _context.Perfis
+        // Carregar perfis com as suas skills associadas para poder fazer o matching
+        var perfis = await _context.Set<Perfil>()
             .Include(p => p.PerfilSkills)
+                .ThenInclude(ps => ps.Skill)
             .ToListAsync();
 
         var talentosElegiveis = new List<TalentoElegivel>();
@@ -50,19 +52,24 @@ public class PropostaMatchingService
         return talentosElegiveis.OrderBy(te => te.ValorEstimado).ToList();
     }
 
-    
     private static bool VerificarSePerfilAtendeRequisitos(Perfil perfil, List<SkillNecessaria> skillsNecessarias)
     {
+        // Obter os nomes das skills que o perfil possui
+        var skillsDoPerfil = perfil.PerfilSkills
+            .Select(ps => ps.Skill?.Nome)
+            .Where(nome => !string.IsNullOrWhiteSpace(nome))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
         foreach (var skillNecessaria in skillsNecessarias)
         {
-            // Verificar se o perfil tem a skill com experiência suficiente
-            var perfilSkill = perfil.PerfilSkills
-                .FirstOrDefault(ps => ps.SkillId == skillNecessaria.SkillId);
+            var nomeSkill = skillNecessaria.Skill?.Nome;
 
-            if (perfilSkill == null)
+            // Skill sem nome carregado — não é possível validar, rejeitar o perfil
+            if (string.IsNullOrWhiteSpace(nomeSkill))
                 return false;
 
-            if (perfilSkill.AnosExperiencia < skillNecessaria.NivelMinimoRequerido)
+            // O perfil tem de ter a skill necessária
+            if (!skillsDoPerfil.Contains(nomeSkill))
                 return false;
         }
 

@@ -42,7 +42,7 @@ namespace GestaoTalentos.Infrastructure.Migrations
                     b.HasIndex("Nome")
                         .IsUnique();
 
-                    b.ToTable("Areas");
+                    b.ToTable("Areas", (string)null);
 
                     b.HasData(
                         new
@@ -97,7 +97,7 @@ namespace GestaoTalentos.Infrastructure.Migrations
 
                     b.HasIndex("IdCriador");
 
-                    b.ToTable("Clientes");
+                    b.ToTable("Clientes", (string)null);
                 });
 
             modelBuilder.Entity("GestaoTalentos.Domain.ExperienciaProfissional", b =>
@@ -129,7 +129,7 @@ namespace GestaoTalentos.Infrastructure.Migrations
 
                     b.HasIndex("PerfilId");
 
-                    b.ToTable("ExperienciasProfissionais");
+                    b.ToTable("ExperienciasProfissionais", (string)null);
                 });
 
             modelBuilder.Entity("GestaoTalentos.Domain.Perfil", b =>
@@ -166,9 +166,13 @@ namespace GestaoTalentos.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+<<<<<<< HEAD
                     b.HasIndex("OwnerId");
 
                     b.ToTable("Perfil", (string)null);
+=======
+                    b.ToTable("Perfis", (string)null);
+>>>>>>> origin/develop
                 });
 
             modelBuilder.Entity("GestaoTalentos.Domain.PerfilSkill", b =>
@@ -186,7 +190,7 @@ namespace GestaoTalentos.Infrastructure.Migrations
 
                     b.HasIndex("SkillId");
 
-                    b.ToTable("PerfilSkills");
+                    b.ToTable("PerfilSkills", (string)null);
                 });
 
             modelBuilder.Entity("GestaoTalentos.Domain.Proposta", b =>
@@ -261,7 +265,7 @@ namespace GestaoTalentos.Infrastructure.Migrations
                     b.HasIndex("Nome")
                         .IsUnique();
 
-                    b.ToTable("Skills");
+                    b.ToTable("Skills", (string)null);
                 });
 
             modelBuilder.Entity("GestaoTalentos.Domain.SkillNecessaria", b =>
@@ -290,7 +294,7 @@ namespace GestaoTalentos.Infrastructure.Migrations
 
                     b.HasIndex("SkillId");
 
-                    b.ToTable("SkillsNecessarias");
+                    b.ToTable("SkillsNecessarias", (string)null);
                 });
 
             modelBuilder.Entity("GestaoTalentos.Domain.TalentoElegivel", b =>
@@ -346,7 +350,7 @@ namespace GestaoTalentos.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", (string)null);
                 });
 
             modelBuilder.Entity("GestaoTalentos.Domain.Cliente", b =>

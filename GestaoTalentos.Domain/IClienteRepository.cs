@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using System.Threading.Tasks;
+
 namespace GestaoTalentos.Domain;
 
 /// Interface para repositório de clientes, definindo operações CRUD básicas.
@@ -7,13 +10,13 @@ public interface IClienteRepository
     Task<Cliente?> GetByIdAsync(int id);
     Task<Cliente?> GetByEmailAsync(string email);
 
-    
     Task<List<Cliente>> GetAllAsync();
     Task<List<Cliente>> GetByCriadorIdAsync(int criadorId);
-    
+
     Task AddAsync(Cliente cliente);
     Task UpdateAsync(Cliente cliente);
-    Task DeleteAsync(int id);  
-    
+    Task DeleteAsync(int id);
+
     Task<bool> AnyAsync();
+    Task SaveChangesAsync(); // NOVA LINHA
 }
