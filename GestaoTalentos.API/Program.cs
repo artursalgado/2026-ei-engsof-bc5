@@ -105,8 +105,6 @@ builder.Services.AddAuthorization(options =>
 
 //
 
-var app = builder.Build();
-
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -874,6 +872,60 @@ app.MapDelete("/propostas/{id:int}", async (int id, IPropostaRepository repo) =>
     {
         return Results.BadRequest("Não é possível apagar a proposta");
     }
+}).RequireAuthorization("UserManagerPolicy");
+
+// ======================
+// DASHBOARD (US-09)
+// ======================
+
+app.MapGet("/dashboard", async (AppDbContext context) =>
+{
+    var agora = DateTime.UtcNow;
+    var quatroSemanasAtras = agora.AddDays(-28);
+
+    var totalPerfis = await context.Perfis.CountAsync();
+    var totalPropostas = await context.Propostas.CountAsync();
+
+    var perfisUltimasQuatroSemanas = await context.Perfis
+        .CountAsync(p => p.CreatedAt >= quatroSemanasAtras);
+
+    var propostas = await context.Propostas.ToListAsync();
+    var valorTotalEstimado = propostas.Sum(p => p.NumeroTotalHoras * p.PrecoHoraMedio);
+
+    var totalTalentosElegiveis = await context.TalentosElegiveis.CountAsync();
+
+    // Taxa de aprovação: % de propostas com pelo menos 1 talento elegível
+    var propostasComTalentos = await context.TalentosElegiveis
+        .Select(te => te.PropostaId)
+        .Distinct()
+        .CountAsync();
+
+    var taxaAprovacao = totalPropostas > 0
+        ? Math.Round((double)propostasComTalentos / totalPropostas * 100, 1)
+        : 0.0;
+
+    // Detalhes de cada proposta com métricas 176h/mês
+    var propostasDetalhadas = propostas.Select(p => new
+    {
+        p.Id,
+        p.Nome,
+        p.NumeroTotalHoras,
+        p.PrecoHoraMedio,
+        ValorEstimado = p.NumeroTotalHoras * p.PrecoHoraMedio,
+        MesesEquivalentes = Math.Round(p.NumeroTotalHoras / 176.0, 2),
+        ValorMensalEquivalente = Math.Round((double)(p.PrecoHoraMedio * 176), 2)
+    }).OrderByDescending(p => p.ValorEstimado).ToList();
+
+    return Results.Ok(new
+    {
+        TotalPerfis = totalPerfis,
+        TotalPropostas = totalPropostas,
+        ValorTotalEstimadoPropostas = valorTotalEstimado,
+        PerfisUltimasQuatroSemanas = perfisUltimasQuatroSemanas,
+        TotalTalentosElegiveis = totalTalentosElegiveis,
+        TaxaAprovacao = taxaAprovacao,
+        PropostasDetalhadas = propostasDetalhadas
+    });
 }).RequireAuthorization("UserManagerPolicy");
 
 app.Run();

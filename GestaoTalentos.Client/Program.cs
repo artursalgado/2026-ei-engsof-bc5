@@ -31,5 +31,6 @@ builder.Services.AddScoped<ISkillService, SkillService>();
 builder.Services.AddScoped<IPropostaService, PropostaService>();
 builder.Services.AddScoped<IClienteService, ClienteService>();
 builder.Services.AddScoped<IAreaService, AreaService>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
 
 await builder.Build().RunAsync();
