@@ -4,8 +4,6 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-#pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
-
 namespace GestaoTalentos.Infrastructure.Migrations
 {
     /// <inheritdoc />
@@ -15,6 +13,7 @@ namespace GestaoTalentos.Infrastructure.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
+<<<<<<< HEAD:GestaoTalentos.Infrastructure/Migrations/20260506180423_InitialCreate.cs
                 name: "Areas",
                 columns: table => new
                 {
@@ -93,6 +92,9 @@ namespace GestaoTalentos.Infrastructure.Migrations
 
             migrationBuilder.CreateTable(
                 name: "Clientes",
+=======
+                name: "ExperienciasProfissionais",
+>>>>>>> origin/develop:GestaoTalentos.Infrastructure/Migrations/20260421141427_AdicionarTipoUtilizador.cs
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "integer", nullable: false)
@@ -138,6 +140,7 @@ namespace GestaoTalentos.Infrastructure.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+<<<<<<< HEAD:GestaoTalentos.Infrastructure/Migrations/20260506180423_InitialCreate.cs
             migrationBuilder.CreateTable(
                 name: "SkillsNecessarias",
                 columns: table => new
@@ -259,6 +262,8 @@ namespace GestaoTalentos.Infrastructure.Migrations
                 column: "Nome",
                 unique: true);
 
+=======
+>>>>>>> origin/develop:GestaoTalentos.Infrastructure/Migrations/20260421141427_AdicionarTipoUtilizador.cs
             migrationBuilder.CreateIndex(
                 name: "IX_Clientes_IdCriador",
                 table: "Clientes",
@@ -278,6 +283,7 @@ namespace GestaoTalentos.Infrastructure.Migrations
                 name: "IX_PerfilSkills_SkillId",
                 table: "PerfilSkills",
                 column: "SkillId");
+<<<<<<< HEAD:GestaoTalentos.Infrastructure/Migrations/20260506180423_InitialCreate.cs
 
             migrationBuilder.CreateIndex(
                 name: "IX_Propostas_AreaId",
@@ -320,11 +326,14 @@ namespace GestaoTalentos.Infrastructure.Migrations
                 name: "IX_TalentosElegiveis_PropostaId",
                 table: "TalentosElegiveis",
                 column: "PropostaId");
+=======
+>>>>>>> origin/develop:GestaoTalentos.Infrastructure/Migrations/20260421141427_AdicionarTipoUtilizador.cs
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+<<<<<<< HEAD:GestaoTalentos.Infrastructure/Migrations/20260506180423_InitialCreate.cs
             migrationBuilder.DropTable(
                 name: "Clientes");
 
@@ -345,6 +354,10 @@ namespace GestaoTalentos.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "Perfil");
+=======
+            migrationBuilder.DropTable(name: "ExperienciasProfissionais");
+            migrationBuilder.DropTable(name: "PerfilSkills");
+>>>>>>> origin/develop:GestaoTalentos.Infrastructure/Migrations/20260421141427_AdicionarTipoUtilizador.cs
 
             migrationBuilder.DropTable(
                 name: "Propostas");

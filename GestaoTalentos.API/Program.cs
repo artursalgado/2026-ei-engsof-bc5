@@ -62,7 +62,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IClienteRepository, ClienteRepository>();
-builder.Services.AddScoped<IPerfilRepository, PerfilRepository>();
+//builder.Services.AddScoped<IPerfilRepository, PerfilRepository>();
+builder.Services.AddScoped<GestaoTalentos.Infrastructure.IPerfilRepository, PerfilRepository>();
 builder.Services.AddScoped<ISkillRepository, SkillRepository>();
 builder.Services.AddScoped<IAreaRepository, AreaRepository>();
 builder.Services.AddScoped<IPropostaRepository, PropostaRepository>();
@@ -73,8 +74,6 @@ builder.Services.AddScoped<PropostaMatchingService>();
 builder.Services.AddScoped<IPropostaService, PropostaService>();
 builder.Services.AddScoped<ITalentoElegiveService, TalentoElegiveService>();
 builder.Services.AddScoped<IPerfilService, PerfilService>();
-
-
 
 var jwtKey = builder.Configuration["Jwt:Key"] ?? "MudaIstoParaSegredoMuitoForte#2026";
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "GestaoTalentosApi";
@@ -103,10 +102,8 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("UserManagerPolicy", policy => policy.RequireClaim("role", "UserManager", "Admin"));
     options.AddPolicy("AdminPolicy", policy => policy.RequireClaim("role", "Admin"));
 });
-// erro cors
-// builder.Services.AddCors removido (consolidado acima)
+
 //
-var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
@@ -114,7 +111,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 app.UseCors("AllowAll");
-// app.UseHttpsRedirection(); // Comentado para evitar perda de token em redirecionamentos locais
+// app.UseHttpsRedirection(); // Comentado para nao perder token em redirecionamentos locais
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -224,6 +221,7 @@ app.MapPost("/users", async (UserCreateDto request, IUserRepository repo) =>
     };
 
     await repo.AddAsync(user);
+    await repo.SaveChangesAsync(); // NOVA LINHA
     return Results.Created($"/users/{user.Id}", new { user.Id, user.Username, user.Role });
 }).RequireAuthorization("UserManagerPolicy");
 
@@ -231,22 +229,23 @@ app.MapGet("/perfis", async (ClaimsPrincipal user, GestaoTalentos.Infrastructure
 {
     var userIdStr = user.FindFirstValue("sub");
     var userId = int.TryParse(userIdStr, out var id) ? id : 0;
-    
+
     var current = await userRepo.GetByIdAsync(userId);
     if (current == null) return Results.Unauthorized();
-
-    List<Perfil> perfis;
+    //--
+    IEnumerable<Perfil> perfis;
     if (current.Role == UserRole.User && current.TipoUtilizador == TipoUtilizador.Cliente)
         perfis = await repo.GetPublicAsync();
     else if (current.Role == UserRole.User)
         perfis = await repo.GetByOwnerAsync(userId);
     else
         perfis = await repo.GetAllAsync();
+    //--
 
     return Results.Ok(perfis.Select(p => MapPerfilToDto(p)));
 }).RequireAuthorization("UserPolicy");
 
-// NOVO: Sugestões de empresas baseadas no que já existe na BD (Para evitar hardcoded)
+
 app.MapGet("/perfis/empresas-sugestoes", async (AppDbContext context) =>
 {
     var empresas = await context.ExperienciasProfissionais
@@ -287,7 +286,8 @@ app.MapPost("/perfis", async (PerfilCreateDto request, ClaimsPrincipal user, Ges
         return Results.BadRequest("Preço por hora deve ser maior que zero.");
 
     // Validação de intervalo de datas (Ano Fim >= Ano Inicio)
-    foreach(var exp in request.Experiencias) {
+    foreach (var exp in request.Experiencias)
+    {
         if (exp.AnoFim.HasValue && exp.AnoFim < exp.AnoInicio)
             return Results.BadRequest($"Na empresa '{exp.Empresa}', o ano de fim ({exp.AnoFim}) não pode ser anterior ao início ({exp.AnoInicio}).");
     }
@@ -322,6 +322,7 @@ app.MapPost("/perfis", async (PerfilCreateDto request, ClaimsPrincipal user, Ges
     };
 
     await repo.AddAsync(perfil);
+    await repo.SaveChangesAsync(); // NOVA LINHA
     return Results.Created($"/perfis/{perfil.Id}", MapPerfilToDto(perfil));
 }).RequireAuthorization("UserPolicy");
 
@@ -348,7 +349,8 @@ app.MapPut("/perfis/{id}", async (int id, PerfilUpdateDto request, ClaimsPrincip
         return Results.BadRequest("Preço por hora deve ser maior que zero.");
 
     // Validação de intervalo de datas (Ano Fim >= Ano Inicio)
-    foreach(var exp in request.Experiencias) {
+    foreach (var exp in request.Experiencias)
+    {
         if (exp.AnoFim.HasValue && exp.AnoFim < exp.AnoInicio)
             return Results.BadRequest($"Na empresa '{exp.Empresa}', o ano de fim ({exp.AnoFim}) não pode ser anterior ao início ({exp.AnoInicio}).");
     }
@@ -398,6 +400,7 @@ app.MapDelete("/perfis/{id}", async (int id, ClaimsPrincipal user, GestaoTalento
         return Results.Forbid();
 
     await repo.DeleteAsync(id);
+    await repo.SaveChangesAsync(); // NOVA LINHA
     return Results.NoContent();
 }).RequireAuthorization("UserPolicy");
 
@@ -418,8 +421,6 @@ app.MapGet("/skills", async (ISkillRepository repo) =>
         s.AtualizadoEm
     }));
 }).RequireAuthorization("UserPolicy");
-
-
 
 app.MapPost("/skills", async (CreateSkillDto dto, ISkillRepository repo) =>
 {
@@ -472,7 +473,6 @@ app.MapPut("/skills/{id:int}", async (int id, UpdateSkillDto dto, ISkillReposito
 
     return Results.NoContent();
 }).RequireAuthorization("UserManagerPolicy");
-
 
 // DELETE skills
 app.MapDelete("/skills/{id:int}", async (int id, ISkillRepository repo, AppDbContext context) =>
@@ -578,7 +578,6 @@ app.MapDelete("/areas/{id:int}", async (int id, IAreaRepository repo, AppDbConte
 // FUNÇÕES AUXILIARES
 // ====================================
 
-// Converte a entidade Perfil para o DTO de resposta completo
 static object MapPerfilToDto(Perfil p) => new
 {
     p.Id,
@@ -591,7 +590,11 @@ static object MapPerfilToDto(Perfil p) => new
     p.CreatedAt,
     Experiencias = p.Experiencias.Select(e => new
     {
-        e.Id, e.Titulo, e.Empresa, e.AnoInicio, e.AnoFim
+        e.Id,
+        e.Titulo,
+        e.Empresa,
+        e.AnoInicio,
+        e.AnoFim
     }),
     Skills = p.PerfilSkills.Select(ps => new
     {
@@ -601,8 +604,7 @@ static object MapPerfilToDto(Perfil p) => new
     })
 };
 
-// Algoritmo detetive de sobreposicao temporal de experiencias profissionais
-// Retorna mensagem de erro se houver conflito, ou null se ficar limpo
+
 static string? ValidarSobreposicaoExperiencias(List<ExperienciaCreateDto> experiencias)
 {
     for (int i = 0; i < experiencias.Count; i++)
@@ -668,6 +670,7 @@ app.MapPost("/clientes", async (ClienteCreateDto request, ClaimsPrincipal user, 
         IdMinhaConta = request.IdMinhaConta == 0 ? null : request.IdMinhaConta
     };
     await repo.AddAsync(cliente);
+    await repo.SaveChangesAsync(); // NOVA LINHA
     return Results.Created($"/clientes/{cliente.Id}", new ClienteDto(cliente.Id, cliente.Nome, cliente.Email, cliente.IdCriador, cliente.IdMinhaConta));
 }).RequireAuthorization("UserPolicy");
 

@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace GestaoTalentos.Infrastructure;
 
-// Repositório completo de _context.Perfis com suporte a Experiências e Skills
+// Repositório completo de Perfis com suporte a Experiências e Skills
 public class PerfilRepository : IPerfilRepository
 {
     private readonly AppDbContext _context;
@@ -24,7 +24,7 @@ public class PerfilRepository : IPerfilRepository
             .FirstOrDefaultAsync(p => p.Id == id);
 
     // Lista todos os perfis com experiências e skills
-    public async Task<List<Perfil>> GetAllAsync()
+    public async Task<IEnumerable<Perfil>> GetAllAsync()
         => await _context.Perfis
             .Include(p => p.Experiencias)
             .Include(p => p.PerfilSkills)
