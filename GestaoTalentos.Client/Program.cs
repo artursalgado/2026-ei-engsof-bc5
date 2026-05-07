@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using GestaoTalentos.Client;
 using GestaoTalentos.Client.Services;
+using GestaoTalentos.Shared.DTOs;
 
 using Microsoft.AspNetCore.Components.Authorization;
 using GestaoTalentos.Client.Auth;
