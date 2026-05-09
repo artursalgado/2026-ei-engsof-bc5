@@ -62,7 +62,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IClienteRepository, ClienteRepository>();
-//builder.Services.AddScoped<IPerfilRepository, PerfilRepository>();
+builder.Services.AddScoped<IPerfilRepository, PerfilRepository>();
 builder.Services.AddScoped<GestaoTalentos.Infrastructure.IPerfilRepository, PerfilRepository>();
 builder.Services.AddScoped<ISkillRepository, SkillRepository>();
 builder.Services.AddScoped<IAreaRepository, AreaRepository>();
@@ -225,22 +225,45 @@ app.MapPost("/users", async (UserCreateDto request, IUserRepository repo) =>
     return Results.Created($"/users/{user.Id}", new { user.Id, user.Username, user.Role });
 }).RequireAuthorization("UserManagerPolicy");
 
-app.MapGet("/perfis", async (ClaimsPrincipal user, GestaoTalentos.Infrastructure.IPerfilRepository repo, IUserRepository userRepo) =>
+app.MapGet("/perfis", async (
+    ClaimsPrincipal user,
+    GestaoTalentos.Infrastructure.IPerfilRepository repo,
+    IUserRepository userRepo,
+    IClienteRepository clienteRepo) =>
 {
-    var userIdStr = user.FindFirstValue("sub");
-    var userId = int.TryParse(userIdStr, out var id) ? id : 0;
+    var userId = int.TryParse(user.FindFirstValue("sub"), out var id) ? id : 0;
 
     var current = await userRepo.GetByIdAsync(userId);
     if (current == null) return Results.Unauthorized();
-    //--
+
     IEnumerable<Perfil> perfis;
-    if (current.Role == UserRole.User && current.TipoUtilizador == TipoUtilizador.Cliente)
-        perfis = await repo.GetPublicAsync();
-    else if (current.Role == UserRole.User)
-        perfis = await repo.GetByOwnerAsync(userId);
-    else
+
+    if (current.Role == UserRole.Admin || current.Role == UserRole.UserManager)
+    {
         perfis = await repo.GetAllAsync();
-    //--
+    }
+    else
+    {
+        var cliente = await clienteRepo.GetByMinhaContaAsync(userId);
+
+        if (cliente != null)
+        {
+            // É Cliente → públicos + apresentados
+            var publicos = await repo.GetPublicAsync();
+            var idsApresentados = await repo.GetPerfilIdsApresentadosAoClienteAsync(cliente.Id);
+
+            var todos = await repo.GetAllAsync();
+            var apresentadosNaoPublicos = todos
+                .Where(p => idsApresentados.Contains(p.Id) && !p.IsShared);
+
+            perfis = publicos.Concat(apresentadosNaoPublicos);
+        }
+        else
+        {
+            // User normal → os seus + os públicos
+            perfis = await repo.GetVisibleForUserAsync(userId);
+        }
+    }
 
     return Results.Ok(perfis.Select(p => MapPerfilToDto(p)));
 }).RequireAuthorization("UserPolicy");
@@ -927,5 +950,120 @@ app.MapGet("/dashboard", async (AppDbContext context) =>
         PropostasDetalhadas = propostasDetalhadas
     });
 }).RequireAuthorization("UserManagerPolicy");
+
+
+// ======================
+// PESQUISAS
+// ======================
+
+// GET /pesquisa/talentos?skillIds=1&skillIds=2&todas=true
+// Pesquisa talentos por combinação de skills, ordenados por nome
+app.MapGet("/pesquisa/talentos", async (
+    HttpContext http,
+    ClaimsPrincipal user,
+    GestaoTalentos.Infrastructure.IPerfilRepository perfilRepo,
+    IUserRepository userRepo,
+    IClienteRepository clienteRepo) =>
+{
+    var skillIds = http.Request.Query["skillIds"]
+        .SelectMany(v => (v ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries))
+        .Select(s => int.TryParse(s.Trim(), out var n) ? n : 0)
+        .Where(n => n > 0)
+        .Distinct()
+        .ToList();
+
+    if (skillIds.Count == 0)
+        return Results.BadRequest("Indique pelo menos um skillId (ex.: ?skillIds=1&skillIds=2).");
+
+    var todas = true;
+    if (http.Request.Query.TryGetValue("todas", out var todasVal) &&
+        bool.TryParse(todasVal, out var parsed))
+    {
+        todas = parsed;
+    }
+
+    var userId = int.TryParse(user.FindFirstValue("sub"), out var uid) ? uid : 0;
+    var current = await userRepo.GetByIdAsync(userId);
+    if (current == null) return Results.Unauthorized();
+
+    var perfis = await perfilRepo.SearchBySkillsAsync(skillIds, todas);
+
+    // ---- Filtragem por visibilidade ----
+    IEnumerable<Perfil> visiveis;
+
+    if (current.Role == UserRole.Admin || current.Role == UserRole.UserManager)
+    {
+        visiveis = perfis;
+    }
+    else
+    {
+        var cliente = await clienteRepo.GetByMinhaContaAsync(userId);
+
+        if (cliente != null)
+        {
+            // É Cliente → públicos + apresentados
+            var perfisApresentados = await perfilRepo.GetPerfilIdsApresentadosAoClienteAsync(cliente.Id);
+            visiveis = perfis.Where(p => p.IsShared || perfisApresentados.Contains(p.Id));
+        }
+        else
+        {
+            // User normal → os seus + os públicos
+            visiveis = perfis.Where(p => p.OwnerId == userId || p.IsShared);
+        }
+    }
+    // ------------------------------------
+
+    var result = visiveis
+        .OrderBy(p => p.Nome)
+        .Select(p => new TalentoPesquisaResultDto(
+            p.Id,
+            p.OwnerId,
+            p.Nome,
+            p.Email,
+            p.Pais,
+            p.PrecoPorHora,
+            p.IsShared,
+            p.PerfilSkills.Select(ps => new SkillResumoDto(
+                ps.SkillId,
+                ps.Skill?.Nome ?? string.Empty,
+                ps.AnosExperiencia
+            )).ToList()
+        ));
+
+    return Results.Ok(result);
+}).RequireAuthorization("UserPolicy");
+
+
+// GET /pesquisa/propostas/{id}/talentos-elegiveis
+// Lista talentos elegíveis para uma proposta, ordenados por valor total
+app.MapGet("/pesquisa/propostas/{id:int}/talentos-elegiveis", async (
+    int id,
+    IPropostaRepository propostaRepo,
+    ITalentoElegivelRepository talentoRepo) =>
+{
+    var proposta = await propostaRepo.GetByIdAsync(id);
+    if (proposta == null) return Results.NotFound("Proposta não encontrada.");
+
+    var talentos = await talentoRepo.GetByPropostaIdOrderedByValorAsync(id);
+
+    var result = talentos
+        .OrderBy(te => te.ValorEstimado)
+        .Select(te => new TalentoElegivelPropostaDto(
+            te.Id,
+            te.PerfilId,
+            te.Perfil?.Nome ?? string.Empty,
+            te.Perfil?.Email ?? string.Empty,
+            te.Perfil?.Pais ?? string.Empty,
+            te.Perfil?.PrecoPorHora ?? 0m,
+            te.ValorEstimado,
+            proposta.NumeroTotalHoras,
+            proposta.PrecoHoraMedio
+        ));
+
+    return Results.Ok(result);
+}).RequireAuthorization("UserPolicy");
+
+
+
 
 app.Run();

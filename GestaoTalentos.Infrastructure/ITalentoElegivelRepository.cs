@@ -15,4 +15,13 @@ public interface ITalentoElegivelRepository
     Task<IEnumerable<TalentoElegivel>> GetByPropostaIdAsync(int propostaId);
     Task<IEnumerable<TalentoElegivel>> GetByPropostaIdOrderedByValorAsync(int propostaId);
     Task DeleteByPropostaIdAsync(int propostaId);
+
+    public async Task<IEnumerable<TalentoElegivel>> GetByPropostaIdOrderedByValorAsync(int propostaId)
+    {
+        return await _context.TalentosElegiveis
+            .Include(te => te.Perfil)
+            .Where(te => te.PropostaId == propostaId)
+            .OrderBy(te => te.ValorEstimado)
+            .ToListAsync();
+    }
 }

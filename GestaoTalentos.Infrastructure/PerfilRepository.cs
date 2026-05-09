@@ -98,4 +98,48 @@ public class PerfilRepository : IPerfilRepository
     {
         await _context.SaveChangesAsync();
     }
+
+    public async Task<List<Perfil>> SearchBySkillsAsync(IEnumerable<int> skillIds, bool todasAsSkills)
+    {
+        var ids = (skillIds ?? Enumerable.Empty<int>()).Distinct().ToList();
+
+        if (ids.Count == 0)
+            return new List<Perfil>();
+
+        var query = _context.Perfis
+            .Include(p => p.Experiencias)
+            .Include(p => p.PerfilSkills)
+            .ThenInclude(ps => ps.Skill)
+            .AsNoTracking()
+            .AsQueryable();
+
+        if (todasAsSkills)
+        {
+            // AND: o perfil tem de conter TODAS as skills indicadas
+            query = query.Where(p =>
+                ids.All(skillId => p.PerfilSkills.Any(ps => ps.SkillId == skillId)));
+        }
+        else
+        {
+            // OR: pelo menos uma das skills
+            query = query.Where(p =>
+                p.PerfilSkills.Any(ps => ids.Contains(ps.SkillId)));
+        }
+
+        return await query
+            .OrderBy(p => p.Nome)
+            .ToListAsync();
+    }
+
+    public async Task<HashSet<int>> GetPerfilIdsApresentadosAoClienteAsync(int clienteId)
+    {
+        // Ajusta os nomes (Apresentacoes / ClienteId / PerfilId) caso a tua entidade use outros
+        var ids = await _context.Apresentacoes
+            .Where(a => a.ClienteId == clienteId)
+            .Select(a => a.PerfilId)
+            .Distinct()
+            .ToListAsync();
+
+        return ids.ToHashSet();
+    }
 }

@@ -66,6 +66,11 @@ public class ClienteRepository : IClienteRepository
     public async Task SaveChangesAsync() // NOVO MÉTODO
         => await _context.SaveChangesAsync();
 
+    public async Task<Cliente?> GetByMinhaContaAsync(int userId)
+        => await _context.Clientes
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.IdMinhaConta == userId);
+
     //public async Task<Cliente?> GetWithPropostaAsync(int id)
     // => await _context.Clientes
     //  .Include(c => c.Propostas)

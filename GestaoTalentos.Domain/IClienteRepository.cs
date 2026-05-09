@@ -19,4 +19,6 @@ public interface IClienteRepository
 
     Task<bool> AnyAsync();
     Task SaveChangesAsync(); // NOVA LINHA
+
+    Task<Cliente?> GetByMinhaContaAsync(int userId);
 }
