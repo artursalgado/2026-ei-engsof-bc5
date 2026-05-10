@@ -75,6 +75,10 @@ builder.Services.AddScoped<IPropostaService, PropostaService>();
 builder.Services.AddScoped<ITalentoElegiveService, TalentoElegiveService>();
 builder.Services.AddScoped<IPerfilService, PerfilService>();
 
+// Observer Pattern — Auditoria
+builder.Services.AddScoped<ILogObserver, DatabaseLogObserver>();
+builder.Services.AddScoped<AuditManager>();
+
 var jwtKey = builder.Configuration["Jwt:Key"] ?? "MudaIstoParaSegredoMuitoForte#2026";
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "GestaoTalentosApi";
 
@@ -103,7 +107,7 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("AdminPolicy", policy => policy.RequireClaim("role", "Admin"));
 });
 
-//
+var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
@@ -128,13 +132,16 @@ await using (var scope = app.Services.CreateAsyncScope())
         {
             Username = "admin",
             Password = BCrypt.Net.BCrypt.HashPassword("admin123"),
-            Role = UserRole.Admin
+            Role = UserRole.Admin,
         };
         await userRepository.AddAsync(admin);
     }
+
+    // Dados de demonstração (só executa numa BD limpa)
+    await SeedData.SeedAsync(context);
 }
 
-app.MapPost("/register", async (GestaoTalentos.API.UserRegisterDto request, IUserRepository repo, IClienteRepository clienteRepo) =>
+app.MapPost("/register", async (UserRegisterDto request, IUserRepository repo) =>
 {
     if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
         return Results.BadRequest("Username e password são obrigatórios.");
@@ -146,29 +153,15 @@ app.MapPost("/register", async (GestaoTalentos.API.UserRegisterDto request, IUse
     {
         Username = request.Username.Trim(),
         Password = BCrypt.Net.BCrypt.HashPassword(request.Password),
-        Role = UserRole.User,
-        TipoUtilizador = request.TipoUtilizador
+        Role = UserRole.User
     };
 
     await repo.AddAsync(user);
 
-    // Se se registar como Cliente, criar automaticamente o registo na tabela Clientes
-    if (request.TipoUtilizador == TipoUtilizador.Cliente)
-    {
-        var cliente = new Cliente
-        {
-            Nome = user.Username,
-            Email = "",
-            IdCriador = user.Id,
-            IdMinhaConta = user.Id
-        };
-        await clienteRepo.AddAsync(cliente);
-    }
-
     return Results.Created($"/users/{user.Id}", new { user.Id, user.Username, user.Role });
 });
 
-app.MapPost("/login", async (GestaoTalentos.API.UserLoginDto request, IUserRepository repo) =>
+app.MapPost("/login", async (UserLoginDto request, IUserRepository repo) =>
 {
     var user = await repo.GetByUsernameAsync(request.Username);
     if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.Password))
@@ -182,7 +175,7 @@ app.MapGet("/users/me", async (ClaimsPrincipal user, IUserRepository repo) =>
 {
     var userId = int.TryParse(user.FindFirstValue("sub"), out var id) ? id : 0;
     var current = await repo.GetByIdAsync(userId);
-    return current is null ? Results.NotFound() : Results.Ok(new { current.Id, current.Username, current.Role, current.TipoUtilizador });
+    return current is null ? Results.NotFound() : Results.Ok(new { current.Id, current.Username, current.Role });
 }).RequireAuthorization();
 
 app.MapGet("/users", async (IUserRepository repo) =>
@@ -234,9 +227,7 @@ app.MapGet("/perfis", async (ClaimsPrincipal user, GestaoTalentos.Infrastructure
     if (current == null) return Results.Unauthorized();
     //--
     IEnumerable<Perfil> perfis;
-    if (current.Role == UserRole.User && current.TipoUtilizador == TipoUtilizador.Cliente)
-        perfis = await repo.GetPublicAsync();
-    else if (current.Role == UserRole.User)
+    if (current.Role == UserRole.User)
         perfis = await repo.GetByOwnerAsync(userId);
     else
         perfis = await repo.GetAllAsync();
@@ -502,14 +493,8 @@ app.MapDelete("/skills/{id:int}", async (int id, ISkillRepository repo, AppDbCon
 
 app.MapGet("/areas", async (IAreaRepository repo) =>
 {
-    var areas = await repo.GetAllWithSkillsAsync();
-    return Results.Ok(areas.Select(a => new GestaoTalentos.Shared.DTOs.AreaDto
-    {
-        Id = a.Id,
-        Nome = a.Nome,
-        CriadoEm = a.CriadoEm,
-        TotalSkills = a.Skills.Count
-    }));
+    var areas = await repo.GetAllWithSkilsAsync();
+    return Results.Ok(areas.Select(a => new AreaDto(a.Id, a.Nome, a.CriadoEm)));
 }).RequireAuthorization("UserPolicy");
 
 app.MapPost("/areas", async (AreaCreateDto dto, IAreaRepository repo) =>
@@ -530,7 +515,7 @@ app.MapPost("/areas", async (AreaCreateDto dto, IAreaRepository repo) =>
 
     await repo.AddAsync(area);
 
-    return Results.Created($"/areas/{area.Id}", new GestaoTalentos.Shared.DTOs.AreaDto { Id = area.Id, Nome = area.Nome, CriadoEm = area.CriadoEm });
+    return Results.Created($"/areas/{area.Id}", new AreaDto(area.Id, area.Nome, area.CriadoEm));
 }).RequireAuthorization("UserManagerPolicy");
 
 app.MapPut("/areas/{id:int}", async (int id, AreaCreateDto dto, IAreaRepository repo) =>
@@ -772,7 +757,7 @@ app.MapGet("/propostas/{id:int}", async (int id, IPropostaRepository repo, ITale
             te.Id,
             te.PerfilId,
             te.ValorEstimado,
-            Perfil = te.Perfil == null ? null : new { te.Perfil.Id, te.Perfil.OwnerId }
+            Perfil = te.Perfil == null ? null : new { te.Perfil.Id, te.Perfil.OwnerId, te.Perfil.Nome, te.Perfil.Pais, te.Perfil.PrecoPorHora }
         }).OrderBy(te => te.ValorEstimado)
     });
 }).RequireAuthorization("UserPolicy");

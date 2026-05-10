@@ -6,10 +6,10 @@ namespace GestaoTalentos.Shared.DTOs;
 // =========================
 //
 
-public record UserRegisterDto(string Username, string Password, int RoleId);
+public record UserRegisterDto(string Username, string Password);
 public record UserLoginDto(string Username, string Password);
 public record UserRoleUpdateDto(int UserId, string Role);
-public record UserCreateDto(string Username, string Password, int RoleId);
+public record UserCreateDto(string Username, string Password, string Role);
 
 //
 // =========================
@@ -20,23 +20,35 @@ public record UserCreateDto(string Username, string Password, int RoleId);
 public record PerfilDto(
     int Id,
     int OwnerId,
-    string Content,
-    int PaisId,
+    string Nome,
+    string Email,
+    string Pais,
+    decimal PrecoPorHora,
     bool IsShared,
     DateTime CreatedAt
 );
 
-public record PerfilCreateDto(
-    string Content,
-    int PaisId,
-    bool IsShared
-);
+public class PerfilCreateDto
+{
+    public string Nome { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string Pais { get; set; } = string.Empty;
+    public decimal PrecoPorHora { get; set; }
+    public bool IsShared { get; set; }
+    public List<ExperienciaCreateDto> Experiencias { get; set; } = new();
+    public List<PerfilSkillDto> Skills { get; set; } = new();
+}
 
-public record PerfilUpdateDto(
-    string Content,
-    int PaisId,
-    bool IsShared
-);
+public class PerfilUpdateDto
+{
+    public string Nome { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string Pais { get; set; } = string.Empty;
+    public decimal PrecoPorHora { get; set; }
+    public bool IsShared { get; set; }
+    public List<ExperienciaCreateDto> Experiencias { get; set; } = new();
+    public List<PerfilSkillDto> Skills { get; set; } = new();
+}
 
 //
 // =========================
@@ -55,9 +67,18 @@ public record ClienteUpdateDto(string Nome, string Email, int? IdMinhaConta);
 //
 public record SkillDto(int Id, string Nome, int AreaId, string AreaNome, DateTime CriadoEm);
 
-public record CreateSkillDto(string Nome, int AreaId);
+public class CreateSkillDto
+{
+    public string Nome { get; set; } = string.Empty;
+    public int AreaId { get; set; }
+}
 
-public record UpdateSkillDto(int Id, string Nome, int AreaId);
+public class UpdateSkillDto
+{
+    public int Id { get; set; }
+    public string Nome { get; set; } = string.Empty;
+    public int AreaId { get; set; }
+}
 
 //
 // =========================
@@ -95,17 +116,19 @@ public class PerfilTalentoUpdateDto
 // =========================
 //
 
-public record ExperienciaCreateDto(
-    string Empresa,
-    string Cargo,
-    DateTime DataInicio,
-    DateTime? DataFim
-);
+public class ExperienciaCreateDto
+{
+    public string Empresa { get; set; } = string.Empty;
+    public string Titulo { get; set; } = string.Empty;
+    public int AnoInicio { get; set; }
+    public int? AnoFim { get; set; }
+}
 
-public record PerfilSkillDto(
-    int SkillId,
-    int Nivel
-);
+public class PerfilSkillDto
+{
+    public int SkillId { get; set; }
+    public int AnosExperiencia { get; set; }
+}
 
 //
 // =========================
@@ -114,7 +137,10 @@ public record PerfilSkillDto(
 //
 
 public record AreaDto(int Id, string Nome, DateTime CriadoEm);
-public record AreaCreateDto(string Nome);
+public class AreaCreateDto
+{
+    public string Nome { get; set; } = string.Empty;
+}
 
 //
 // =========================

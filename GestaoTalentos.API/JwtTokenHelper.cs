@@ -14,8 +14,7 @@ public static class JwtTokenHelper
         {
             new Claim("sub", user.Id.ToString()),
             new Claim("name", user.Username),
-            new Claim("role", user.Role.ToString()),
-            new Claim("tipo", user.TipoUtilizador.ToString())
+            new Claim("role", user.Role.ToString())
         };
 
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));

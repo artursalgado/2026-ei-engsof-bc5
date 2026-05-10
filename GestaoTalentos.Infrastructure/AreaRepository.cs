@@ -34,10 +34,29 @@ public class AreaRepository : IAreaRepository
         await _context.Areas.AddAsync(area);
         await _context.SaveChangesAsync();
     }
-    public async Task DeleteAsync(string nome)    /// Exclui um utilizador da base de dados pelo ID.
+    public async Task<Area?> GetByIdAsync(int id)
+        => await _context.Areas.Include(a => a.Skills).FirstOrDefaultAsync(a => a.Id == id);
+
+    public async Task UpdateAsync(Area area)
+    {
+        _context.Areas.Update(area);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task DeleteAsync(string nome)    /// Exclui uma área pelo nome.
     {
         var area = await _context.Areas
             .FirstOrDefaultAsync(a => a.Nome.ToLower() == nome.ToLower());
+        if (area != null)
+        {
+            _context.Areas.Remove(area);
+            await _context.SaveChangesAsync();
+        }
+    }
+
+    public async Task DeleteAsync(int id)    /// Exclui uma área pelo ID.
+    {
+        var area = await _context.Areas.FindAsync(id);
         if (area != null)
         {
             _context.Areas.Remove(area);

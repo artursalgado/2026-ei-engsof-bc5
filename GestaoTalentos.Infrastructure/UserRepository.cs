@@ -47,6 +47,9 @@ public class UserRepository : IUserRepository
     public async Task<bool> AnyAsync() /// Verifica se existe pelo menos um utilizador na base de dados.
         => await _context.Users.AnyAsync();
 
-    public async Task SaveChangesAsync() // NOVO MÉTODO
+    public async Task SaveChangesAsync()
         => await _context.SaveChangesAsync();
+
+    public async Task<IEnumerable<User>> GetByRoleIdAsync(int roleId)
+        => await _context.Users.Where(u => (int)u.Role == roleId).ToListAsync();
 }

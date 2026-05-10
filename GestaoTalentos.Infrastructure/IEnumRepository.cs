@@ -8,11 +8,14 @@ using GestaoTalentos.Domain;
 public interface IAreaRepository
 {
     Task<Area?> GetByNomeAsync(string nome);
+    Task<Area?> GetByIdAsync(int id);
     Task<List<Area>> GetAllAsync();
     Task<IEnumerable<Area>> GetAllWithSkilsAsync();
-    
+
     Task AddAsync(Area area);
+    Task UpdateAsync(Area area);
     Task DeleteAsync(string nome);
+    Task DeleteAsync(int id);
 }
 
 /// Interface para repositório de roles, definindo operações CRUD e específicas.

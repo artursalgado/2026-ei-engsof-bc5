@@ -3,7 +3,7 @@ Plano de Sprints - Tema A
 Para a organização do projeto (Plataforma de Gestão de Talentos IT), este ficheiro define a rotação de papéis e o cronograma do processo Scrum.
 
 1. Sprints
-Número total de sprints: 5 
+Número total de sprints: 7
 
 Duração de cada sprint: 2 semanas
 

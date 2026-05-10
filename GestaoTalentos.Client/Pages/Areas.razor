@@ -50,7 +50,6 @@ else
             <thead>
                 <tr>
                     <th>Nome</th>
-                    <th>Skills associadas</th>
                     <th>Criado em</th>
                     @if (podeGerir)
                     {
@@ -63,7 +62,6 @@ else
                 {
                     <tr>
                         <td class="cell-name">@area.Nome</td>
-                        <td><span class="badge badge-area">@area.TotalSkills skill@(area.TotalSkills != 1 ? "s" : "")</span></td>
                         <td class="cell-muted">@area.CriadoEm.ToString("dd/MM/yyyy")</td>
                         @if (podeGerir)
                         {

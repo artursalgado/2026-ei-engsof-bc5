@@ -17,10 +17,7 @@
     </button>
 </div>
 
-@if (!string.IsNullOrEmpty(mensagemSucesso))
-{
-    <div class="alert alert-success mb-4">@mensagemSucesso</div>
-}
+
 
 @if (clientes == null)
 {
@@ -108,7 +105,6 @@ else
     private string formEmail = "";
     private bool isBusy = false;
     private string? formError;
-    private string? mensagemSucesso;
     private bool toastVisible = false;
     private string toastMensagem = "";
 

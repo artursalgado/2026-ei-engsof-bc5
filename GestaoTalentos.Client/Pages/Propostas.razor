@@ -49,7 +49,7 @@ else
                     </td>
                     <td>@p.Id</td>
                     <td>@p.Nome</td>
-                    <td>@p.AreaId</td>
+                    <td>@(areas.FirstOrDefault(a => a.Id == p.AreaId)?.Nome ?? "-")</td>
                     <td>@p.NumeroTotalHoras</td>
                     <td>@p.PrecoHoraMedio</td>
                     <td class="text-end">
@@ -71,7 +71,9 @@ else
                                 <table class="table table-sm mt-2 mb-0">
                                     <thead>
                                         <tr>
-                                            <th>Perfil ID</th>
+                                            <th>Talento</th>
+                                            <th>País</th>
+                                            <th>Preço/h (€)</th>
                                             <th>Valor Estimado (€)</th>
                                         </tr>
                                     </thead>
@@ -79,7 +81,9 @@ else
                                         @foreach (var t in p.TalentosElegiveis.OrderBy(x => x.ValorEstimado))
                                         {
                                             <tr>
-                                                <td>@t.PerfilId</td>
+                                                <td>@(t.Perfil?.Nome ?? $"Perfil #{t.PerfilId}")</td>
+                                                <td>@(t.Perfil?.Pais ?? "-")</td>
+                                                <td>@(t.Perfil?.PrecoPorHora.ToString("F2") ?? "-")</td>
                                                 <td>@t.ValorEstimado.ToString("F2")</td>
                                             </tr>
                                         }
@@ -274,6 +278,15 @@ else
         public int Id { get; set; }
         public int PerfilId { get; set; }
         public decimal ValorEstimado { get; set; }
+        public PerfilResumoVm? Perfil { get; set; }
+    }
+
+    public class PerfilResumoVm
+    {
+        public int Id { get; set; }
+        public string Nome { get; set; } = "";
+        public string Pais { get; set; } = "";
+        public decimal PrecoPorHora { get; set; }
     }
 
     public class PropostaReadVm
