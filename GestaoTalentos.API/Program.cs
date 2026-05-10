@@ -349,7 +349,12 @@ app.MapPost("/perfis", async (PerfilCreateDto request, ClaimsPrincipal user, Ges
     return Results.Created($"/perfis/{perfil.Id}", MapPerfilToDto(perfil));
 }).RequireAuthorization("UserPolicy");
 
-app.MapPut("/perfis/{id}", async (int id, PerfilUpdateDto request, ClaimsPrincipal user, GestaoTalentos.Infrastructure.IPerfilRepository repo, IUserRepository userRepo) =>
+app.MapGet("/perfis/{id}", async (
+    int id,
+    ClaimsPrincipal user,
+    GestaoTalentos.Infrastructure.IPerfilRepository repo,
+    IUserRepository userRepo,
+    IClienteRepository clienteRepo) =>
 {
     var perfil = await repo.GetByIdAsync(id);
     if (perfil == null) return Results.NotFound();
@@ -358,56 +363,25 @@ app.MapPut("/perfis/{id}", async (int id, PerfilUpdateDto request, ClaimsPrincip
     var current = await userRepo.GetByIdAsync(userId);
     if (current == null) return Results.Unauthorized();
 
-    if (current.Role != UserRole.Admin && current.Role != UserRole.UserManager && perfil.OwnerId != userId)
-        return Results.Forbid();
-
-    // Validações básicas
-    if (string.IsNullOrWhiteSpace(request.Nome))
-        return Results.BadRequest("Nome é obrigatório.");
-    if (string.IsNullOrWhiteSpace(request.Email))
-        return Results.BadRequest("Email é obrigatório.");
-    if (string.IsNullOrWhiteSpace(request.Pais))
-        return Results.BadRequest("País é obrigatório.");
-    if (request.PrecoPorHora <= 0)
-        return Results.BadRequest("Preço por hora deve ser maior que zero.");
-
-    // Validação de intervalo de datas (Ano Fim >= Ano Inicio)
-    foreach (var exp in request.Experiencias)
+    // Admin / UserManager / dono / público
+    if (current.Role == UserRole.Admin
+        || current.Role == UserRole.UserManager
+        || perfil.OwnerId == userId
+        || perfil.IsShared)
     {
-        if (exp.AnoFim.HasValue && exp.AnoFim < exp.AnoInicio)
-            return Results.BadRequest($"Na empresa '{exp.Empresa}', o ano de fim ({exp.AnoFim}) não pode ser anterior ao início ({exp.AnoInicio}).");
+        return Results.Ok(MapPerfilToDto(perfil));
     }
 
-    // Validação de sobreposição de datas
-    var erroData = ValidarSobreposicaoExperiencias(request.Experiencias);
-    if (erroData != null) return Results.BadRequest(erroData);
-
-    if (request.Skills.Any(s => s.AnosExperiencia < 1))
-        return Results.BadRequest("As skills devem ter pelo menos 1 ano de experiência.");
-
-    // Atualizar os dados do perfil (o repositório trata de apagar os antigos)
-    perfil.Nome = request.Nome.Trim();
-    perfil.Email = request.Email.Trim();
-    perfil.Pais = request.Pais.Trim();
-    perfil.PrecoPorHora = request.PrecoPorHora;
-    perfil.IsShared = request.IsShared;
-    perfil.Experiencias = request.Experiencias.Select(e => new ExperienciaProfissional
+    // Cliente: pode ver se o perfil lhe foi apresentado
+    var cliente = await clienteRepo.GetByMinhaContaAsync(userId);
+    if (cliente != null)
     {
-        PerfilId = id,
-        Titulo = e.Titulo.Trim(),
-        Empresa = e.Empresa.Trim(),
-        AnoInicio = e.AnoInicio,
-        AnoFim = e.AnoFim
-    }).ToList();
-    perfil.PerfilSkills = request.Skills.Select(s => new PerfilSkill
-    {
-        PerfilId = id,
-        SkillId = s.SkillId,
-        AnosExperiencia = s.AnosExperiencia
-    }).ToList();
+        var idsApresentados = await repo.GetPerfilIdsApresentadosAoClienteAsync(cliente.Id);
+        if (idsApresentados.Contains(perfil.Id))
+            return Results.Ok(MapPerfilToDto(perfil));
+    }
 
-    await repo.UpdateAsync(perfil);
-    return Results.NoContent();
+    return Results.Forbid();
 }).RequireAuthorization("UserPolicy");
 
 app.MapDelete("/perfis/{id}", async (int id, ClaimsPrincipal user, GestaoTalentos.Infrastructure.IPerfilRepository repo, IUserRepository userRepo) =>
