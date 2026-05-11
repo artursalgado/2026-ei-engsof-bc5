@@ -182,7 +182,7 @@ else
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-        var role = authState.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+        var role = authState.User.FindFirst("role")?.Value;
         podeGerir = role == "UserManager" || role == "Admin";
 
         await LoadSkills();

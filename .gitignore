@@ -483,3 +483,8 @@ $RECYCLE.BIN/
 
 # Ignorar configuracoes locais de Base de Dados
 appsettings.Development.json
+
+# Ferramentas locais de desenvolvimento (nunca subir para o repositório)
+.claude/
+CLAUDE.md
+GestaoTalentos.API/JwtTokenHelper.cs

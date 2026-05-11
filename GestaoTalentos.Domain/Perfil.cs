@@ -11,6 +11,7 @@ public class Perfil
     public int OwnerId { get; set; }
     public bool IsShared { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public User? Owner { get; set; }
 
     public ICollection<ExperienciaProfissional> Experiencias { get; set; } = new List<ExperienciaProfissional>();
     public ICollection<PerfilSkill> PerfilSkills { get; set; } = new List<PerfilSkill>();

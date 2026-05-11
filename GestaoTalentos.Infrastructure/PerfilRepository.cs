@@ -1,5 +1,7 @@
 using GestaoTalentos.Domain;
 using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace GestaoTalentos.Infrastructure;
 
@@ -7,21 +9,23 @@ namespace GestaoTalentos.Infrastructure;
 public class PerfilRepository : IPerfilRepository
 {
     private readonly AppDbContext _context;
-    private DbSet<Perfil> Perfis => _context.Set<Perfil>();
 
-    public PerfilRepository(AppDbContext context) => _context = context;
+    public PerfilRepository(AppDbContext context)
+    {
+        _context = context;
+    }
 
     // Busca simples por ID (com tudo relacionado incluído)
     public async Task<Perfil?> GetByIdAsync(int id)
-        => await Perfis
+        => await _context.Perfis
             .Include(p => p.Experiencias)
             .Include(p => p.PerfilSkills)
                 .ThenInclude(ps => ps.Skill)
             .FirstOrDefaultAsync(p => p.Id == id);
 
     // Lista todos os perfis com experiências e skills
-    public async Task<List<Perfil>> GetAllAsync()
-        => await Perfis
+    public async Task<IEnumerable<Perfil>> GetAllAsync()
+        => await _context.Perfis
             .Include(p => p.Experiencias)
             .Include(p => p.PerfilSkills)
                 .ThenInclude(ps => ps.Skill)
@@ -29,7 +33,7 @@ public class PerfilRepository : IPerfilRepository
             .ToListAsync();
 
     public async Task<List<Perfil>> GetByOwnerAsync(int userId)
-        => await Perfis
+        => await _context.Perfis
             .Include(p => p.Experiencias)
             .Include(p => p.PerfilSkills)
                 .ThenInclude(ps => ps.Skill)
@@ -38,7 +42,7 @@ public class PerfilRepository : IPerfilRepository
             .ToListAsync();
 
     public async Task<List<Perfil>> GetPublicAsync()
-        => await Perfis
+        => await _context.Perfis
             .Include(p => p.Experiencias)
             .Include(p => p.PerfilSkills)
                 .ThenInclude(ps => ps.Skill)
@@ -48,7 +52,7 @@ public class PerfilRepository : IPerfilRepository
 
     // Lista apenas os perfis visíveis para um utilizador (os seus + os públicos)
     public async Task<List<Perfil>> GetVisibleForUserAsync(int userId)
-        => await Perfis
+        => await _context.Perfis
             .Include(p => p.Experiencias)
             .Include(p => p.PerfilSkills)
                 .ThenInclude(ps => ps.Skill)
@@ -59,8 +63,7 @@ public class PerfilRepository : IPerfilRepository
     // Cria um novo Perfil (com experiências e skills em cascata)
     public async Task AddAsync(Perfil perfil)
     {
-        await Perfis.AddAsync(perfil);
-        await _context.SaveChangesAsync();
+        await _context.Perfis.AddAsync(perfil);
     }
 
     // Atualiza um perfil existente, apagando e recriando experiências e skills
@@ -77,18 +80,22 @@ public class PerfilRepository : IPerfilRepository
             .ToListAsync();
         _context.PerfilSkills.RemoveRange(skillsAntigas);
 
-        Perfis.Update(perfil);
+        _context.Perfis.Update(perfil);
         await _context.SaveChangesAsync();
     }
 
     // Apaga o perfil (as experiências e skills são removidas em cascata pela BD)
     public async Task DeleteAsync(int id)
     {
-        var entity = await Perfis.FindAsync(id);
-        if (entity != null)
+        var perfil = await GetByIdAsync(id);
+        if (perfil != null)
         {
-            Perfis.Remove(entity);
-            await _context.SaveChangesAsync();
+            _context.Perfis.Remove(perfil);
         }
+    }
+
+    public async Task SaveChangesAsync()
+    {
+        await _context.SaveChangesAsync();
     }
 }

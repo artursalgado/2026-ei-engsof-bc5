@@ -1,0 +1,136 @@
+@page "/dashboard"
+@using Microsoft.AspNetCore.Authorization
+@using GestaoTalentos.Client.Services
+@inject IDashboardService DashboardService
+@attribute [Authorize(Policy = "UserManagerPolicy")]
+
+<PageTitle>Dashboard - Gestão de Talentos</PageTitle>
+
+<h1>📊 Dashboard</h1>
+<p class="text-muted mb-4">Relatório de métricas e indicadores da plataforma</p>
+
+@if (loading)
+{
+    <p>A carregar...</p>
+}
+else if (dados == null)
+{
+    <div class="alert alert-danger">Não foi possível carregar os dados do dashboard.</div>
+}
+else
+{
+    @* Cartões de resumo *@
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-lg-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div style="font-size:2rem;">👤</div>
+                    <h2 class="fw-bold mb-0">@dados.TotalPerfis</h2>
+                    <p class="text-muted small mb-0">Perfis registados</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div style="font-size:2rem;">🆕</div>
+                    <h2 class="fw-bold mb-0">@dados.PerfisUltimasQuatroSemanas</h2>
+                    <p class="text-muted small mb-0">Inscrições últimas 4 semanas</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div style="font-size:2rem;">📋</div>
+                    <h2 class="fw-bold mb-0">@dados.TotalPropostas</h2>
+                    <p class="text-muted small mb-0">Propostas ativas</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div style="font-size:2rem;">✅</div>
+                    <h2 class="fw-bold mb-0">@dados.TaxaAprovacao.ToString("F1")%</h2>
+                    <p class="text-muted small mb-0">Taxa de aprovação</p>
+                    <small class="text-muted">(@dados.TotalTalentosElegiveis talentos elegíveis)</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* Valor total *@
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <h5 class="card-title">💰 Valorização das Propostas</h5>
+            <div class="row align-items-center">
+                <div class="col-md-4 text-center border-end">
+                    <p class="text-muted small mb-1">Valor total estimado</p>
+                    <h3 class="fw-bold text-success">@dados.ValorTotalEstimadoPropostas.ToString("N2") €</h3>
+                </div>
+                <div class="col-md-4 text-center border-end">
+                    <p class="text-muted small mb-1">Regra de referência</p>
+                    <h4 class="fw-bold">176 h/mês</h4>
+                    <small class="text-muted">1 mês = 176 horas de trabalho</small>
+                </div>
+                <div class="col-md-4 text-center">
+                    <p class="text-muted small mb-1">Total de propostas</p>
+                    <h3 class="fw-bold">@dados.TotalPropostas</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* Tabela de propostas *@
+    @if (dados.PropostasDetalhadas.Any())
+    {
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title mb-3">📈 Detalhe por Proposta</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Proposta</th>
+                                <th class="text-end">Horas</th>
+                                <th class="text-end">Preço/h (€)</th>
+                                <th class="text-end">Valor estimado (€)</th>
+                                <th class="text-end">Meses equiv. (176h)</th>
+                                <th class="text-end">Custo mensal equiv. (€)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var p in dados.PropostasDetalhadas)
+                            {
+                                <tr>
+                                    <td><strong>#@p.Id</strong> @p.Nome</td>
+                                    <td class="text-end">@p.NumeroTotalHoras</td>
+                                    <td class="text-end">@p.PrecoHoraMedio.ToString("N2")</td>
+                                    <td class="text-end fw-bold text-success">@p.ValorEstimado.ToString("N2")</td>
+                                    <td class="text-end">@p.MesesEquivalentes.ToString("F2")</td>
+                                    <td class="text-end">@p.ValorMensalEquivalente.ToString("N2")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info">Ainda não existem propostas para apresentar.</div>
+    }
+}
+
+@code {
+    private DashboardDto? dados;
+    private bool loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        dados = await DashboardService.GetDashboardAsync();
+        loading = false;
+    }
+}

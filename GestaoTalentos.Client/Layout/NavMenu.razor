@@ -25,6 +25,11 @@
             <Authorized>
                 <div class="nav-section-label">Catálogo</div>
                 <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="areas">
+                        <span class="nav-ico">🗂️</span> Áreas
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3">
                     <NavLink class="nav-link" href="skills">
                         <span class="nav-ico">⚡</span> Skills
                     </NavLink>
@@ -39,6 +44,21 @@
                         <span class="nav-ico">💼</span> Clientes
                     </NavLink>
                 </div>
+              <div class="nav-item px-3">
+                 <NavLink class="nav-link" href="propostas">
+                     <span class="nav-ico">📋</span> Propostas
+                </NavLink>
+              </div>
+                <AuthorizeView Policy="UserManagerPolicy">
+                    <Authorized Context="managerCtx">
+                        <div class="nav-section-label">Relatórios</div>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="dashboard">
+                                <span class="nav-ico">📊</span> Dashboard
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
             </Authorized>
             <NotAuthorized>
                 <div class="nav-section-label">Conta</div>

@@ -15,34 +15,67 @@ public class AppDbContext : DbContext
     public DbSet<SkillNecessaria> SkillsNecessarias { get; set; } = null!;
     public DbSet<ExperienciaProfissional> ExperienciasProfissionais { get; set; } = null!;
     public DbSet<PerfilSkill> PerfilSkills { get; set; } = null!;
+    public DbSet<Proposta> Propostas { get; set; } = null!;
+    public DbSet<TalentoElegivel> TalentosElegiveis { get; set; } = null!;
+    public DbSet<Log> Logs { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
-        // Configurar relacionamentos
+        // Ignorar entidades sem tabela na BD (não gerar relações automáticas)
+        modelBuilder.Ignore<Role>();
+        modelBuilder.Ignore<Pais>();
+
+        // CLIENTE → USER
+        modelBuilder.Entity<Cliente>()
+            .HasOne(c => c.User)
+            .WithMany()
+            .HasForeignKey(c => c.IdCriador)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // PERFIL → USER (owner)
+        modelBuilder.Entity<Perfil>()
+            .HasOne(pf => pf.Owner)
+            .WithMany()
+            .HasForeignKey(pf => pf.OwnerId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // SKILL → AREA
         modelBuilder.Entity<Skill>()
             .HasOne(s => s.Area)
             .WithMany(a => a.Skills)
             .HasForeignKey(s => s.AreaId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        // PROPOSTA → AREA
+        modelBuilder.Entity<Proposta>()
+            .HasOne(p => p.Area)
+            .WithMany()
+            .HasForeignKey(p => p.AreaId)
+            .OnDelete(DeleteBehavior.Restrict);
 
-
+        // SKILL NECESSARIA → SKILL + PROPOSTA
         modelBuilder.Entity<SkillNecessaria>()
             .HasOne(sn => sn.Skill)
             .WithMany(s => s.SkillsNecessarias)
             .HasForeignKey(sn => sn.SkillId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Perfis - Experiencias (Cascade Delete)
+        modelBuilder.Entity<SkillNecessaria>()
+            .HasOne<Proposta>()
+            .WithMany(p => p.SkillsNecessarias)
+            .HasForeignKey(sn => sn.PropostaId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // PERFIL → EXPERIENCIAS
         modelBuilder.Entity<ExperienciaProfissional>()
             .HasOne(e => e.Perfil)
             .WithMany(p => p.Experiencias)
             .HasForeignKey(e => e.PerfilId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // Perfil - Skills (Muitos-para-Muitos)
+        // PERFIL ↔ SKILL (N:N)
         modelBuilder.Entity<PerfilSkill>()
             .HasKey(ps => new { ps.PerfilId, ps.SkillId });
 
@@ -58,28 +91,22 @@ public class AppDbContext : DbContext
             .HasForeignKey(ps => ps.SkillId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Cliente → User (criador)
-        modelBuilder.Entity<Cliente>()
-            .HasOne(c => c.User)
+        // TALENTO ELEGIVEL → PROPOSTA + PERFIL
+        modelBuilder.Entity<TalentoElegivel>()
+            .HasOne(te => te.Proposta)
+            .WithMany(p => p.TalentosElegiveis)
+            .HasForeignKey(te => te.PropostaId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<TalentoElegivel>()
+            .HasOne(te => te.Perfil)
             .WithMany()
-            .HasForeignKey(c => c.IdCriador)
-            .OnDelete(DeleteBehavior.Restrict);
+            .HasForeignKey(te => te.PerfilId)
+            .OnDelete(DeleteBehavior.Cascade);
 
-        // Índices para performance
-        modelBuilder.Entity<Skill>()
-            .HasIndex(s => s.Nome)
-            .IsUnique();
-
-        modelBuilder.Entity<Area>()
-            .HasIndex(a => a.Nome)
-            .IsUnique();
-
-        // SEED DE DADOS PARA TESTE INICIAL (De acordo com o enunciado):
-        modelBuilder.Entity<Area>().HasData(
-            new Area { Id = 1, Nome = "Developer" },
-            new Area { Id = 2, Nome = "Designer" },
-            new Area { Id = 3, Nome = "Product Manager" },
-            new Area { Id = 4, Nome = "Project Manager" }
-        );
+        // ÍNDICES ÚNICOS
+        modelBuilder.Entity<Skill>().HasIndex(s => s.Nome).IsUnique();
+        modelBuilder.Entity<Area>().HasIndex(a => a.Nome).IsUnique();
+        modelBuilder.Entity<Proposta>().HasIndex(p => p.Nome).IsUnique();
     }
 }

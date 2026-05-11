@@ -56,7 +56,7 @@ else
     <div class="perfis-grid">
         @foreach (var p in perfis)
         {
-            <div class="perfil-card">
+            <div class="perfil-card @(isCliente ? "perfil-card-clickable" : "")" @onclick="() => { if (isCliente) AbrirDetalhe(p); }">
                 <div class="perfil-card-head">
                     <div class="perfil-avatar">@(p.Nome.Length > 0 ? p.Nome[0].ToString().ToUpper() : "?")</div>
                     <div class="perfil-info">
@@ -93,15 +93,93 @@ else
                     }
                 </div>
 
-                @if (!isCliente)
-                {
-                    <div class="perfil-card-foot">
+                <div class="perfil-card-foot" @onclick:stopPropagation>
+                    <button class="btn btn-sm btn-outline" @onclick="() => AbrirDetalhe(p)">Ver Detalhe</button>
+                    @if (!isCliente)
+                    {
                         <button class="btn btn-sm btn-secondary" @onclick="() => Editar(p.Id)">Editar</button>
                         <button class="btn btn-sm btn-danger" @onclick="() => ConfirmarApagar(p)">Apagar</button>
-                    </div>
-                }
+                    }
+                </div>
             </div>
         }
+    </div>
+}
+
+@if (perfilDetalhe != null)
+{
+    <div class="modal-backdrop-custom" @onclick="FecharDetalhe"></div>
+    <div class="modal-custom modal-detalhe" @onclick:stopPropagation>
+        <div class="modal-head">
+            <div class="detalhe-head-info">
+                <div class="perfil-avatar detalhe-avatar">@(perfilDetalhe.Nome.Length > 0 ? perfilDetalhe.Nome[0].ToString().ToUpper() : "?")</div>
+                <div>
+                    <h3>@perfilDetalhe.Nome</h3>
+                    <span class="perfil-location">📍 @perfilDetalhe.Pais</span>
+                </div>
+            </div>
+            <button class="modal-close" @onclick="FecharDetalhe">×</button>
+        </div>
+        <div class="modal-body-custom">
+
+            <div class="detalhe-section">
+                <div class="detalhe-row">
+                    <span class="detalhe-label">Email</span>
+                    <span>@perfilDetalhe.Email</span>
+                </div>
+                <div class="detalhe-row">
+                    <span class="detalhe-label">Preço/hora</span>
+                    <span class="price-tag">@perfilDetalhe.PrecoPorHora.ToString("F2") €</span>
+                </div>
+                <div class="detalhe-row">
+                    <span class="detalhe-label">Visibilidade</span>
+                    <span class="visibility-badge @(perfilDetalhe.IsShared ? "public" : "private")">
+                        @(perfilDetalhe.IsShared ? "Público" : "Privado")
+                    </span>
+                </div>
+            </div>
+
+            @if (perfilDetalhe.Skills != null && perfilDetalhe.Skills.Any())
+            {
+                <div class="detalhe-section">
+                    <h4 class="detalhe-section-title">Skills</h4>
+                    <div class="skill-pills">
+                        @foreach (var s in perfilDetalhe.Skills)
+                        {
+                            <span class="skill-pill">@s.SkillNome <span class="skill-years">@s.AnosExperiencia a</span></span>
+                        }
+                    </div>
+                </div>
+            }
+
+            @if (perfilDetalhe.Experiencias != null && perfilDetalhe.Experiencias.Any())
+            {
+                <div class="detalhe-section">
+                    <h4 class="detalhe-section-title">Experiência Profissional</h4>
+                    <div class="exp-list">
+                        @foreach (var e in perfilDetalhe.Experiencias)
+                        {
+                            <div class="exp-item">
+                                <div class="exp-dot"></div>
+                                <div class="exp-content">
+                                    <div class="exp-titulo">@e.Titulo</div>
+                                    <div class="exp-empresa">@e.Empresa</div>
+                                    <div class="exp-anos">@e.AnoInicio — @(e.AnoFim.HasValue ? e.AnoFim.ToString() : "Presente")</div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="detalhe-section">
+                    <h4 class="detalhe-section-title">Experiência Profissional</h4>
+                    <p class="detalhe-empty">Sem experiências registadas.</p>
+                </div>
+            }
+
+        </div>
     </div>
 }
 
@@ -111,12 +189,13 @@ else
     private string? erro;
     private string? mensagemSucesso;
     private bool isCliente = false;
+    private PerfilVm? perfilDetalhe = null;
 
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-        var tipo = authState.User.FindFirst("TipoUtilizador")?.Value;
-        isCliente = tipo == "Cliente";
+        var role = authState.User.FindFirst("role")?.Value;
+        isCliente = role == "UserManager" || role == "Admin";
 
         await CarregarPerfis();
     }
@@ -135,6 +214,9 @@ else
         }
         carregando = false;
     }
+
+    private void AbrirDetalhe(PerfilVm p) => perfilDetalhe = p;
+    private void FecharDetalhe() => perfilDetalhe = null;
 
     private void CriarNovo() => Navigation.NavigateTo("/perfis/form");
     private void Editar(int id) => Navigation.NavigateTo($"/perfis/form/{id}");
