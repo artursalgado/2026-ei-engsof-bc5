@@ -62,13 +62,16 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IClienteRepository, ClienteRepository>();
-//builder.Services.AddScoped<IPerfilRepository, PerfilRepository>();
+builder.Services.AddScoped<IPerfilRepository, PerfilRepository>();
 builder.Services.AddScoped<GestaoTalentos.Infrastructure.IPerfilRepository, PerfilRepository>();
 builder.Services.AddScoped<ISkillRepository, SkillRepository>();
 builder.Services.AddScoped<IAreaRepository, AreaRepository>();
 builder.Services.AddScoped<IPropostaRepository, PropostaRepository>();
 builder.Services.AddScoped<ITalentoElegivelRepository, TalentoElegivelRepository>();
 builder.Services.AddScoped<PropostaMatchingService>();
+builder.Services.AddScoped<ILogObserver, DatabaseLogObserver>();
+builder.Services.AddScoped<AuditManager>();
+builder.Services.AddScoped<AuditEndpointFilter>();
 
 // Services
 builder.Services.AddScoped<IPropostaService, PropostaService>();
