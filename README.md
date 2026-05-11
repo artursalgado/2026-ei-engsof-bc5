@@ -16,7 +16,7 @@ O projeto é desenvolvido seguindo a metodologia **Scrum**, com rotação do pap
 | **Sprint 1** | 03/03 | 16/03 | Cristiano | Artur | ✅ Concluido |
 | **Sprint 2** | 17/03 | 30/03 | Carlos | Ricardo | ✅ Concluido |
 | **Sprint 3** | 31/03 | 13/04 | Maria | Carlos |  ✅ Concluido |
-| **Sprint 4** | 14/04 | 27/04 | Ricardo | Cristiano | 🏗️ Agendado |
+| **Sprint 4** | 14/04 | 27/04 | Ricardo | Cristiano |  ✅ Concluido |
 | **Sprint 5** | 28/04 | 11/05 | Artur | Maria| 📅 Agendado |
 
 📌 *Consultar o ficheiro [SPRINTS.md](./SPRINTS.md) para o cronograma detalhado.*
