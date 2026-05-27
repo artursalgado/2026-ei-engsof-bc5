@@ -868,7 +868,7 @@ app.MapPut("/propostas/{id:int}", async (int id, UpdatePropostaDto dto, IPropost
         proposta.SkillsNecessarias.Add(skillNecessaria);
     }
 
-    await repo.UpdateAsync(proposta);
+    await context.SaveChangesAsync();
 
     await talentoRepo.DeleteByPropostaIdAsync(id);
     var talentosElegiveis = await matchingService.IdentificarTalentosElegiveisAsync(id, proposta.PrecoHoraMedio);
