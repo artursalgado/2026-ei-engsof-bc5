@@ -247,6 +247,43 @@ app.MapGet("/perfis/empresas-sugestoes", async (AppDbContext context) =>
     return Results.Ok(empresas);
 }).RequireAuthorization("UserPolicy");
 
+//pesquisa Talentos Skill
+
+
+app.MapGet("/perfis/pesquisa-skills", async (
+    HttpContext context,
+    ClaimsPrincipal user,
+    GestaoTalentos.Infrastructure.IPerfilRepository repo,
+    IUserRepository userRepo) =>
+{
+    var skillIds = context.Request.Query["skillIds"]
+        .Where(s => int.TryParse(s, out _))
+        .Select(s => int.Parse(s))
+        .ToList();
+
+    var userId = int.TryParse(user.FindFirstValue("sub"), out var uid) ? uid : 0;
+    var current = await userRepo.GetByIdAsync(userId);
+    if (current == null) return Results.Unauthorized();
+
+    IEnumerable<Perfil> perfis;
+    if (current.Role == UserRole.User)
+        perfis = await repo.GetByOwnerAsync(userId);
+    else
+        perfis = await repo.GetAllAsync();
+
+    if (skillIds != null && skillIds.Count > 0)
+    {
+        perfis = perfis.Where(p =>
+            skillIds.All(sid => p.PerfilSkills.Any(ps => ps.SkillId == sid)));
+    }
+
+    return Results.Ok(perfis.Select(p => MapPerfilToDto(p)));
+}).RequireAuthorization("UserPolicy");
+
+//
+
+
+
 app.MapGet("/perfis/{id}", async (int id, ClaimsPrincipal user, GestaoTalentos.Infrastructure.IPerfilRepository repo, IUserRepository userRepo) =>
 {
     var perfil = await repo.GetByIdAsync(id);
