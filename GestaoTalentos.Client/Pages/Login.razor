@@ -51,7 +51,7 @@
             var response = await Http.PostAsJsonAsync("/login", loginModel);
             if (response.IsSuccessStatusCode)
             {
-                var result = await response.Content.ReadFromJsonAsync<LoginResult>();
+                var result = await response.Content.ReadFromJsonAsync<LoginResponseDto>();
                 if (result != null && !string.IsNullOrEmpty(result.Token))
                 {
                     await JS.InvokeVoidAsync("sessionStorage.setItem", "authToken", result.Token);

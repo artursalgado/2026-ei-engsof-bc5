@@ -135,9 +135,8 @@ else
         try
         {
             bool ok = isEditMode
-                ? await ClienteService.UpdateClienteAsync(editingId, new UpdateClienteDto { Nome = formNome, Email = formEmail })
-                : await ClienteService.AddClienteAsync(new CreateClienteDto { Nome = formNome, Email = formEmail }) != null;
-
+              ? await ClienteService.UpdateClienteAsync(editingId, new ClienteUpdateDto(formNome, formEmail, null))
+              : await ClienteService.AddClienteAsync(new ClienteCreateDto(formNome, formEmail, null)) != null;
             if (ok)
             {
                 await LoadClientes();

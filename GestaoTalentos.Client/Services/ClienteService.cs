@@ -1,46 +1,14 @@
 using System.ComponentModel.DataAnnotations;
 using System.Net.Http.Json;
+using GestaoTalentos.Shared.DTOs;
 
 namespace GestaoTalentos.Client.Services;
-
-public class ClienteDto
-{
-    public int Id { get; set; }
-    public string Nome { get; set; } = string.Empty;
-    public string Email { get; set; } = string.Empty;
-    public int IdCriador { get; set; }
-    public int? IdMinhaConta { get; set; }
-}
-
-public class CreateClienteDto
-{
-    [Required(ErrorMessage = "Nome é obrigatório")]
-    public string Nome { get; set; } = string.Empty;
-
-    [Required(ErrorMessage = "Email é obrigatório")]
-    [EmailAddress(ErrorMessage = "Email inválido")]
-    public string Email { get; set; } = string.Empty;
-
-    public int? IdMinhaConta { get; set; }
-}
-
-public class UpdateClienteDto
-{
-    [Required(ErrorMessage = "Nome é obrigatório")]
-    public string Nome { get; set; } = string.Empty;
-
-    [Required(ErrorMessage = "Email é obrigatório")]
-    [EmailAddress(ErrorMessage = "Email inválido")]
-    public string Email { get; set; } = string.Empty;
-
-    public int? IdMinhaConta { get; set; }
-}
 
 public interface IClienteService
 {
     Task<List<ClienteDto>> GetAllClientesAsync();
-    Task<ClienteDto?> AddClienteAsync(CreateClienteDto dto);
-    Task<bool> UpdateClienteAsync(int id, UpdateClienteDto dto);
+    Task<ClienteDto?> AddClienteAsync(ClienteCreateDto dto);
+    Task<bool> UpdateClienteAsync(int id, ClienteUpdateDto dto);
     Task<bool> DeleteClienteAsync(int id);
 }
 
@@ -63,7 +31,7 @@ public class ClienteService : IClienteService
         }
     }
 
-    public async Task<ClienteDto?> AddClienteAsync(CreateClienteDto dto)
+    public async Task<ClienteDto?> AddClienteAsync(ClienteCreateDto dto)
     {
         try
         {
@@ -78,7 +46,7 @@ public class ClienteService : IClienteService
         }
     }
 
-    public async Task<bool> UpdateClienteAsync(int id, UpdateClienteDto dto)
+    public async Task<bool> UpdateClienteAsync(int id, ClienteUpdateDto dto)
     {
         try
         {
