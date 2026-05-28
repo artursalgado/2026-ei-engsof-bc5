@@ -1,0 +1,165 @@
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 1.75rem;
+    gap: 1rem;
+}
+
+.page-header h1 {
+    margin-bottom: 0.25rem;
+}
+
+.page-subtitle {
+    color: var(--color-text-muted);
+    font-size: 0.92rem;
+    margin: 0;
+}
+
+.loading-state {
+    padding: 3rem;
+    text-align: center;
+    color: var(--color-text-muted);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.stat-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+    text-align: center;
+    transition: box-shadow 0.15s ease;
+}
+
+.stat-card:hover {
+    box-shadow: var(--shadow-md);
+}
+
+.stat-icon {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.stat-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--color-text);
+    line-height: 1.2;
+}
+
+.stat-label {
+    font-size: 0.82rem;
+    color: var(--color-text-muted);
+    margin-top: 0.2rem;
+}
+
+.stat-detail {
+    font-size: 0.75rem;
+    color: var(--color-text-soft);
+    margin-top: 0.25rem;
+}
+
+.valor-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.valor-title {
+    font-size: 1rem;
+    margin: 0 0 1.25rem;
+}
+
+.valor-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1rem;
+    text-align: center;
+}
+
+.valor-separator {
+    border-left: 1px solid var(--color-border);
+    border-right: 1px solid var(--color-border);
+    padding: 0 1rem;
+}
+
+.valor-label {
+    font-size: 0.82rem;
+    color: var(--color-text-muted);
+    margin-bottom: 0.35rem;
+}
+
+.valor-amount {
+    font-size: 1.35rem;
+    font-weight: 700;
+}
+
+.valor-amount.success {
+    color: var(--color-success);
+}
+
+.valor-detail {
+    font-size: 0.75rem;
+    color: var(--color-text-soft);
+    margin-top: 0.25rem;
+}
+
+.table-card {
+    padding: 0;
+    overflow: hidden;
+}
+
+.table-head {
+    padding: 1.1rem 1.25rem 0;
+}
+
+.table-head h3 {
+    font-size: 1rem;
+    margin: 0 0 0.75rem;
+}
+
+.cell-name {
+    font-weight: 500;
+}
+
+.cell-muted {
+    color: var(--color-text-muted);
+    font-size: 0.88rem;
+}
+
+.price-tag {
+    font-weight: 600;
+    color: var(--color-success);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: var(--color-surface);
+    border: 1px dashed var(--color-border-strong);
+    border-radius: var(--radius-lg);
+}
+
+.empty-ico {
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.empty-state h3 {
+    font-size: 1.1rem;
+    margin-bottom: 0.35rem;
+}
+
+.empty-state p {
+    color: var(--color-text-muted);
+    margin-bottom: 0;
+}

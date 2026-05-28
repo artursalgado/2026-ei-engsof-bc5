@@ -1,0 +1,154 @@
+@page "/relatorios"
+@using System.Net.Http.Json
+@using Microsoft.AspNetCore.Authorization
+@inject HttpClient Http
+@attribute [Authorize]
+
+<PageTitle>Relatórios - Gestão de Talentos</PageTitle>
+
+<div class="page-header">
+    <div>
+        <h1>Relatórios</h1>
+        <p class="page-subtitle">Análise de preços médios mensais da plataforma (176h/mês)</p>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(erro))
+{
+    <div class="alert alert-danger">@erro</div>
+}
+
+<div class="report-grid">
+
+    <div class="report-card">
+        <div class="report-card-head">
+            <div class="report-icon">📊</div>
+            <div>
+                <h3>Por Categoria e País</h3>
+                <p class="report-desc">Preço médio mensal agrupado por categoria de talento e país de origem</p>
+            </div>
+        </div>
+
+        @if (dadosCategoriaPais == null)
+        {
+            <div class="loading-state">A carregar...</div>
+        }
+        else if (!dadosCategoriaPais.Any())
+        {
+            <div class="report-empty">
+                <p>Sem dados disponíveis. Adiciona perfis com skills para ver resultados.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-card">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Categoria</th>
+                            <th>País</th>
+                            <th class="text-end">Preço Médio Mensal</th>
+                            <th class="text-end">Perfis</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var linha in dadosCategoriaPais)
+                        {
+                            <tr>
+                                <td class="cell-name">@linha.Categoria</td>
+                                <td>@linha.Pais</td>
+                                <td class="text-end"><span class="price-tag">@linha.PrecoMedioMensal.ToString("F2") €</span></td>
+                                <td class="text-end"><span class="badge badge-count">@linha.NumeroPerfis</span></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+
+    <div class="report-card">
+        <div class="report-card-head">
+            <div class="report-icon">📈</div>
+            <div>
+                <h3>Por Skill</h3>
+                <p class="report-desc">Preço médio mensal agrupado por competência técnica</p>
+            </div>
+        </div>
+
+        @if (dadosSkill == null)
+        {
+            <div class="loading-state">A carregar...</div>
+        }
+        else if (!dadosSkill.Any())
+        {
+            <div class="report-empty">
+                <p>Sem dados disponíveis. Adiciona perfis com skills para ver resultados.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-card">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Skill</th>
+                            <th class="text-end">Preço Médio Mensal</th>
+                            <th class="text-end">Perfis</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var linha in dadosSkill)
+                        {
+                            <tr>
+                                <td class="cell-name">@linha.Skill</td>
+                                <td class="text-end"><span class="price-tag">@linha.PrecoMedioMensal.ToString("F2") €</span></td>
+                                <td class="text-end"><span class="badge badge-count">@linha.NumeroPerfis</span></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private List<CategoriaPaisVm>? dadosCategoriaPais;
+    private List<SkillVm>? dadosSkill;
+    private string? erro;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CarregarRelatorios();
+    }
+
+    private async Task CarregarRelatorios()
+    {
+        erro = null;
+        try
+        {
+            dadosCategoriaPais = await Http.GetFromJsonAsync<List<CategoriaPaisVm>>("relatorios/preco-medio-categoria-pais");
+            dadosSkill         = await Http.GetFromJsonAsync<List<SkillVm>>("relatorios/preco-medio-skill");
+        }
+        catch (Exception ex)
+        {
+            erro = $"Erro ao carregar relatórios: {ex.Message}";
+        }
+    }
+
+    private class CategoriaPaisVm
+    {
+        public string Categoria        { get; set; } = "";
+        public string Pais             { get; set; } = "";
+        public double PrecoMedioMensal { get; set; }
+        public int    NumeroPerfis     { get; set; }
+    }
+
+    private class SkillVm
+    {
+        public string Skill            { get; set; } = "";
+        public double PrecoMedioMensal { get; set; }
+        public int    NumeroPerfis     { get; set; }
+    }
+}

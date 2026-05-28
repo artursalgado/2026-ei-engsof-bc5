@@ -22,6 +22,13 @@
                         <p>Encontra profissionais disponíveis</p>
                     </div>
                 </a>
+                <a href="propostas" class="quick-card">
+                    <div class="quick-ico">📋</div>
+                    <div>
+                        <h3>Propostas</h3>
+                        <p>Gere as tuas propostas de trabalho</p>
+                    </div>
+                </a>
             }
             else
             {
@@ -39,8 +46,39 @@
                         <p>Organiza as competências do sistema</p>
                     </div>
                 </a>
+                <a href="propostas" class="quick-card">
+                    <div class="quick-ico">📋</div>
+                    <div>
+                        <h3>Propostas</h3>
+                        <p>Consulta propostas de trabalho</p>
+                    </div>
+                </a>
             }
         </div>
+
+        @{
+            var role = context.User.FindFirst("role")?.Value;
+            var isManager = role == "UserManager" || role == "Admin";
+        }
+        @if (isManager)
+        {
+            <div class="quick-grid">
+                <a href="dashboard" class="quick-card quick-card-accent">
+                    <div class="quick-ico accent">📊</div>
+                    <div>
+                        <h3>Dashboard</h3>
+                        <p>Métricas e indicadores da plataforma</p>
+                    </div>
+                </a>
+                <a href="relatorios" class="quick-card quick-card-accent">
+                    <div class="quick-ico accent">📈</div>
+                    <div>
+                        <h3>Relatórios</h3>
+                        <p>Preços médios por categoria e skill</p>
+                    </div>
+                </a>
+            </div>
+        }
 
         <div class="session-info">
             <div class="session-row">
@@ -51,17 +89,61 @@
                 <span class="session-label">Tipo de conta</span>
                 <span class="badge badge-role">@context.User.FindFirst("tipo")?.Value</span>
             </div>
+            <div class="session-row">
+                <span class="session-label">Permissão</span>
+                <span class="badge badge-role">@context.User.FindFirst("role")?.Value</span>
+            </div>
         </div>
     </Authorized>
     <NotAuthorized>
-        <div class="landing">
-            <div class="brand-mark-lg">GT</div>
-            <h1>Gestão de Talentos</h1>
-            <p class="subtitle">Plataforma de gestão de currículos para profissionais IT.</p>
-            <div class="landing-actions">
-                <a href="/login" class="btn btn-primary">Entrar</a>
-                <a href="/register" class="btn btn-secondary">Criar Conta</a>
+        <div class="hero">
+            <div class="hero-bg"></div>
+            <div class="hero-content">
+                <div class="hero-badge">Plataforma de Gestão IT</div>
+                <h1 class="hero-title">Conecta <span class="hero-accent">Talentos</span> a <span class="hero-accent">Oportunidades</span></h1>
+                <p class="hero-desc">Gere perfis profissionais, competências técnicas e propostas de trabalho. Encontra o talento certo com matching automático baseado em skills.</p>
+                <div class="hero-actions">
+                    <a href="/register" class="btn btn-primary btn-lg">Começar Agora</a>
+                    <a href="/login" class="btn btn-secondary btn-lg">Já tenho conta</a>
+                </div>
             </div>
+        </div>
+
+        <div class="features-section">
+            <div class="feature-card">
+                <div class="feature-icon-wrap">
+                    <span class="feature-icon">👤</span>
+                </div>
+                <h3>Perfis de Talento</h3>
+                <p>Cria perfis detalhados com competências, experiências profissionais e preço por hora.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon-wrap">
+                    <span class="feature-icon">⚡</span>
+                </div>
+                <h3>Skills & Matching</h3>
+                <p>Catálogo de skills por área. Pesquisa talentos por combinação de competências.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon-wrap">
+                    <span class="feature-icon">📋</span>
+                </div>
+                <h3>Propostas de Trabalho</h3>
+                <p>Cria propostas com requisitos e descobre automaticamente os talentos elegíveis.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon-wrap">
+                    <span class="feature-icon">📊</span>
+                </div>
+                <h3>Relatórios & Dashboard</h3>
+                <p>Analisa preços médios por categoria, país e skill. Métricas em tempo real.</p>
+            </div>
+        </div>
+
+        <div class="cta-section">
+            <h2>Pronto para começar?</h2>
+            <p>Cria a tua conta gratuita e começa a gerir talentos IT hoje.</p>
+            <a href="/register" class="btn btn-primary btn-lg">Criar Conta</a>
         </div>
     </NotAuthorized>
 </AuthorizeView>
