@@ -705,6 +705,23 @@ app.MapGet("/clientes/{id}", async (int id, ClaimsPrincipal user, IClienteReposi
     return Results.Ok(new ClienteDto(cliente.Id, cliente.Nome, cliente.Email, cliente.IdCriador, cliente.IdMinhaConta));
 }).RequireAuthorization("UserPolicy");
 
+app.MapGet("/clientes/me/associado",
+        async (ClaimsPrincipal user, AppDbContext context) =>
+        {
+            var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrEmpty(userIdClaim))
+                return Results.Unauthorized();
+
+            var userId = int.Parse(userIdClaim);
+
+            var associado = await context.Clientes
+                .AnyAsync(c => c.IdMinhaConta == userId);
+
+            return Results.Ok(associado);
+        })
+    .RequireAuthorization();
+
 app.MapPost("/clientes", async (ClienteCreateDto request, ClaimsPrincipal user, IClienteRepository repo) =>
 {
     if (string.IsNullOrWhiteSpace(request.Nome)) return Results.BadRequest("Nome é obrigatório.");

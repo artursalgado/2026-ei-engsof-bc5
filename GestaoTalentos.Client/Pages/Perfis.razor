@@ -3,6 +3,7 @@
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
 @attribute [Authorize]
+
 @inject HttpClient Http
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
@@ -13,14 +14,16 @@
 <div class="page-header">
     <div>
         <h1>@(isCliente ? "Pesquisa de Talentos" : "Os Meus Perfis")</h1>
-        <p class="page-subtitle">@(isCliente ? "Encontra profissionais disponíveis na plataforma" : "Gere os teus currículos e competências")</p>
+        <p class="page-subtitle">
+            @(isCliente ? "Encontra profissionais disponíveis na plataforma" : "Gere os teus currículos e competências")
+        </p>
     </div>
-    @if (!isCliente)
-    {
-       <button class="btn btn-sm btn-outline" @onclick="PesquisarPorSkills" disabled="@(skillsFiltro.Count == 0 && !filtroAtivo)">
-    @(filtroAtivo ? "✕ Limpar filtro" : "Pesquisar")
-</button>
-    }
+    <div class="page-header-actions">
+        @if (!isCliente)
+        {
+            <button class = " btn btn-primary " @onclick = " CriarNovo "> + Novo Perfil </button>
+        }
+    </div>
 </div>
 
 @if (!string.IsNullOrEmpty(mensagemSucesso))
@@ -28,59 +31,84 @@
     <div class="alert alert-success mb-4">@mensagemSucesso</div>
 }
 
-@if (isCliente)
-{
-    <div class="skill-search-bar">
-        <div class="skill-search-label">Filtrar por Skills</div>
-        <div class="skill-search-row">
-            <div class="skill-multiselect-wrapper">
-                <div class="skill-selected-pills">
-                    @foreach (var sid in skillsFiltro)
-                    {
-                        var nome = todasSkills.FirstOrDefault(s => s.Id == sid)?.Nome ?? sid.ToString();
-                        <span class="skill-filter-pill">
-                            @nome
-                            <button class="pill-remove" @onclick="() => RemoverSkillFiltro(sid)">×</button>
-                        </span>
-                    }
-                    <div class="skill-dropdown-trigger" @onclick="ToggleDropdown">
-                        <span class="skill-add-text">@(skillsFiltro.Count == 0 ? "Selecionar skills..." : "+ Adicionar")</span>
-                        <span class="dropdown-arrow">@(dropdownAberto ? "▲" : "▼")</span>
+@* ===================== BARra DE PESQUISA SEMPRE VISÍVEL ===================== *@
+<div class="skill-search-bar">
+    <div class="skill-search-label">Filtrar por Skills</div>
+
+    <div class="skill-search-row">
+
+        <div class="skill-multiselect-wrapper">
+
+            <div class="skill-selected-pills">
+                @foreach (var sid in skillsFiltro)
+                {
+                    var nome = todasSkills.FirstOrDefault(s => s.Id == sid)?.Nome ?? sid.ToString();
+
+                    <span class="skill-filter-pill">
+                        @nome
+                        <button class="pill-remove"
+                                @onclick="() => RemoverSkillFiltro(sid)">
+                            ×
+                        </button>
+                    </span>
+                }
+
+                <div class="skill-dropdown-trigger" @onclick="ToggleDropdown">
+                    <span class="skill-add-text">
+                        @(skillsFiltro.Count == 0 ? "Selecionar skills..." : "+ Adicionar")
+                    </span>
+                    <span class="dropdown-arrow">
+                        @(dropdownAberto ? "▲" : "▼")
+                    </span>
+                </div>
+            </div>
+
+            @if (dropdownAberto)
+            {
+                <div class="skill-dropdown">
+                    <input class="skill-dropdown-search"
+                           placeholder="Pesquisar skill..."
+                           @bind="pesquisaDropdown"
+                           @bind:event="oninput" />
+
+                    <div class="skill-dropdown-list">
+                        @foreach (var sk in todasSkills.Where(s =>
+                            !skillsFiltro.Contains(s.Id) &&
+                            (string.IsNullOrEmpty(pesquisaDropdown)
+                             || s.Nome.Contains(pesquisaDropdown, StringComparison.OrdinalIgnoreCase))))
+                        {
+                            <div class="skill-dropdown-item"
+                                 @onclick="() => AdicionarSkillFiltro(sk.Id)">
+                                @sk.Nome <span class="skill-area-tag">@sk.AreaNome</span>
+                            </div>
+                        }
                     </div>
                 </div>
-                @if (dropdownAberto)
-                {
-                    <div class="skill-dropdown">
-                        <input class="skill-dropdown-search" placeholder="Pesquisar skill..." @bind="pesquisaDropdown" @bind:event="oninput" />
-                        <div class="skill-dropdown-list">
-                            @foreach (var sk in todasSkills.Where(s => !skillsFiltro.Contains(s.Id) && (string.IsNullOrEmpty(pesquisaDropdown) || s.Nome.Contains(pesquisaDropdown, StringComparison.OrdinalIgnoreCase))))
-                            {
-                                <div class="skill-dropdown-item" @onclick="() => AdicionarSkillFiltro(sk.Id)">
-                                    @sk.Nome <span class="skill-area-tag">@sk.AreaNome</span>
-                                </div>
-                            }
-                            @if (!todasSkills.Where(s => !skillsFiltro.Contains(s.Id) && (string.IsNullOrEmpty(pesquisaDropdown) || s.Nome.Contains(pesquisaDropdown, StringComparison.OrdinalIgnoreCase))).Any())
-                            {
-                                <div class="skill-dropdown-empty">Nenhuma skill encontrada</div>
-                            }
-                        </div>
-                    </div>
-                }
-            </div>
-            <button class="btn btn-primary" @onclick="PesquisarPorSkills" disabled="@(skillsFiltro.Count == 0 && !filtroAtivo)">
+            }
+        </div>
+
+        @* botão só aparece para não-clientes *@
+        @if (!isCliente)
+        {
+            <button class="btn btn-primary"
+                    @onclick="PesquisarPorSkills"
+                    disabled="@(skillsFiltro.Count == 0 && !filtroAtivo)">
                 @(filtroAtivo ? "Limpar Filtro" : "Pesquisar")
             </button>
-        </div>
-        @if (filtroAtivo)
-        {
-            <div class="skill-filter-result-info">
-                A mostrar talentos com <strong>todas</strong> as skills selecionadas.
-                <span class="skill-result-count">@perfis.Count resultado(s)</span>
-            </div>
         }
-    </div>
-}
 
+    </div>
+
+    @if (filtroAtivo)
+    {
+        <div class="skill-filter-result-info">
+            A mostrar talentos com <strong>todas</strong> as skills selecionadas.
+            <span class="skill-result-count">@perfis.Count resultado(s)</span>
+        </div>
+    }
+</div>
+
+@* ===================== LISTA PERFIS ===================== *@
 @if (carregando)
 {
     <div class="loading-state">A carregar perfis...</div>
@@ -93,6 +121,7 @@ else if (!perfis.Any())
 {
     <div class="empty-state">
         <div class="empty-ico">👤</div>
+
         @if (isCliente)
         {
             <h3>Nenhum talento disponível</h3>
@@ -102,7 +131,9 @@ else if (!perfis.Any())
         {
             <h3>Ainda não tens perfis</h3>
             <p>Cria o teu primeiro perfil de talento para começar.</p>
-            <button class="btn btn-primary" @onclick="CriarNovo">Criar primeiro perfil</button>
+            <button class="btn btn-primary" @onclick="CriarNovo">
+                Criar primeiro perfil
+            </button>
         }
     </div>
 }
@@ -111,13 +142,19 @@ else
     <div class="perfis-grid">
         @foreach (var p in perfis)
         {
-            <div class="perfil-card @(isCliente ? "perfil-card-clickable" : "")" @onclick="() => { if (isCliente) AbrirDetalhe(p); }">
+            <div class="perfil-card @(isCliente ? "perfil-card-clickable" : "")"
+                 @onclick="() => { if (isCliente) AbrirDetalhe(p); }">
+
                 <div class="perfil-card-head">
-                    <div class="perfil-avatar">@(p.Nome.Length > 0 ? p.Nome[0].ToString().ToUpper() : "?")</div>
+                    <div class="perfil-avatar">
+                        @(p.Nome.Length > 0 ? p.Nome[0].ToString().ToUpper() : "?")
+                    </div>
+
                     <div class="perfil-info">
                         <h3>@p.Nome</h3>
                         <span class="perfil-location">📍 @p.Pais</span>
                     </div>
+
                     <span class="visibility-badge @(p.IsShared ? "public" : "private")">
                         @(p.IsShared ? "Público" : "Privado")
                     </span>
@@ -125,116 +162,35 @@ else
 
                 <div class="perfil-card-body">
                     <div class="perfil-meta-row">
-                        <span class="meta-label">Email</span>
+                        <span>Email</span>
                         <span>@p.Email</span>
                     </div>
-                    <div class="perfil-meta-row">
-                        <span class="meta-label">Preço/hora</span>
-                        <span class="price-tag">@p.PrecoPorHora.ToString("F2") €</span>
-                    </div>
 
-                    @if (p.Skills != null && p.Skills.Any())
-                    {
-                        <div class="skill-pills">
-                            @foreach (var s in p.Skills.Take(4))
-                            {
-                                <span class="skill-pill">@s.SkillNome <span class="skill-years">@s.AnosExperiencia a</span></span>
-                            }
-                            @if (p.Skills.Count > 4)
-                            {
-                                <span class="skill-pill more">+@(p.Skills.Count - 4)</span>
-                            }
-                        </div>
-                    }
+                    <div class="perfil-meta-row">
+                        <span>Preço/hora</span>
+                        <span>@p.PrecoPorHora €</span>
+                    </div>
                 </div>
 
                 <div class="perfil-card-foot" @onclick:stopPropagation>
-                    <button class="btn btn-sm btn-outline" @onclick="() => AbrirDetalhe(p)">Ver Detalhe</button>
+                    <button class="btn btn-sm btn-outline" @onclick="() => AbrirDetalhe(p)">
+                        Ver Detalhe
+                    </button>
+
                     @if (!isCliente)
                     {
-                        <button class="btn btn-sm btn-secondary" @onclick="() => Editar(p.Id)">Editar</button>
-                        <button class="btn btn-sm btn-danger" @onclick="() => ConfirmarApagar(p)">Apagar</button>
+                        <button class="btn btn-sm btn-secondary" @onclick="() => Editar(p.Id)">
+                            Editar
+                        </button>
+
+                        <button class="btn btn-sm btn-danger" @onclick="() => ConfirmarApagar(p)">
+                            Apagar
+                        </button>
                     }
                 </div>
+
             </div>
         }
-    </div>
-}
-
-@if (perfilDetalhe != null)
-{
-    <div class="modal-backdrop-custom" @onclick="FecharDetalhe"></div>
-    <div class="modal-custom modal-detalhe" @onclick:stopPropagation>
-        <div class="modal-head">
-            <div class="detalhe-head-info">
-                <div class="perfil-avatar detalhe-avatar">@(perfilDetalhe.Nome.Length > 0 ? perfilDetalhe.Nome[0].ToString().ToUpper() : "?")</div>
-                <div>
-                    <h3>@perfilDetalhe.Nome</h3>
-                    <span class="perfil-location">📍 @perfilDetalhe.Pais</span>
-                </div>
-            </div>
-            <button class="modal-close" @onclick="FecharDetalhe">×</button>
-        </div>
-        <div class="modal-body-custom">
-
-            <div class="detalhe-section">
-                <div class="detalhe-row">
-                    <span class="detalhe-label">Email</span>
-                    <span>@perfilDetalhe.Email</span>
-                </div>
-                <div class="detalhe-row">
-                    <span class="detalhe-label">Preço/hora</span>
-                    <span class="price-tag">@perfilDetalhe.PrecoPorHora.ToString("F2") €</span>
-                </div>
-                <div class="detalhe-row">
-                    <span class="detalhe-label">Visibilidade</span>
-                    <span class="visibility-badge @(perfilDetalhe.IsShared ? "public" : "private")">
-                        @(perfilDetalhe.IsShared ? "Público" : "Privado")
-                    </span>
-                </div>
-            </div>
-
-            @if (perfilDetalhe.Skills != null && perfilDetalhe.Skills.Any())
-            {
-                <div class="detalhe-section">
-                    <h4 class="detalhe-section-title">Skills</h4>
-                    <div class="skill-pills">
-                        @foreach (var s in perfilDetalhe.Skills)
-                        {
-                            <span class="skill-pill">@s.SkillNome <span class="skill-years">@s.AnosExperiencia a</span></span>
-                        }
-                    </div>
-                </div>
-            }
-
-            @if (perfilDetalhe.Experiencias != null && perfilDetalhe.Experiencias.Any())
-            {
-                <div class="detalhe-section">
-                    <h4 class="detalhe-section-title">Experiência Profissional</h4>
-                    <div class="exp-list">
-                        @foreach (var e in perfilDetalhe.Experiencias)
-                        {
-                            <div class="exp-item">
-                                <div class="exp-dot"></div>
-                                <div class="exp-content">
-                                    <div class="exp-titulo">@e.Titulo</div>
-                                    <div class="exp-empresa">@e.Empresa</div>
-                                    <div class="exp-anos">@e.AnoInicio — @(e.AnoFim.HasValue ? e.AnoFim.ToString() : "Presente")</div>
-                                </div>
-                            </div>
-                        }
-                    </div>
-                </div>
-            }
-            else
-            {
-                <div class="detalhe-section">
-                    <h4 class="detalhe-section-title">Experiência Profissional</h4>
-                    <p class="detalhe-empty">Sem experiências registadas.</p>
-                </div>
-            }
-
-        </div>
     </div>
 }
 
@@ -243,10 +199,10 @@ else
     private bool carregando = true;
     private string? erro;
     private string? mensagemSucesso;
-    private bool isCliente = false;
-    private PerfilVm? perfilDetalhe = null;
 
-    // Multi-skill search state
+    private bool isCliente = false;
+    private PerfilVm? perfilDetalhe;
+
     private List<SkillOpcao> todasSkills = new();
     private List<int> skillsFiltro = new();
     private bool dropdownAberto = false;
@@ -257,111 +213,86 @@ else
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         var role = authState.User.FindFirst("role")?.Value;
-        isCliente = role == "UserManager" || role == "Admin";
 
-        if (isCliente)
-            await CarregarSkills();
+        if (role == "Admin" || role == "UserManager")
+        {
+            isCliente = false;
+        }
+        else if (role == "User")
+        {
+            try
+            {
+                isCliente = await Http.GetFromJsonAsync<bool>("/clientes/me/associado");
+            }
+            catch
+            {
+                isCliente = false;
+            }
+        }
 
         await CarregarPerfis();
-    }
-
-    private async Task CarregarSkills()
-    {
-        try
-        {
-            var skills = await Http.GetFromJsonAsync<List<SkillOpcao>>("/skills") ?? new();
-            todasSkills = skills;
-        }
-        catch { /* silently ignore */ }
     }
 
     private async Task CarregarPerfis()
     {
         carregando = true;
         erro = null;
+
         try
         {
             perfis = await Http.GetFromJsonAsync<List<PerfilVm>>("/perfis") ?? new();
         }
         catch (Exception ex)
         {
-            erro = $"Erro ao carregar perfis: {ex.Message}";
+            erro = ex.Message;
         }
+
         carregando = false;
     }
 
     private void ToggleDropdown() => dropdownAberto = !dropdownAberto;
 
-    private void AdicionarSkillFiltro(int skillId)
+    private void AdicionarSkillFiltro(int id)
     {
-        if (!skillsFiltro.Contains(skillId))
-            skillsFiltro.Add(skillId);
-        pesquisaDropdown = "";
+        if (!skillsFiltro.Contains(id))
+            skillsFiltro.Add(id);
+
         dropdownAberto = false;
+        pesquisaDropdown = "";
     }
 
-    private void RemoverSkillFiltro(int skillId)
+    private void RemoverSkillFiltro(int id)
     {
-        skillsFiltro.Remove(skillId);
-        if (filtroAtivo && skillsFiltro.Count == 0)
-        {
-            filtroAtivo = false;
-            _ = CarregarPerfis();
-        }
+        skillsFiltro.Remove(id);
     }
 
     private async Task PesquisarPorSkills()
     {
         if (filtroAtivo)
         {
-            // limpar filtro
             skillsFiltro.Clear();
             filtroAtivo = false;
-            dropdownAberto = false;
             await CarregarPerfis();
             return;
         }
 
-        if (skillsFiltro.Count == 0) return;
-
-        carregando = true;
-        erro = null;
-        dropdownAberto = false;
         filtroAtivo = true;
 
-        try
-        {
-            var query = string.Join("&", skillsFiltro.Select(id => $"skillIds={id}"));
-            perfis = await Http.GetFromJsonAsync<List<PerfilVm>>($"/perfis/pesquisa-skills?{query}") ?? new();
-        }
-        catch (Exception ex)
-        {
-            erro = $"Erro ao pesquisar: {ex.Message}";
-        }
-        carregando = false;
+        var query = string.Join("&", skillsFiltro.Select(x => $"skillIds={x}"));
+        perfis = await Http.GetFromJsonAsync<List<PerfilVm>>($"/perfis/pesquisa-skills?{query}") ?? new();
     }
 
     private void AbrirDetalhe(PerfilVm p) => perfilDetalhe = p;
-    private void FecharDetalhe() => perfilDetalhe = null;
-
     private void CriarNovo() => Navigation.NavigateTo("/perfis/form");
     private void Editar(int id) => Navigation.NavigateTo($"/perfis/form/{id}");
 
     private async Task ConfirmarApagar(PerfilVm p)
     {
-        var ok = await JS.InvokeAsync<bool>("confirm", $"Queres mesmo apagar o perfil de '{p.Nome}'?");
+        var ok = await JS.InvokeAsync<bool>("confirm", $"Apagar {p.Nome}?");
         if (!ok) return;
 
-        var resposta = await Http.DeleteAsync($"/perfis/{p.Id}");
-        if (resposta.IsSuccessStatusCode)
-        {
-            mensagemSucesso = "Perfil apagado com sucesso.";
-            await CarregarPerfis();
-        }
-        else
-        {
-            erro = "Não foi possível apagar o perfil.";
-        }
+        await Http.DeleteAsync($"/perfis/{p.Id}");
+        await CarregarPerfis();
     }
 
     public class PerfilVm
@@ -372,24 +303,6 @@ else
         public string Pais { get; set; } = "";
         public decimal PrecoPorHora { get; set; }
         public bool IsShared { get; set; }
-        public List<SkillVm> Skills { get; set; } = new();
-        public List<ExperienciaVm> Experiencias { get; set; } = new();
-    }
-
-    public class SkillVm
-    {
-        public int SkillId { get; set; }
-        public string? SkillNome { get; set; }
-        public int AnosExperiencia { get; set; }
-    }
-
-    public class ExperienciaVm
-    {
-        public int Id { get; set; }
-        public string Titulo { get; set; } = "";
-        public string Empresa { get; set; } = "";
-        public int AnoInicio { get; set; }
-        public int? AnoFim { get; set; }
     }
 
     public class SkillOpcao
