@@ -997,4 +997,27 @@ app.MapGet("/relatorios/preco-medio-categoria-pais", async (AppDbContext context
     return Results.Ok(linhas);
 }).RequireAuthorization("UserManagerPolicy");
 
+// RF12 — Preço médio mensal por skill
+// Para cada skill, calcula a média de PrecoPorHora × 176 dos perfis que a têm
+app.MapGet("/relatorios/preco-medio-skill", async (AppDbContext context) =>
+{
+    var perfilSkills = await context.Set<PerfilSkill>()
+        .Include(ps => ps.Perfil)
+        .Include(ps => ps.Skill)
+        .ToListAsync();
+
+    var resultado = perfilSkills
+        .GroupBy(ps => new { ps.SkillId, ps.Skill!.Nome })
+        .Select(g => new
+        {
+            Skill            = g.Key.Nome,
+            PrecoMedioMensal = Math.Round((double)g.Average(ps => ps.Perfil!.PrecoPorHora * 176), 2),
+            NumeroPerfis     = g.Count()
+        })
+        .OrderBy(x => x.Skill)
+        .ToList();
+
+    return Results.Ok(resultado);
+}).RequireAuthorization("UserManagerPolicy");
+
 app.Run();
