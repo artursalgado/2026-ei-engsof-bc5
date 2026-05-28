@@ -1,0 +1,130 @@
+@page "/relatorios"
+@using System.Net.Http.Json
+@using Microsoft.AspNetCore.Authorization
+@inject HttpClient Http
+@attribute [Authorize]
+
+<h1>Relatórios</h1>
+
+@if (!string.IsNullOrWhiteSpace(erro))
+{
+    <div class="alert alert-danger">@erro</div>
+}
+
+@* ── RF11: Preço médio mensal por categoria + país ── *@
+<h4 class="mt-4">Preço médio mensal por categoria e país</h4>
+<p class="text-muted small">Média de preço por hora × 176 horas, agrupada por categoria de talento e país.</p>
+
+@if (dadosCategoriaPais == null)
+{
+    <p>A carregar...</p>
+}
+else if (!dadosCategoriaPais.Any())
+{
+    <p class="text-muted">Sem dados disponíveis. Adiciona perfis com skills para ver resultados.</p>
+}
+else
+{
+    <table class="table table-striped table-sm">
+        <thead class="table-dark">
+            <tr>
+                <th>Categoria</th>
+                <th>País</th>
+                <th class="text-end">Preço Médio Mensal (€)</th>
+                <th class="text-end">Nº Perfis</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var linha in dadosCategoriaPais)
+            {
+                <tr>
+                    <td>@linha.Categoria</td>
+                    <td>@linha.Pais</td>
+                    <td class="text-end">@linha.PrecoMedioMensal.ToString("F2")</td>
+                    <td class="text-end">@linha.NumeroPerfis</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@* ── RF12: Preço médio mensal por skill ── *@
+<h4 class="mt-5">Preço médio mensal por skill</h4>
+<p class="text-muted small">Média de preço por hora × 176 horas, agrupada por skill.</p>
+
+@if (dadosSkill == null)
+{
+    <p>A carregar...</p>
+}
+else if (!dadosSkill.Any())
+{
+    <p class="text-muted">Sem dados disponíveis. Adiciona perfis com skills para ver resultados.</p>
+}
+else
+{
+    <table class="table table-striped table-sm">
+        <thead class="table-dark">
+            <tr>
+                <th>Skill</th>
+                <th class="text-end">Preço Médio Mensal (€)</th>
+                <th class="text-end">Nº Perfis</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var linha in dadosSkill)
+            {
+                <tr>
+                    <td>@linha.Skill</td>
+                    <td class="text-end">@linha.PrecoMedioMensal.ToString("F2")</td>
+                    <td class="text-end">@linha.NumeroPerfis</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    // Dados do RF11 — por categoria + país
+    private List<CategoriaPaisVm>? dadosCategoriaPais;
+
+    // Dados do RF12 — por skill
+    private List<SkillVm>? dadosSkill;
+
+    private string? erro;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CarregarRelatorios();
+    }
+
+    private async Task CarregarRelatorios()
+    {
+        erro = null;
+        try
+        {
+            dadosCategoriaPais = await Http.GetFromJsonAsync<List<CategoriaPaisVm>>("relatorios/preco-medio-categoria-pais");
+            dadosSkill         = await Http.GetFromJsonAsync<List<SkillVm>>("relatorios/preco-medio-skill");
+        }
+        catch (Exception ex)
+        {
+            erro = $"Erro ao carregar relatórios: {ex.Message}";
+        }
+    }
+
+    // Modelo para o RF11
+    private class CategoriaPaisVm
+    {
+        public string Categoria        { get; set; } = "";
+        public string Pais             { get; set; } = "";
+        public double PrecoMedioMensal { get; set; }
+        public int    NumeroPerfis     { get; set; }
+    }
+
+    // Modelo para o RF12
+    private class SkillVm
+    {
+        public string Skill            { get; set; } = "";
+        public double PrecoMedioMensal { get; set; }
+        public int    NumeroPerfis     { get; set; }
+    }
+}

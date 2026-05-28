@@ -17,13 +17,68 @@
     </div>
     @if (!isCliente)
     {
-        <button class="btn btn-primary" @onclick="CriarNovo">+ Novo Perfil</button>
+       <button class="btn btn-sm btn-outline" @onclick="PesquisarPorSkills" disabled="@(skillsFiltro.Count == 0 && !filtroAtivo)">
+    @(filtroAtivo ? "✕ Limpar filtro" : "Pesquisar")
+</button>
     }
 </div>
 
 @if (!string.IsNullOrEmpty(mensagemSucesso))
 {
     <div class="alert alert-success mb-4">@mensagemSucesso</div>
+}
+
+@if (isCliente)
+{
+    <div class="skill-search-bar">
+        <div class="skill-search-label">Filtrar por Skills</div>
+        <div class="skill-search-row">
+            <div class="skill-multiselect-wrapper">
+                <div class="skill-selected-pills">
+                    @foreach (var sid in skillsFiltro)
+                    {
+                        var nome = todasSkills.FirstOrDefault(s => s.Id == sid)?.Nome ?? sid.ToString();
+                        <span class="skill-filter-pill">
+                            @nome
+                            <button class="pill-remove" @onclick="() => RemoverSkillFiltro(sid)">×</button>
+                        </span>
+                    }
+                    <div class="skill-dropdown-trigger" @onclick="ToggleDropdown">
+                        <span class="skill-add-text">@(skillsFiltro.Count == 0 ? "Selecionar skills..." : "+ Adicionar")</span>
+                        <span class="dropdown-arrow">@(dropdownAberto ? "▲" : "▼")</span>
+                    </div>
+                </div>
+                @if (dropdownAberto)
+                {
+                    <div class="skill-dropdown">
+                        <input class="skill-dropdown-search" placeholder="Pesquisar skill..." @bind="pesquisaDropdown" @bind:event="oninput" />
+                        <div class="skill-dropdown-list">
+                            @foreach (var sk in todasSkills.Where(s => !skillsFiltro.Contains(s.Id) && (string.IsNullOrEmpty(pesquisaDropdown) || s.Nome.Contains(pesquisaDropdown, StringComparison.OrdinalIgnoreCase))))
+                            {
+                                <div class="skill-dropdown-item" @onclick="() => AdicionarSkillFiltro(sk.Id)">
+                                    @sk.Nome <span class="skill-area-tag">@sk.AreaNome</span>
+                                </div>
+                            }
+                            @if (!todasSkills.Where(s => !skillsFiltro.Contains(s.Id) && (string.IsNullOrEmpty(pesquisaDropdown) || s.Nome.Contains(pesquisaDropdown, StringComparison.OrdinalIgnoreCase))).Any())
+                            {
+                                <div class="skill-dropdown-empty">Nenhuma skill encontrada</div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+            <button class="btn btn-primary" @onclick="PesquisarPorSkills" disabled="@(skillsFiltro.Count == 0 && !filtroAtivo)">
+                @(filtroAtivo ? "Limpar Filtro" : "Pesquisar")
+            </button>
+        </div>
+        @if (filtroAtivo)
+        {
+            <div class="skill-filter-result-info">
+                A mostrar talentos com <strong>todas</strong> as skills selecionadas.
+                <span class="skill-result-count">@perfis.Count resultado(s)</span>
+            </div>
+        }
+    </div>
 }
 
 @if (carregando)
@@ -191,13 +246,33 @@ else
     private bool isCliente = false;
     private PerfilVm? perfilDetalhe = null;
 
+    // Multi-skill search state
+    private List<SkillOpcao> todasSkills = new();
+    private List<int> skillsFiltro = new();
+    private bool dropdownAberto = false;
+    private string pesquisaDropdown = "";
+    private bool filtroAtivo = false;
+
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         var role = authState.User.FindFirst("role")?.Value;
         isCliente = role == "UserManager" || role == "Admin";
 
+        if (isCliente)
+            await CarregarSkills();
+
         await CarregarPerfis();
+    }
+
+    private async Task CarregarSkills()
+    {
+        try
+        {
+            var skills = await Http.GetFromJsonAsync<List<SkillOpcao>>("/skills") ?? new();
+            todasSkills = skills;
+        }
+        catch { /* silently ignore */ }
     }
 
     private async Task CarregarPerfis()
@@ -211,6 +286,57 @@ else
         catch (Exception ex)
         {
             erro = $"Erro ao carregar perfis: {ex.Message}";
+        }
+        carregando = false;
+    }
+
+    private void ToggleDropdown() => dropdownAberto = !dropdownAberto;
+
+    private void AdicionarSkillFiltro(int skillId)
+    {
+        if (!skillsFiltro.Contains(skillId))
+            skillsFiltro.Add(skillId);
+        pesquisaDropdown = "";
+        dropdownAberto = false;
+    }
+
+    private void RemoverSkillFiltro(int skillId)
+    {
+        skillsFiltro.Remove(skillId);
+        if (filtroAtivo && skillsFiltro.Count == 0)
+        {
+            filtroAtivo = false;
+            _ = CarregarPerfis();
+        }
+    }
+
+    private async Task PesquisarPorSkills()
+    {
+        if (filtroAtivo)
+        {
+            // limpar filtro
+            skillsFiltro.Clear();
+            filtroAtivo = false;
+            dropdownAberto = false;
+            await CarregarPerfis();
+            return;
+        }
+
+        if (skillsFiltro.Count == 0) return;
+
+        carregando = true;
+        erro = null;
+        dropdownAberto = false;
+        filtroAtivo = true;
+
+        try
+        {
+            var query = string.Join("&", skillsFiltro.Select(id => $"skillIds={id}"));
+            perfis = await Http.GetFromJsonAsync<List<PerfilVm>>($"/perfis/pesquisa-skills?{query}") ?? new();
+        }
+        catch (Exception ex)
+        {
+            erro = $"Erro ao pesquisar: {ex.Message}";
         }
         carregando = false;
     }
@@ -264,5 +390,13 @@ else
         public string Empresa { get; set; } = "";
         public int AnoInicio { get; set; }
         public int? AnoFim { get; set; }
+    }
+
+    public class SkillOpcao
+    {
+        public int Id { get; set; }
+        public string Nome { get; set; } = "";
+        public int AreaId { get; set; }
+        public string AreaNome { get; set; } = "";
     }
 }

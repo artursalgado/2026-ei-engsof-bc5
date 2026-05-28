@@ -247,6 +247,43 @@ app.MapGet("/perfis/empresas-sugestoes", async (AppDbContext context) =>
     return Results.Ok(empresas);
 }).RequireAuthorization("UserPolicy");
 
+//pesquisa Talentos Skill
+
+
+app.MapGet("/perfis/pesquisa-skills", async (
+    HttpContext context,
+    ClaimsPrincipal user,
+    GestaoTalentos.Infrastructure.IPerfilRepository repo,
+    IUserRepository userRepo) =>
+{
+    var skillIds = context.Request.Query["skillIds"]
+        .Where(s => int.TryParse(s, out _))
+        .Select(s => int.Parse(s))
+        .ToList();
+
+    var userId = int.TryParse(user.FindFirstValue("sub"), out var uid) ? uid : 0;
+    var current = await userRepo.GetByIdAsync(userId);
+    if (current == null) return Results.Unauthorized();
+
+    IEnumerable<Perfil> perfis;
+    if (current.Role == UserRole.User)
+        perfis = await repo.GetByOwnerAsync(userId);
+    else
+        perfis = await repo.GetAllAsync();
+
+    if (skillIds != null && skillIds.Count > 0)
+    {
+        perfis = perfis.Where(p =>
+            skillIds.All(sid => p.PerfilSkills.Any(ps => ps.SkillId == sid)));
+    }
+
+    return Results.Ok(perfis.Select(p => MapPerfilToDto(p)));
+}).RequireAuthorization("UserPolicy");
+
+//
+
+
+
 app.MapGet("/perfis/{id}", async (int id, ClaimsPrincipal user, GestaoTalentos.Infrastructure.IPerfilRepository repo, IUserRepository userRepo) =>
 {
     var perfil = await repo.GetByIdAsync(id);
@@ -831,7 +868,7 @@ app.MapPut("/propostas/{id:int}", async (int id, UpdatePropostaDto dto, IPropost
         proposta.SkillsNecessarias.Add(skillNecessaria);
     }
 
-    await repo.UpdateAsync(proposta);
+    await context.SaveChangesAsync();
 
     await talentoRepo.DeleteByPropostaIdAsync(id);
     var talentosElegiveis = await matchingService.IdentificarTalentosElegiveisAsync(id, proposta.PrecoHoraMedio);
@@ -911,6 +948,76 @@ app.MapGet("/dashboard", async (AppDbContext context) =>
         TaxaAprovacao = taxaAprovacao,
         PropostasDetalhadas = propostasDetalhadas
     });
+}).RequireAuthorization("UserManagerPolicy");
+
+// ======================
+// RELATÓRIOS (RF11 + RF12)
+// ======================
+
+// RF11 — Preço médio mensal por categoria de talento (área) e por país
+// Agrupa os perfis pelas áreas das suas skills e calcula a média de PrecoPorHora × 176
+app.MapGet("/relatorios/preco-medio-categoria-pais", async (AppDbContext context) =>
+{
+    // Vai buscar todos os perfis com as suas skills e as áreas dessas skills
+    var perfis = await context.Perfis
+        .Include(p => p.PerfilSkills)
+            .ThenInclude(ps => ps.Skill)
+                .ThenInclude(s => s!.Area)
+        .ToListAsync();
+
+    // Para cada perfil, pega nas áreas distintas das suas skills
+    // e cria uma entrada por (área, país) para esse perfil
+    var linhas = perfis
+        .Where(p => p.PerfilSkills.Any())
+        .SelectMany(p =>
+            p.PerfilSkills
+                .Where(ps => ps.Skill?.Area != null)
+                .Select(ps => ps.Skill!.Area!)
+                .DistinctBy(a => a.Id)
+                .Select(area => new
+                {
+                    AreaId      = area.Id,
+                    AreaNome    = area.Nome,
+                    Pais        = p.Pais,
+                    PrecoMensal = p.PrecoPorHora * 176  // 1 mês = 176 horas
+                })
+        )
+        .GroupBy(x => new { x.AreaId, x.AreaNome, x.Pais })
+        .Select(g => new
+        {
+            Categoria        = g.Key.AreaNome,
+            Pais             = g.Key.Pais,
+            PrecoMedioMensal = Math.Round((double)g.Average(x => x.PrecoMensal), 2),
+            NumeroPerfis     = g.Count()
+        })
+        .OrderBy(x => x.Categoria)
+        .ThenBy(x => x.Pais)
+        .ToList();
+
+    return Results.Ok(linhas);
+}).RequireAuthorization("UserManagerPolicy");
+
+// RF12 — Preço médio mensal por skill
+// Para cada skill, calcula a média de PrecoPorHora × 176 dos perfis que a têm
+app.MapGet("/relatorios/preco-medio-skill", async (AppDbContext context) =>
+{
+    var perfilSkills = await context.Set<PerfilSkill>()
+        .Include(ps => ps.Perfil)
+        .Include(ps => ps.Skill)
+        .ToListAsync();
+
+    var resultado = perfilSkills
+        .GroupBy(ps => new { ps.SkillId, ps.Skill!.Nome })
+        .Select(g => new
+        {
+            Skill            = g.Key.Nome,
+            PrecoMedioMensal = Math.Round((double)g.Average(ps => ps.Perfil!.PrecoPorHora * 176), 2),
+            NumeroPerfis     = g.Count()
+        })
+        .OrderBy(x => x.Skill)
+        .ToList();
+
+    return Results.Ok(resultado);
 }).RequireAuthorization("UserManagerPolicy");
 
 app.Run();
