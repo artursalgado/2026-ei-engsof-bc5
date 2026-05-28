@@ -34,6 +34,10 @@
     padding: 3rem;
     text-align: center;
     color: var(--color-text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
 }
 
 .empty-state {
@@ -105,6 +109,18 @@
     color: var(--color-text-muted);
     cursor: pointer;
     line-height: 1;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease;
+}
+
+.modal-close:hover:not(:disabled) {
+    background: var(--color-surface-alt);
+    color: var(--color-text);
 }
 
 .modal-body-custom {

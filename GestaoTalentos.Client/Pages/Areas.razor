@@ -18,19 +18,19 @@
     @if (podeGerir)
     {
         <button class="btn btn-primary" @onclick="OpenCreateModal" disabled="@isBusy">
-            + Nova Área
+            <i class="bi bi-plus-lg"></i> Nova Área
         </button>
     }
 </div>
 
 @if (areas == null)
 {
-    <div class="loading-state">A carregar...</div>
+    <div class="loading-state"><i class="bi bi-hourglass-split"></i> A carregar...</div>
 }
 else if (areas.Count == 0)
 {
     <div class="empty-state">
-        <div class="empty-ico"><i class="bi bi-folder2"></i></div>
+        <div class="empty-ico"><i class="bi bi-folder2-open"></i></div>
         <h3>Ainda não há áreas</h3>
         @if (podeGerir)
         {
@@ -66,8 +66,8 @@ else
                         @if (podeGerir)
                         {
                             <td class="text-end">
-                                <button class="btn btn-sm btn-secondary" @onclick="() => OpenEditModal(area)" disabled="@isBusy">Editar</button>
-                                <button class="btn btn-sm btn-danger" @onclick="() => ConfirmDelete(area)" disabled="@isBusy">Apagar</button>
+                                <button class="btn btn-sm btn-secondary" @onclick="() => OpenEditModal(area)" disabled="@isBusy"><i class="bi bi-pencil"></i> Editar</button>
+                                <button class="btn btn-sm btn-danger" @onclick="() => ConfirmDelete(area)" disabled="@isBusy"><i class="bi bi-trash3"></i></button>
                             </td>
                         }
                     </tr>
@@ -83,7 +83,7 @@ else
     <div class="modal-custom" @onclick:stopPropagation>
         <div class="modal-head">
             <h3>@(isEditMode ? "Editar Área" : "Nova Área")</h3>
-            <button class="modal-close" @onclick="CloseModal" disabled="@isBusy">×</button>
+            <button class="modal-close" @onclick="CloseModal" disabled="@isBusy">&times;</button>
         </div>
 
         <div class="modal-body-custom">
