@@ -45,15 +45,7 @@ else
         }
     </div>
 
-    @{
-        var filtered = clientes
-            .Where(c => string.IsNullOrEmpty(searchQuery)
-                || c.Nome.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)
-                || c.Email.Contains(searchQuery, StringComparison.OrdinalIgnoreCase))
-            .ToList();
-    }
-
-    @if (filtered.Count == 0)
+    @if (FilteredClientes.Count == 0)
     {
         <div class="no-results">
             <i class="bi bi-search"></i>
@@ -63,10 +55,10 @@ else
     else
     {
         <div class="counter-row">
-            <span class="counter-badge">@filtered.Count cliente@(filtered.Count != 1 ? "s" : "")</span>
+            <span class="counter-badge">@FilteredClientes.Count cliente@(FilteredClientes.Count != 1 ? "s" : "")</span>
         </div>
         <div class="clients-grid">
-            @foreach (var (c, idx) in filtered.Select((c, i) => (c, i)))
+            @foreach (var (c, idx) in FilteredClientes.Select((c, i) => (c, i)))
             {
                 var initials = GetInitials(c.Nome);
                 var accentClass = $"accent-{(idx % 6)}";
@@ -136,6 +128,12 @@ else
 @code {
     private List<ClienteDto>? clientes;
     private string searchQuery = "";
+
+    private List<ClienteDto> FilteredClientes => clientes?
+        .Where(c => string.IsNullOrEmpty(searchQuery)
+            || c.Nome.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)
+            || c.Email.Contains(searchQuery, StringComparison.OrdinalIgnoreCase))
+        .ToList() ?? new List<ClienteDto>();
     private bool showModal = false;
     private bool isEditMode = false;
     private int editingId = 0;
