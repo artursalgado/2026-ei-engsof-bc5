@@ -32,5 +32,11 @@
         position: relative;
         width: 100%;
         max-width: 440px;
+        animation: authFadeIn 0.35s ease-out;
+    }
+
+    @@keyframes authFadeIn {
+        from { opacity: 0; transform: translateY(12px); }
+        to { opacity: 1; transform: translateY(0); }
     }
 </style>
