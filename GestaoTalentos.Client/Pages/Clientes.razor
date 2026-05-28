@@ -13,15 +13,15 @@
         <p class="page-subtitle">Gere os clientes da plataforma</p>
     </div>
     <button class="btn btn-primary" @onclick="OpenCreateModal" disabled="@isBusy">
-        + Novo Cliente
+        <i class="bi bi-plus-lg"></i> Novo Cliente
     </button>
 </div>
 
-
-
 @if (clientes == null)
 {
-    <div class="loading-state">A carregar clientes...</div>
+    <div class="loading-state">
+        <i class="bi bi-hourglass-split"></i> A carregar clientes...
+    </div>
 }
 else if (clientes.Count == 0)
 {
@@ -34,30 +34,67 @@ else if (clientes.Count == 0)
 }
 else
 {
-    <div class="card table-card">
-        <table class="table mb-0">
-            <thead>
-                <tr>
-                    <th>Nome</th>
-                    <th>Email</th>
-                    <th class="text-end">Ações</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var c in clientes)
-                {
-                    <tr>
-                        <td class="cell-name">@c.Nome</td>
-                        <td class="cell-muted">@c.Email</td>
-                        <td class="text-end">
-                            <button class="btn btn-sm btn-secondary" @onclick="() => OpenEditModal(c)" disabled="@isBusy">Editar</button>
-                            <button class="btn btn-sm btn-danger" @onclick="() => ConfirmDelete(c)" disabled="@isBusy">Apagar</button>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+    <div class="search-bar">
+        <i class="bi bi-search search-icon"></i>
+        <input class="search-input" type="text" placeholder="Pesquisar cliente..." @bind="searchQuery" @bind:event="oninput" />
+        @if (!string.IsNullOrEmpty(searchQuery))
+        {
+            <button class="search-clear" @onclick="() => searchQuery = string.Empty" title="Limpar">
+                <i class="bi bi-x"></i>
+            </button>
+        }
     </div>
+
+    @{
+        var filtered = clientes
+            .Where(c => string.IsNullOrEmpty(searchQuery)
+                || c.Nome.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)
+                || c.Email.Contains(searchQuery, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+    }
+
+    @if (filtered.Count == 0)
+    {
+        <div class="no-results">
+            <i class="bi bi-search"></i>
+            <span>Nenhum cliente encontrado para "<strong>@searchQuery</strong>"</span>
+        </div>
+    }
+    else
+    {
+        <div class="counter-row">
+            <span class="counter-badge">@filtered.Count cliente@(filtered.Count != 1 ? "s" : "")</span>
+        </div>
+        <div class="clients-grid">
+            @foreach (var (c, idx) in filtered.Select((c, i) => (c, i)))
+            {
+                var initials = GetInitials(c.Nome);
+                var accentClass = $"accent-{(idx % 6)}";
+                <div class="client-card">
+                    <div class="card-accent @accentClass"></div>
+                    <div class="card-body-inner">
+                        <div class="card-top">
+                            <div class="client-avatar @accentClass">@initials</div>
+                            <div class="client-info">
+                                <span class="client-name">@c.Nome</span>
+                                <a class="client-email" href="mailto:@c.Email">
+                                    <i class="bi bi-envelope"></i> @c.Email
+                                </a>
+                            </div>
+                        </div>
+                        <div class="card-actions">
+                            <button class="btn-action btn-edit" @onclick="() => OpenEditModal(c)" disabled="@isBusy">
+                                <i class="bi bi-pencil"></i> Editar
+                            </button>
+                            <button class="btn-action btn-delete" @onclick="() => ConfirmDelete(c)" disabled="@isBusy">
+                                <i class="bi bi-trash3"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
 }
 
 @if (showModal)
@@ -66,7 +103,7 @@ else
     <div class="modal-custom" @onclick:stopPropagation>
         <div class="modal-head">
             <h3>@(isEditMode ? "Editar Cliente" : "Novo Cliente")</h3>
-            <button class="modal-close" @onclick="CloseModal" disabled="@isBusy">×</button>
+            <button class="modal-close" @onclick="CloseModal" disabled="@isBusy">&times;</button>
         </div>
         <div class="modal-body-custom">
             @if (!string.IsNullOrEmpty(formError))
@@ -98,6 +135,7 @@ else
 
 @code {
     private List<ClienteDto>? clientes;
+    private string searchQuery = "";
     private bool showModal = false;
     private bool isEditMode = false;
     private int editingId = 0;
@@ -111,6 +149,15 @@ else
     protected override async Task OnInitializedAsync() => await LoadClientes();
 
     private async Task LoadClientes() => clientes = await ClienteService.GetAllClientesAsync();
+
+    // gera as iniciais do nome (max 2 letras)
+    private static string GetInitials(string nome)
+    {
+        var parts = nome.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0) return "?";
+        if (parts.Length == 1) return parts[0][..Math.Min(2, parts[0].Length)].ToUpper();
+        return $"{parts[0][0]}{parts[^1][0]}".ToUpper();
+    }
 
     private void OpenCreateModal()
     {
