@@ -8,7 +8,7 @@
 <AuthorizeView>
     <Authorized>
         <div class="welcome-header">
-            <h1>Olá, @context.User.Identity?.Name 👋</h1>
+            <h1>Olá, @context.User.Identity?.Name</h1>
             <p class="subtitle">Bem-vindo à tua plataforma de gestão de talentos.</p>
         </div>
 
@@ -16,14 +16,14 @@
             @if (context.User.FindFirst("tipo")?.Value == "Cliente")
             {
                 <a href="perfis" class="quick-card">
-                    <div class="quick-ico">🔍</div>
+                    <div class="quick-ico"><i class="bi bi-search"></i></div>
                     <div>
                         <h3>Pesquisa de Talentos</h3>
                         <p>Encontra profissionais disponíveis</p>
                     </div>
                 </a>
                 <a href="propostas" class="quick-card">
-                    <div class="quick-ico">📋</div>
+                    <div class="quick-ico"><i class="bi bi-file-text"></i></div>
                     <div>
                         <h3>Propostas</h3>
                         <p>Gere as tuas propostas de trabalho</p>
@@ -33,21 +33,21 @@
             else
             {
                 <a href="perfis" class="quick-card">
-                    <div class="quick-ico">👤</div>
+                    <div class="quick-ico"><i class="bi bi-person-vcard"></i></div>
                     <div>
                         <h3>Os Meus Perfis</h3>
                         <p>Gere currículos e competências</p>
                     </div>
                 </a>
                 <a href="skills" class="quick-card">
-                    <div class="quick-ico">⚡</div>
+                    <div class="quick-ico"><i class="bi bi-lightning-charge-fill"></i></div>
                     <div>
                         <h3>Catálogo de Skills</h3>
                         <p>Organiza as competências do sistema</p>
                     </div>
                 </a>
                 <a href="propostas" class="quick-card">
-                    <div class="quick-ico">📋</div>
+                    <div class="quick-ico"><i class="bi bi-file-text"></i></div>
                     <div>
                         <h3>Propostas</h3>
                         <p>Consulta propostas de trabalho</p>
@@ -64,14 +64,14 @@
         {
             <div class="quick-grid">
                 <a href="dashboard" class="quick-card quick-card-accent">
-                    <div class="quick-ico accent">📊</div>
+                    <div class="quick-ico accent"><i class="bi bi-bar-chart-line"></i></div>
                     <div>
                         <h3>Dashboard</h3>
                         <p>Métricas e indicadores da plataforma</p>
                     </div>
                 </a>
                 <a href="relatorios" class="quick-card quick-card-accent">
-                    <div class="quick-ico accent">📈</div>
+                    <div class="quick-ico accent"><i class="bi bi-graph-up"></i></div>
                     <div>
                         <h3>Relatórios</h3>
                         <p>Preços médios por categoria e skill</p>
@@ -96,55 +96,7 @@
         </div>
     </Authorized>
     <NotAuthorized>
-        <div class="hero">
-            <div class="hero-bg"></div>
-            <div class="hero-content">
-                <div class="hero-badge">Plataforma de Gestão IT</div>
-                <h1 class="hero-title">Conecta <span class="hero-accent">Talentos</span> a <span class="hero-accent">Oportunidades</span></h1>
-                <p class="hero-desc">Gere perfis profissionais, competências técnicas e propostas de trabalho. Encontra o talento certo com matching automático baseado em skills.</p>
-                <div class="hero-actions">
-                    <a href="/register" class="btn btn-primary btn-lg">Começar Agora</a>
-                    <a href="/login" class="btn btn-secondary btn-lg">Já tenho conta</a>
-                </div>
-            </div>
-        </div>
-
-        <div class="features-section">
-            <div class="feature-card">
-                <div class="feature-icon-wrap">
-                    <span class="feature-icon">👤</span>
-                </div>
-                <h3>Perfis de Talento</h3>
-                <p>Cria perfis detalhados com competências, experiências profissionais e preço por hora.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon-wrap">
-                    <span class="feature-icon">⚡</span>
-                </div>
-                <h3>Skills & Matching</h3>
-                <p>Catálogo de skills por área. Pesquisa talentos por combinação de competências.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon-wrap">
-                    <span class="feature-icon">📋</span>
-                </div>
-                <h3>Propostas de Trabalho</h3>
-                <p>Cria propostas com requisitos e descobre automaticamente os talentos elegíveis.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon-wrap">
-                    <span class="feature-icon">📊</span>
-                </div>
-                <h3>Relatórios & Dashboard</h3>
-                <p>Analisa preços médios por categoria, país e skill. Métricas em tempo real.</p>
-            </div>
-        </div>
-
-        <div class="cta-section">
-            <h2>Pronto para começar?</h2>
-            <p>Cria a tua conta gratuita e começa a gerir talentos IT hoje.</p>
-            <a href="/register" class="btn btn-primary btn-lg">Criar Conta</a>
-        </div>
+        @{ Navigation.NavigateTo("/login", replace: true); }
     </NotAuthorized>
 </AuthorizeView>
 

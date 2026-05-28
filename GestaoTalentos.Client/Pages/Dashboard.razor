@@ -25,22 +25,22 @@ else
 {
     <div class="stats-grid">
         <div class="stat-card">
-            <div class="stat-icon">👤</div>
+            <div class="stat-icon"><i class="bi bi-people"></i></div>
             <div class="stat-value">@dados.TotalPerfis</div>
             <div class="stat-label">Perfis registados</div>
         </div>
         <div class="stat-card">
-            <div class="stat-icon">🆕</div>
+            <div class="stat-icon"><i class="bi bi-person-plus"></i></div>
             <div class="stat-value">@dados.PerfisUltimasQuatroSemanas</div>
             <div class="stat-label">Inscrições (4 semanas)</div>
         </div>
         <div class="stat-card">
-            <div class="stat-icon">📋</div>
+            <div class="stat-icon"><i class="bi bi-file-text"></i></div>
             <div class="stat-value">@dados.TotalPropostas</div>
             <div class="stat-label">Propostas ativas</div>
         </div>
         <div class="stat-card">
-            <div class="stat-icon">✅</div>
+            <div class="stat-icon"><i class="bi bi-check-circle"></i></div>
             <div class="stat-value">@dados.TaxaAprovacao.ToString("F1")%</div>
             <div class="stat-label">Taxa de aprovação</div>
             <div class="stat-detail">@dados.TotalTalentosElegiveis talentos elegíveis</div>
@@ -48,7 +48,7 @@ else
     </div>
 
     <div class="valor-card">
-        <h3 class="valor-title">Valorização das Propostas</h3>
+        <h3 class="valor-title"><i class="bi bi-currency-euro" style="margin-right:.4rem;"></i>Valorização das Propostas</h3>
         <div class="valor-grid">
             <div class="valor-item">
                 <div class="valor-label">Valor total estimado</div>
@@ -102,7 +102,7 @@ else
     else
     {
         <div class="empty-state">
-            <div class="empty-ico">📈</div>
+            <div class="empty-ico"><i class="bi bi-graph-up"></i></div>
             <h3>Sem propostas</h3>
             <p>Ainda não existem propostas para apresentar no dashboard.</p>
         </div>

@@ -10,7 +10,7 @@
     @if (registoSucesso)
     {
         <div class="success-state">
-            <div class="success-ico">✓</div>
+            <div class="success-ico"><i class="bi bi-check-lg"></i></div>
             <h3>Conta criada!</h3>
             <p>A tua conta foi criada com sucesso.<br />Já podes entrar na plataforma.</p>
             <a href="/login" class="btn btn-primary w-100">Ir para o login</a>
@@ -47,14 +47,14 @@
             <button type="button"
                     class="type-card @(tipoUtilizador == "Talento" ? "active" : "")"
                     @onclick='() => tipoUtilizador = "Talento"'>
-                <div class="type-ico">🎯</div>
+                <div class="type-ico"><i class="bi bi-person-workspace"></i></div>
                 <div class="type-title">Talento</div>
                 <div class="type-desc">Sou um profissional</div>
             </button>
             <button type="button"
                     class="type-card @(tipoUtilizador == "Cliente" ? "active" : "")"
                     @onclick='() => tipoUtilizador = "Cliente"'>
-                <div class="type-ico">💼</div>
+                <div class="type-ico"><i class="bi bi-buildings"></i></div>
                 <div class="type-title">Cliente</div>
                 <div class="type-desc">Quero contratar</div>
             </button>

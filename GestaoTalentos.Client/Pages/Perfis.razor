@@ -18,7 +18,7 @@
     @if (!isCliente)
     {
        <button class="btn btn-sm btn-outline" @onclick="PesquisarPorSkills" disabled="@(skillsFiltro.Count == 0 && !filtroAtivo)">
-    @(filtroAtivo ? "✕ Limpar filtro" : "Pesquisar")
+    @(filtroAtivo ? "Limpar filtro" : "Pesquisar")
 </button>
     }
 </div>
@@ -92,7 +92,7 @@ else if (erro != null)
 else if (!perfis.Any())
 {
     <div class="empty-state">
-        <div class="empty-ico">👤</div>
+        <div class="empty-ico"><i class="bi bi-person-vcard"></i></div>
         @if (isCliente)
         {
             <h3>Nenhum talento disponível</h3>
@@ -116,7 +116,7 @@ else
                     <div class="perfil-avatar">@(p.Nome.Length > 0 ? p.Nome[0].ToString().ToUpper() : "?")</div>
                     <div class="perfil-info">
                         <h3>@p.Nome</h3>
-                        <span class="perfil-location">📍 @p.Pais</span>
+                        <span class="perfil-location"><i class="bi bi-geo-alt"></i> @p.Pais</span>
                     </div>
                     <span class="visibility-badge @(p.IsShared ? "public" : "private")">
                         @(p.IsShared ? "Público" : "Privado")
