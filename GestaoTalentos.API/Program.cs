@@ -950,4 +950,51 @@ app.MapGet("/dashboard", async (AppDbContext context) =>
     });
 }).RequireAuthorization("UserManagerPolicy");
 
+// ======================
+// RELATÓRIOS (RF11 + RF12)
+// ======================
+
+// RF11 — Preço médio mensal por categoria de talento (área) e por país
+// Agrupa os perfis pelas áreas das suas skills e calcula a média de PrecoPorHora × 176
+app.MapGet("/relatorios/preco-medio-categoria-pais", async (AppDbContext context) =>
+{
+    // Vai buscar todos os perfis com as suas skills e as áreas dessas skills
+    var perfis = await context.Perfis
+        .Include(p => p.PerfilSkills)
+            .ThenInclude(ps => ps.Skill)
+                .ThenInclude(s => s!.Area)
+        .ToListAsync();
+
+    // Para cada perfil, pega nas áreas distintas das suas skills
+    // e cria uma entrada por (área, país) para esse perfil
+    var linhas = perfis
+        .Where(p => p.PerfilSkills.Any())
+        .SelectMany(p =>
+            p.PerfilSkills
+                .Where(ps => ps.Skill?.Area != null)
+                .Select(ps => ps.Skill!.Area!)
+                .DistinctBy(a => a.Id)
+                .Select(area => new
+                {
+                    AreaId      = area.Id,
+                    AreaNome    = area.Nome,
+                    Pais        = p.Pais,
+                    PrecoMensal = p.PrecoPorHora * 176  // 1 mês = 176 horas
+                })
+        )
+        .GroupBy(x => new { x.AreaId, x.AreaNome, x.Pais })
+        .Select(g => new
+        {
+            Categoria        = g.Key.AreaNome,
+            Pais             = g.Key.Pais,
+            PrecoMedioMensal = Math.Round((double)g.Average(x => x.PrecoMensal), 2),
+            NumeroPerfis     = g.Count()
+        })
+        .OrderBy(x => x.Categoria)
+        .ThenBy(x => x.Pais)
+        .ToList();
+
+    return Results.Ok(linhas);
+}).RequireAuthorization("UserManagerPolicy");
+
 app.Run();
