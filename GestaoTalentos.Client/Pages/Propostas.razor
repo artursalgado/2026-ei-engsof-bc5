@@ -9,178 +9,189 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @attribute [Authorize]
 
-<h1>Propostas</h1>
+<PageTitle>Propostas - Gestão de Talentos</PageTitle>
+
+<div class="page-header">
+    <div>
+        <h1>Propostas de Trabalho</h1>
+        <p class="page-subtitle">Gere as propostas e consulta talentos elegíveis</p>
+    </div>
+    <button class="btn btn-primary" @onclick="OpenCreateModal" disabled="@busy">
+        + Nova Proposta
+    </button>
+</div>
 
 @if (!string.IsNullOrWhiteSpace(error))
 {
     <div class="alert alert-danger">@error</div>
 }
 
-<div class="mb-3">
-    <button class="btn btn-primary" @onclick="OpenCreateModal" disabled="@busy">+ Nova Proposta</button>
-</div>
-
 @if (propostas == null)
 {
-    <p>A carregar...</p>
+    <div class="loading-state">A carregar propostas...</div>
+}
+else if (!propostas.Any())
+{
+    <div class="empty-state">
+        <div class="empty-ico">📋</div>
+        <h3>Ainda não há propostas</h3>
+        <p>Cria a primeira proposta de trabalho para começar.</p>
+        <button class="btn btn-primary" @onclick="OpenCreateModal">Criar primeira proposta</button>
+    </div>
 }
 else
 {
-    <table class="table">
-        <thead>
-            <tr>
-                <th></th>
-                <th>Id</th>
-                <th>Nome</th>
-                <th>Área</th>
-                <th>Horas</th>
-                <th>Preço/h</th>
-                <th class="text-end">Ações</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var p in propostas)
-            {
+    <div class="card table-card">
+        <table class="table mb-0">
+            <thead>
                 <tr>
-                    <td>
-                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => ToggleDetail(p.Id)" title="Ver talentos elegíveis">
-                            @(expandedPropostaId == p.Id ? "▲" : "▼")
-                        </button>
-                    </td>
-                    <td>@p.Id</td>
-                    <td>@p.Nome</td>
-                    <td>@(areas.FirstOrDefault(a => a.Id == p.AreaId)?.Nome ?? "-")</td>
-                    <td>@p.NumeroTotalHoras</td>
-                    <td>@p.PrecoHoraMedio</td>
-                    <td class="text-end">
-                        <button class="btn btn-sm btn-warning me-1" @onclick="() => OpenEditModal(p)" disabled="@busy">Editar</button>
-                        <button class="btn btn-sm btn-danger" @onclick="() => ConfirmDelete(p.Id)" disabled="@busy">Apagar</button>
-                    </td>
+                    <th style="width:36px;"></th>
+                    <th>Nome</th>
+                    <th>Área</th>
+                    <th class="text-end">Horas</th>
+                    <th class="text-end">Preço/h</th>
+                    <th class="text-end">Ações</th>
                 </tr>
-                @if (expandedPropostaId == p.Id)
+            </thead>
+            <tbody>
+                @foreach (var p in propostas)
                 {
-                    <tr class="table-light">
-                        <td colspan="7">
-                            <strong>Talentos Elegíveis</strong>
-                            @if (!p.TalentosElegiveis.Any())
-                            {
-                                <span class="text-muted ms-2">Nenhum talento elegível encontrado.</span>
-                            }
-                            else
-                            {
-                                <table class="table table-sm mt-2 mb-0">
-                                    <thead>
-                                        <tr>
-                                            <th>Talento</th>
-                                            <th>País</th>
-                                            <th>Preço/h (€)</th>
-                                            <th>Valor Estimado (€)</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach (var t in p.TalentosElegiveis.OrderBy(x => x.ValorEstimado))
-                                        {
-                                            <tr>
-                                                <td>@(t.Perfil?.Nome ?? $"Perfil #{t.PerfilId}")</td>
-                                                <td>@(t.Perfil?.Pais ?? "-")</td>
-                                                <td>@(t.Perfil?.PrecoPorHora.ToString("F2") ?? "-")</td>
-                                                <td>@t.ValorEstimado.ToString("F2")</td>
-                                            </tr>
-                                        }
-                                    </tbody>
-                                </table>
-                            }
+                    <tr>
+                        <td>
+                            <button class="btn-expand" @onclick="() => ToggleDetail(p.Id)" title="Ver talentos elegíveis">
+                                @(expandedPropostaId == p.Id ? "▲" : "▼")
+                            </button>
+                        </td>
+                        <td class="cell-name">@p.Nome</td>
+                        <td><span class="badge badge-area">@(areas.FirstOrDefault(a => a.Id == p.AreaId)?.Nome ?? "-")</span></td>
+                        <td class="text-end cell-muted">@p.NumeroTotalHoras h</td>
+                        <td class="text-end cell-muted">@p.PrecoHoraMedio.ToString("F2") €</td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-secondary" @onclick="() => OpenEditModal(p)" disabled="@busy">Editar</button>
+                            <button class="btn btn-sm btn-danger" @onclick="() => ConfirmDelete(p.Id)" disabled="@busy">Apagar</button>
                         </td>
                     </tr>
+                    @if (expandedPropostaId == p.Id)
+                    {
+                        <tr>
+                            <td colspan="6" class="expanded-row">
+                                <div class="elegivel-section">
+                                    <h4 class="elegivel-title">Talentos Elegíveis</h4>
+                                    @if (!p.TalentosElegiveis.Any())
+                                    {
+                                        <p class="elegivel-empty">Nenhum talento elegível encontrado para esta proposta.</p>
+                                    }
+                                    else
+                                    {
+                                        <div class="elegivel-grid">
+                                            @foreach (var t in p.TalentosElegiveis.OrderBy(x => x.ValorEstimado))
+                                            {
+                                                <div class="elegivel-card">
+                                                    <div class="elegivel-avatar">@(t.Perfil?.Nome?.Length > 0 ? t.Perfil.Nome[0].ToString().ToUpper() : "?")</div>
+                                                    <div class="elegivel-info">
+                                                        <div class="elegivel-nome">@(t.Perfil?.Nome ?? $"Perfil #{t.PerfilId}")</div>
+                                                        <div class="elegivel-pais">@(t.Perfil?.Pais ?? "-")</div>
+                                                    </div>
+                                                    <div class="elegivel-valores">
+                                                        <span class="elegivel-preco">@(t.Perfil?.PrecoPorHora.ToString("F2") ?? "-") €/h</span>
+                                                        <span class="elegivel-total">@t.ValorEstimado.ToString("F2") € total</span>
+                                                    </div>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
                 }
-            }
-        </tbody>
-    </table>
+            </tbody>
+        </table>
+    </div>
 }
 
 @* Modal Criar *@
 @if (showCreateModal)
 {
-    <div class="modal-backdrop fade show" style="display:block;" @onclick="CloseModals"></div>
-    <div class="modal fade show" style="display:block;" tabindex="-1">
-        <div class="modal-dialog modal-lg" @onclick:stopPropagation>
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Nova Proposta</h5>
-                    <button type="button" class="btn-close" @onclick="CloseModals" disabled="@busy"></button>
+    <div class="modal-backdrop-custom" @onclick="CloseModals"></div>
+    <div class="modal-custom modal-wide" @onclick:stopPropagation>
+        <div class="modal-head">
+            <h3>Nova Proposta</h3>
+            <button class="modal-close" @onclick="CloseModals" disabled="@busy">×</button>
+        </div>
+        <div class="modal-body-custom">
+            @if (!string.IsNullOrWhiteSpace(formError))
+            {
+                <div class="alert alert-danger">@formError</div>
+            }
+            <EditForm Model="createDto" OnValidSubmit="HandleCreate">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Nome</label>
+                        <InputText class="form-control" @bind-Value="createDto.Nome" placeholder="Nome da proposta" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Área</label>
+                        <InputSelect class="form-select" @bind-Value="createDto.AreaId">
+                            <option value="0">Seleciona uma área</option>
+                            @foreach (var a in areas)
+                            {
+                                <option value="@a.Id">@a.Nome</option>
+                            }
+                        </InputSelect>
+                    </div>
                 </div>
-                <div class="modal-body">
-                    @if (!string.IsNullOrWhiteSpace(formError))
+
+                <div class="form-group">
+                    <label class="form-label">Descrição</label>
+                    <InputTextArea class="form-control" @bind-Value="createDto.DescricaoTrabalho" rows="3" placeholder="Descreve o trabalho pretendido" />
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Total de Horas</label>
+                        <InputNumber class="form-control" @bind-Value="createDto.NumeroTotalHoras" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Preço por hora (€)</label>
+                        <InputNumber class="form-control" @bind-Value="createDto.PrecoHoraMedio" />
+                    </div>
+                </div>
+
+                <div class="skills-section">
+                    <div class="skills-section-head">
+                        <h4>Skills necessárias</h4>
+                        <button type="button" class="btn btn-sm btn-secondary" @onclick="AddCreateSkill">+ Adicionar</button>
+                    </div>
+                    @for (int i = 0; i < createDto.SkillsNecessarias.Count; i++)
                     {
-                        <div class="alert alert-danger">@formError</div>
+                        var idx = i;
+                        <div class="skill-row">
+                            <div class="skill-row-select">
+                                <InputSelect class="form-select" @bind-Value="createDto.SkillsNecessarias[idx].SkillId">
+                                    <option value="0">Seleciona uma skill</option>
+                                    @foreach (var s in skills)
+                                    {
+                                        <option value="@s.Id">@s.Nome</option>
+                                    }
+                                </InputSelect>
+                            </div>
+                            <div class="skill-row-anos">
+                                <InputNumber class="form-control" @bind-Value="createDto.SkillsNecessarias[idx].AnosExperienciaMinimo" placeholder="Anos" />
+                            </div>
+                            <button type="button" class="btn btn-sm btn-danger" @onclick="() => RemoveCreateSkill(idx)">✕</button>
+                        </div>
                     }
-                    <EditForm Model="createDto" OnValidSubmit="HandleCreate">
-                        <DataAnnotationsValidator />
-                        <ValidationSummary />
-
-                        <div class="mb-3">
-                            <label class="form-label">Nome</label>
-                            <InputText class="form-control" @bind-Value="createDto.Nome" />
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Área</label>
-                            <InputSelect class="form-select" @bind-Value="createDto.AreaId">
-                                <option value="0">Seleciona uma área</option>
-                                @foreach (var a in areas)
-                                {
-                                    <option value="@a.Id">@a.Nome</option>
-                                }
-                            </InputSelect>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Descrição</label>
-                            <InputTextArea class="form-control" @bind-Value="createDto.DescricaoTrabalho" rows="3" />
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Horas</label>
-                                <InputNumber class="form-control" @bind-Value="createDto.NumeroTotalHoras" />
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Preço/h</label>
-                                <InputNumber class="form-control" @bind-Value="createDto.PrecoHoraMedio" />
-                            </div>
-                        </div>
-
-                        <hr />
-                        <h5>Skills necessárias</h5>
-                        @for (int i = 0; i < createDto.SkillsNecessarias.Count; i++)
-                        {
-                            var idx = i;
-                            <div class="row align-items-end mb-2">
-                                <div class="col-md-7">
-                                    <label class="form-label">Skill</label>
-                                    <InputSelect class="form-select" @bind-Value="createDto.SkillsNecessarias[idx].SkillId">
-                                        <option value="0">Seleciona uma skill</option>
-                                        @foreach (var s in skills)
-                                        {
-                                            <option value="@s.Id">@s.Nome</option>
-                                        }
-                                    </InputSelect>
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="form-label">Nível mínimo</label>
-                                    <InputNumber class="form-control" @bind-Value="createDto.SkillsNecessarias[idx].AnosExperienciaMinimo" />
-                                </div>
-                                <div class="col-md-2 text-end">
-                                    <button type="button" class="btn btn-outline-danger" @onclick="() => RemoveCreateSkill(idx)">Remover</button>
-                                </div>
-                            </div>
-                        }
-                        <button type="button" class="btn btn-outline-secondary mb-3" @onclick="AddCreateSkill">+ Adicionar skill</button>
-
-                        <div class="d-flex justify-content-end gap-2 mt-2">
-                            <button type="button" class="btn btn-secondary" @onclick="CloseModals" disabled="@busy">Cancelar</button>
-                            <button type="submit" class="btn btn-primary" disabled="@busy">@(busy ? "A criar..." : "Criar")</button>
-                        </div>
-                    </EditForm>
                 </div>
-            </div>
+
+                <div class="modal-foot">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseModals" disabled="@busy">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" disabled="@busy">@(busy ? "A criar..." : "Criar Proposta")</button>
+                </div>
+            </EditForm>
         </div>
     </div>
 }
@@ -188,88 +199,92 @@ else
 @* Modal Editar *@
 @if (showEditModal && editDto != null)
 {
-    <div class="modal-backdrop fade show" style="display:block;" @onclick="CloseModals"></div>
-    <div class="modal fade show" style="display:block;" tabindex="-1">
-        <div class="modal-dialog modal-lg" @onclick:stopPropagation>
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Editar Proposta #@editId</h5>
-                    <button type="button" class="btn-close" @onclick="CloseModals" disabled="@busy"></button>
+    <div class="modal-backdrop-custom" @onclick="CloseModals"></div>
+    <div class="modal-custom modal-wide" @onclick:stopPropagation>
+        <div class="modal-head">
+            <h3>Editar Proposta #@editId</h3>
+            <button class="modal-close" @onclick="CloseModals" disabled="@busy">×</button>
+        </div>
+        <div class="modal-body-custom">
+            @if (!string.IsNullOrWhiteSpace(formError))
+            {
+                <div class="alert alert-danger">@formError</div>
+            }
+            <EditForm Model="editDto" OnValidSubmit="HandleEdit">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Nome</label>
+                        <InputText class="form-control" @bind-Value="editDto.Nome" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Área</label>
+                        <InputSelect class="form-select" @bind-Value="editDto.AreaId">
+                            <option value="0">Seleciona uma área</option>
+                            @foreach (var a in areas)
+                            {
+                                <option value="@a.Id">@a.Nome</option>
+                            }
+                        </InputSelect>
+                    </div>
                 </div>
-                <div class="modal-body">
-                    @if (!string.IsNullOrWhiteSpace(formError))
+
+                <div class="form-group">
+                    <label class="form-label">Descrição</label>
+                    <InputTextArea class="form-control" @bind-Value="editDto.DescricaoTrabalho" rows="3" />
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Total de Horas</label>
+                        <InputNumber class="form-control" @bind-Value="editDto.NumeroTotalHoras" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Preço por hora (€)</label>
+                        <InputNumber class="form-control" @bind-Value="editDto.PrecoHoraMedio" />
+                    </div>
+                </div>
+
+                <div class="skills-section">
+                    <div class="skills-section-head">
+                        <h4>Skills necessárias</h4>
+                        <button type="button" class="btn btn-sm btn-secondary" @onclick="AddEditSkill">+ Adicionar</button>
+                    </div>
+                    @for (int i = 0; i < editDto.SkillsNecessarias.Count; i++)
                     {
-                        <div class="alert alert-danger">@formError</div>
+                        var idx = i;
+                        <div class="skill-row">
+                            <div class="skill-row-select">
+                                <InputSelect class="form-select" @bind-Value="editDto.SkillsNecessarias[idx].SkillId">
+                                    <option value="0">Seleciona uma skill</option>
+                                    @foreach (var s in skills)
+                                    {
+                                        <option value="@s.Id">@s.Nome</option>
+                                    }
+                                </InputSelect>
+                            </div>
+                            <div class="skill-row-anos">
+                                <InputNumber class="form-control" @bind-Value="editDto.SkillsNecessarias[idx].AnosExperienciaMinimo" placeholder="Anos" />
+                            </div>
+                            <button type="button" class="btn btn-sm btn-danger" @onclick="() => RemoveEditSkill(idx)">✕</button>
+                        </div>
                     }
-                    <EditForm Model="editDto" OnValidSubmit="HandleEdit">
-                        <DataAnnotationsValidator />
-                        <ValidationSummary />
-
-                        <div class="mb-3">
-                            <label class="form-label">Nome</label>
-                            <InputText class="form-control" @bind-Value="editDto.Nome" />
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Área</label>
-                            <InputSelect class="form-select" @bind-Value="editDto.AreaId">
-                                <option value="0">Seleciona uma área</option>
-                                @foreach (var a in areas)
-                                {
-                                    <option value="@a.Id">@a.Nome</option>
-                                }
-                            </InputSelect>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Descrição</label>
-                            <InputTextArea class="form-control" @bind-Value="editDto.DescricaoTrabalho" rows="3" />
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Horas</label>
-                                <InputNumber class="form-control" @bind-Value="editDto.NumeroTotalHoras" />
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Preço/h</label>
-                                <InputNumber class="form-control" @bind-Value="editDto.PrecoHoraMedio" />
-                            </div>
-                        </div>
-
-                        <hr />
-                        <h5>Skills necessárias</h5>
-                        @for (int i = 0; i < editDto.SkillsNecessarias.Count; i++)
-                        {
-                            var idx = i;
-                            <div class="row align-items-end mb-2">
-                                <div class="col-md-7">
-                                    <label class="form-label">Skill</label>
-                                    <InputSelect class="form-select" @bind-Value="editDto.SkillsNecessarias[idx].SkillId">
-                                        <option value="0">Seleciona uma skill</option>
-                                        @foreach (var s in skills)
-                                        {
-                                            <option value="@s.Id">@s.Nome</option>
-                                        }
-                                    </InputSelect>
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="form-label">Nível mínimo</label>
-                                    <InputNumber class="form-control" @bind-Value="editDto.SkillsNecessarias[idx].AnosExperienciaMinimo" />
-                                </div>
-                                <div class="col-md-2 text-end">
-                                    <button type="button" class="btn btn-outline-danger" @onclick="() => RemoveEditSkill(idx)">Remover</button>
-                                </div>
-                            </div>
-                        }
-                        <button type="button" class="btn btn-outline-secondary mb-3" @onclick="AddEditSkill">+ Adicionar skill</button>
-
-                        <div class="d-flex justify-content-end gap-2 mt-2">
-                            <button type="button" class="btn btn-secondary" @onclick="CloseModals" disabled="@busy">Cancelar</button>
-                            <button type="submit" class="btn btn-primary" disabled="@busy">@(busy ? "A guardar..." : "Guardar")</button>
-                        </div>
-                    </EditForm>
                 </div>
-            </div>
+
+                <div class="modal-foot">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseModals" disabled="@busy">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" disabled="@busy">@(busy ? "A guardar..." : "Guardar")</button>
+                </div>
+            </EditForm>
         </div>
     </div>
+}
+
+@if (toastVisible)
+{
+    <div class="toast-sucesso">@toastMensagem</div>
 }
 
 @code {
@@ -311,6 +326,8 @@ else
     private bool busy;
     private string? error;
     private string? formError;
+    private bool toastVisible = false;
+    private string toastMensagem = "";
 
     private CreatePropostaDto createDto = new();
     private UpdatePropostaDto? editDto;
@@ -376,7 +393,6 @@ else
             return;
         }
         expandedPropostaId = propostaId;
-        // Carrega detalhes (talentos elegíveis) se ainda não carregados
         var p = propostas?.FirstOrDefault(x => x.Id == propostaId);
         if (p != null && !p.TalentosElegiveis.Any())
         {
@@ -386,7 +402,7 @@ else
                 if (detail != null)
                     p.TalentosElegiveis = detail.TalentosElegiveis;
             }
-            catch { /* ignora erros de detalhe */ }
+            catch { }
         }
     }
 
@@ -417,6 +433,7 @@ else
 
             CloseModals();
             await LoadAll();
+            await ShowToast("Proposta criada com sucesso.");
         }
         catch (Exception ex)
         {
@@ -450,6 +467,7 @@ else
 
             CloseModals();
             await LoadAll();
+            await ShowToast("Proposta atualizada com sucesso.");
         }
         catch (Exception ex)
         {
@@ -463,6 +481,8 @@ else
 
     private async Task ConfirmDelete(int id)
     {
+        var ok = await JS.InvokeAsync<bool>("confirm", "Queres mesmo apagar esta proposta?");
+        if (!ok) return;
         try
         {
             busy = true;
@@ -474,6 +494,7 @@ else
                 return;
             }
             await LoadAll();
+            await ShowToast("Proposta apagada.");
         }
         catch (Exception ex)
         {
@@ -482,7 +503,16 @@ else
         finally
         {
             busy = false;
-            CloseModals();
         }
+    }
+
+    private async Task ShowToast(string msg)
+    {
+        toastMensagem = msg;
+        toastVisible = true;
+        StateHasChanged();
+        await Task.Delay(3000);
+        toastVisible = false;
+        StateHasChanged();
     }
 }
