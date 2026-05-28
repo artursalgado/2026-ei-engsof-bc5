@@ -22,6 +22,13 @@
                         <p>Encontra profissionais disponíveis</p>
                     </div>
                 </a>
+                <a href="propostas" class="quick-card">
+                    <div class="quick-ico">📋</div>
+                    <div>
+                        <h3>Propostas</h3>
+                        <p>Gere as tuas propostas de trabalho</p>
+                    </div>
+                </a>
             }
             else
             {
@@ -39,8 +46,39 @@
                         <p>Organiza as competências do sistema</p>
                     </div>
                 </a>
+                <a href="propostas" class="quick-card">
+                    <div class="quick-ico">📋</div>
+                    <div>
+                        <h3>Propostas</h3>
+                        <p>Consulta propostas de trabalho</p>
+                    </div>
+                </a>
             }
         </div>
+
+        @{
+            var role = context.User.FindFirst("role")?.Value;
+            var isManager = role == "UserManager" || role == "Admin";
+        }
+        @if (isManager)
+        {
+            <div class="quick-grid">
+                <a href="dashboard" class="quick-card quick-card-accent">
+                    <div class="quick-ico accent">📊</div>
+                    <div>
+                        <h3>Dashboard</h3>
+                        <p>Métricas e indicadores da plataforma</p>
+                    </div>
+                </a>
+                <a href="relatorios" class="quick-card quick-card-accent">
+                    <div class="quick-ico accent">📈</div>
+                    <div>
+                        <h3>Relatórios</h3>
+                        <p>Preços médios por categoria e skill</p>
+                    </div>
+                </a>
+            </div>
+        }
 
         <div class="session-info">
             <div class="session-row">
@@ -51,6 +89,10 @@
                 <span class="session-label">Tipo de conta</span>
                 <span class="badge badge-role">@context.User.FindFirst("tipo")?.Value</span>
             </div>
+            <div class="session-row">
+                <span class="session-label">Permissão</span>
+                <span class="badge badge-role">@context.User.FindFirst("role")?.Value</span>
+            </div>
         </div>
     </Authorized>
     <NotAuthorized>
@@ -58,6 +100,20 @@
             <div class="brand-mark-lg">GT</div>
             <h1>Gestão de Talentos</h1>
             <p class="subtitle">Plataforma de gestão de currículos para profissionais IT.</p>
+            <div class="landing-features">
+                <div class="feature-item">
+                    <span class="feature-ico">👤</span>
+                    <span>Perfis de talento com skills e experiências</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-ico">📋</span>
+                    <span>Propostas de trabalho com matching automático</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-ico">📊</span>
+                    <span>Relatórios de preços médios do mercado</span>
+                </div>
+            </div>
             <div class="landing-actions">
                 <a href="/login" class="btn btn-primary">Entrar</a>
                 <a href="/register" class="btn btn-secondary">Criar Conta</a>
