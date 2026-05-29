@@ -13,6 +13,9 @@ public class Perfil
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public User? Owner { get; set; }
 
+    /// Nome do ficheiro CV (PDF) guardado em wwwroot/cvs/. Null quando nao ha CV associado.
+    public string? CvFileName { get; set; }
+
     public ICollection<ExperienciaProfissional> Experiencias { get; set; } = new List<ExperienciaProfissional>();
     public ICollection<PerfilSkill> PerfilSkills { get; set; } = new List<PerfilSkill>();
 }
