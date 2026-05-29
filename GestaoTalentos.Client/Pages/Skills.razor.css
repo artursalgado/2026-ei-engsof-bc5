@@ -36,6 +36,10 @@
     padding: 3rem;
     text-align: center;
     color: var(--color-text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
 }
 
 .empty-state {
@@ -84,6 +88,7 @@
     z-index: 1050;
     max-height: 90vh;
     overflow-y: auto;
+    animation: modalSlideIn 0.22s ease-out;
 }
 
 .modal-head {
@@ -106,6 +111,18 @@
     color: var(--color-text-muted);
     cursor: pointer;
     line-height: 1;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease;
+}
+
+.modal-close:hover:not(:disabled) {
+    background: var(--color-surface-alt);
+    color: var(--color-text);
 }
 
 .modal-body-custom {
@@ -133,6 +150,11 @@
     box-shadow: var(--shadow-md);
     z-index: 2000;
     animation: slideIn 0.2s ease;
+}
+
+@keyframes modalSlideIn {
+    from { opacity: 0; transform: translate(-50%, -48%); }
+    to { opacity: 1; transform: translate(-50%, -50%); }
 }
 
 @keyframes slideIn {
