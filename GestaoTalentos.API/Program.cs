@@ -761,6 +761,8 @@ app.MapGet("/propostas", async (IPropostaRepository repo) =>
         ValorEstimadoTotal = p.NumeroTotalHoras * p.PrecoHoraMedio,
         p.CriadoEm,
         p.AtualizadoEm,
+        Estado = p.Estado.ToString(),
+        p.TalentoSelecionadoId,
         SkillsNecessarias = p.SkillsNecessarias.Select(sn => new
         {
             sn.Id,
@@ -797,6 +799,8 @@ app.MapGet("/propostas/{id:int}", async (int id, IPropostaRepository repo, ITale
             sn.NivelMinimoRequerido,
             Skill = sn.Skill == null ? null : new { sn.Skill.Id, sn.Skill.Nome }
         }),
+        Estado = proposta.Estado.ToString(),
+        proposta.TalentoSelecionadoId,
         TalentosElegiveis = talentos.Select(te => new
         {
             te.Id,
@@ -1141,5 +1145,111 @@ app.MapPost("/admin/utilizadores/criar", async (UserCreateDto request, IUserRepo
     await repo.AddAsync(user);
     return Results.Created($"/users/{user.Id}", new { user.Id, user.Username, Role = user.Role.ToString() });
 }).RequireAuthorization("AdminPolicy");
+
+// ======================
+// PARTILHA DE PROPOSTAS (US-17)
+// ======================
+
+/// Gera (ou reutiliza) um token de partilha pública para a proposta.
+app.MapPost("/propostas/{id:int}/partilhar", async (int id, AppDbContext context) =>
+{
+    var proposta = await context.Propostas.FindAsync(id);
+    if (proposta == null) return Results.NotFound();
+
+    // Reutiliza token existente se ainda válido
+    var existente = await context.PartilhaTokens
+        .Where(pt => pt.PropostaId == id && (pt.ExpiraEm == null || pt.ExpiraEm > DateTime.UtcNow))
+        .FirstOrDefaultAsync();
+
+    if (existente != null)
+        return Results.Ok(new { token = existente.Token });
+
+    var novoToken = new PartilhaToken
+    {
+        Token = Guid.NewGuid().ToString("N"),
+        PropostaId = id,
+        CriadoEm = DateTime.UtcNow,
+        ExpiraEm = DateTime.UtcNow.AddDays(30)
+    };
+
+    context.PartilhaTokens.Add(novoToken);
+    await context.SaveChangesAsync();
+
+    return Results.Ok(new { token = novoToken.Token });
+}).RequireAuthorization("UserManagerPolicy");
+
+/// Página pública — sem autenticação. Devolve a proposta e os talentos elegíveis para partilha com cliente.
+app.MapGet("/partilha/{token}", async (string token, AppDbContext context, ITalentoElegivelRepository talentoRepo) =>
+{
+    var partilha = await context.PartilhaTokens
+        .Include(pt => pt.Proposta)
+            .ThenInclude(p => p!.Area)
+        .Include(pt => pt.Proposta)
+            .ThenInclude(p => p!.SkillsNecessarias)
+                .ThenInclude(sn => sn.Skill)
+        .FirstOrDefaultAsync(pt => pt.Token == token);
+
+    if (partilha == null) return Results.NotFound("Link inválido ou expirado.");
+    if (partilha.ExpiraEm.HasValue && partilha.ExpiraEm < DateTime.UtcNow)
+        return Results.NotFound("Este link expirou.");
+
+    var proposta = partilha.Proposta!;
+    var talentos = await talentoRepo.GetByPropostaIdOrderedByValorAsync(proposta.Id);
+
+    return Results.Ok(new
+    {
+        proposta.Id,
+        proposta.Nome,
+        proposta.AreaId,
+        Area = proposta.Area == null ? null : new { proposta.Area.Id, proposta.Area.Nome },
+        proposta.DescricaoTrabalho,
+        proposta.NumeroTotalHoras,
+        proposta.PrecoHoraMedio,
+        ValorEstimadoTotal = proposta.NumeroTotalHoras * proposta.PrecoHoraMedio,
+        Estado = proposta.Estado.ToString(),
+        SkillsNecessarias = proposta.SkillsNecessarias.Select(sn => new
+        {
+            sn.SkillId,
+            Skill = sn.Skill == null ? null : new { sn.Skill.Id, sn.Skill.Nome },
+            sn.NivelMinimoRequerido
+        }),
+        TalentosElegiveis = talentos.Select(te => new
+        {
+            te.PerfilId,
+            te.ValorEstimado,
+            Perfil = te.Perfil == null ? null : new
+            {
+                te.Perfil.Nome,
+                te.Perfil.Pais,
+                te.Perfil.PrecoPorHora,
+                Skills = te.Perfil.PerfilSkills.Select(ps => new { ps.SkillId, SkillNome = ps.Skill == null ? "" : ps.Skill.Nome, ps.AnosExperiencia })
+            }
+        }).OrderBy(te => te.ValorEstimado)
+    });
+});
+
+/// Seleciona um talento para a proposta, marcando-a como Fechada.
+app.MapPatch("/propostas/{id:int}/selecionar-talento", async (int id, SelecionarTalentoDto dto, AppDbContext context) =>
+{
+    var proposta = await context.Propostas.FindAsync(id);
+    if (proposta == null) return Results.NotFound();
+
+    if (proposta.Estado == EstadoProposta.Fechada)
+        return Results.BadRequest("A proposta já está fechada.");
+
+    var talentoExiste = await context.TalentosElegiveis
+        .AnyAsync(te => te.PropostaId == id && te.PerfilId == dto.PerfilId);
+
+    if (!talentoExiste)
+        return Results.BadRequest("Talento não elegível para esta proposta.");
+
+    proposta.TalentoSelecionadoId = dto.PerfilId;
+    proposta.Estado = EstadoProposta.Fechada;
+    proposta.AtualizadoEm = DateTime.UtcNow;
+
+    await context.SaveChangesAsync();
+
+    return Results.Ok(new { mensagem = "Talento selecionado. Proposta fechada." });
+}).RequireAuthorization("UserManagerPolicy");
 
 app.Run();
