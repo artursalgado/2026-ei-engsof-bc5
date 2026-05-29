@@ -3,6 +3,7 @@ using System;
 using GestaoTalentos.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace GestaoTalentos.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260529165128_AdicionarEstadoPropostaEPartilha")]
+    partial class AdicionarEstadoPropostaEPartilha
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -255,9 +258,6 @@ namespace GestaoTalentos.Infrastructure.Migrations
                     b.Property<DateTime>("CriadoEm")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int?>("CriadorId")
-                        .HasColumnType("integer");
-
                     b.Property<string>("DescricaoTrabalho")
                         .IsRequired()
                         .HasMaxLength(2000)
@@ -283,8 +283,6 @@ namespace GestaoTalentos.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("AreaId");
-
-                    b.HasIndex("CriadorId");
 
                     b.HasIndex("Nome")
                         .IsUnique();
@@ -480,14 +478,7 @@ namespace GestaoTalentos.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("GestaoTalentos.Domain.User", "Criador")
-                        .WithMany()
-                        .HasForeignKey("CriadorId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.Navigation("Area");
-
-                    b.Navigation("Criador");
                 });
 
             modelBuilder.Entity("GestaoTalentos.Domain.Skill", b =>

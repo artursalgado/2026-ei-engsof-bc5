@@ -153,6 +153,17 @@ public record RoleCreateDto(string Nome);
 
 //
 // =========================
+// PARTILHA / US-17
+// =========================
+//
+
+public class SelecionarTalentoDto
+{
+    public int PerfilId { get; set; }
+}
+
+//
+// =========================
 // PAIS DTOs
 // =========================
 //

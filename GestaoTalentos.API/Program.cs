@@ -160,8 +160,7 @@ app.MapPost("/register", async (UserRegisterDto request, IUserRepository repo) =
 
     await repo.AddAsync(user);
 
-    return Results.Created($"/users/{user.Id}", new UserResponseDto(user.Id, user.Username, user.Role.ToString()));
-    //return Results.Created($"/users/{user.Id}", new { user.Id, user.Username, user.Role });
+    return Results.Created($"/users/{user.Id}", new { user.Id, user.Username, user.Role });
 });
 
 app.MapPost("/login", async (UserLoginDto request, IUserRepository repo) =>
@@ -177,18 +176,14 @@ app.MapPost("/login", async (UserLoginDto request, IUserRepository repo) =>
         return Results.Json("A tua conta foi suspensa. Contacta o administrador.", statusCode: 403);
 
     var token = JwtTokenHelper.GenerateToken(user, jwtKey, jwtIssuer);
-
-    return Results.Ok(new LoginResponseDto(token));
-    //return Results.Ok(new { token });
+    return Results.Ok(new { token });
 });
 
 app.MapGet("/users/me", async (ClaimsPrincipal user, IUserRepository repo) =>
 {
     var userId = int.TryParse(user.FindFirstValue("sub"), out var id) ? id : 0;
     var current = await repo.GetByIdAsync(userId);
-
-    return current is null ? Results.NotFound() : Results.Ok(new UserResponseDto(current.Id, current.Username, current.Role.ToString()));
-    //return current is null ? Results.NotFound() : Results.Ok(new { current.Id, current.Username, current.Role });
+    return current is null ? Results.NotFound() : Results.Ok(new { current.Id, current.Username, current.Role });
 }).RequireAuthorization();
 
 app.MapGet("/users", async (IUserRepository repo) =>
@@ -228,9 +223,7 @@ app.MapPost("/users", async (UserCreateDto request, IUserRepository repo) =>
 
     await repo.AddAsync(user);
     await repo.SaveChangesAsync(); // NOVA LINHA
-
-    return Results.Created($"/users/{user.Id}", new UserResponseDto(user.Id, user.Username, user.Role.ToString()));
-    //return Results.Created($"/users/{user.Id}", new { user.Id, user.Username, user.Role });
+    return Results.Created($"/users/{user.Id}", new { user.Id, user.Username, user.Role });
 }).RequireAuthorization("UserManagerPolicy");
 
 app.MapGet("/perfis", async (ClaimsPrincipal user, GestaoTalentos.Infrastructure.IPerfilRepository repo, IUserRepository userRepo) =>
@@ -488,8 +481,7 @@ app.MapPost("/skills", async (CreateSkillDto dto, ISkillRepository repo) =>
 
     await repo.AddAsync(skill);
 
-    return Results.Created($"/skills/{skill.Id}", new SkillResponseDto(skill.Id, skill.Nome, skill.AreaId));
-    // return Results.Created($"/skills/{skill.Id}", new { skill.Id, skill.Nome, skill.AreaId });
+    return Results.Created($"/skills/{skill.Id}", new { skill.Id, skill.Nome, skill.AreaId });
 }).RequireAuthorization("UserManagerPolicy");
 
 app.MapPut("/skills/{id:int}", async (int id, UpdateSkillDto dto, ISkillRepository repo) =>
@@ -642,22 +634,6 @@ static object MapPerfilToDto(Perfil p) => new
     })
 };
 
-static PropostaResponseDto MapPropostaToResponseDto(Proposta p) => new PropostaResponseDto
-{
-    Id = p.Id,
-    Nome = p.Nome,
-    AreaId = p.AreaId,
-    Area = p.Area == null ? null : new PropostaAreaDto(p.Area.Id, p.Area.Nome),
-    DescricaoTrabalho = p.DescricaoTrabalho,
-    NumeroTotalHoras = p.NumeroTotalHoras,
-    PrecoHoraMedio = p.PrecoHoraMedio,
-    CriadoEm = p.CriadoEm,
-    AtualizadoEm = p.AtualizadoEm,
-    SkillsNecessarias = p.SkillsNecessarias.Select(sn => new SkillNecessariaResponseDto(
-        sn.Id, sn.SkillId, sn.NivelMinimoRequerido,
-        sn.Skill == null ? null : new PropostaSkillInfoDto(sn.Skill.Id, sn.Skill.Nome)
-    )).ToList()
-};
 
 static string? ValidarSobreposicaoExperiencias(List<ExperienciaCreateDto> experiencias)
 {
@@ -770,10 +746,18 @@ app.MapDelete("/clientes/{id}", async (int id, ClaimsPrincipal user, IClienteRep
 // PROPOSTAS DE TRABALHO
 // ======================
 
-app.MapGet("/propostas", async (IPropostaRepository repo) =>
+app.MapGet("/propostas", async (ClaimsPrincipal user, IUserRepository userRepo, IPropostaRepository repo, bool? minhas) =>
 {
-    var propostas = await repo.GetAllWithSkillsAsync();
-    /*return Results.Ok(propostas.Select(p => new
+    var userId = int.TryParse(user.FindFirstValue("sub"), out var id) ? id : 0;
+    var current = await userRepo.GetByIdAsync(userId);
+    if (current == null) return Results.Unauthorized();
+
+    var canFilter = current.Role == UserRole.UserManager || current.Role == UserRole.Admin;
+    var propostas = (canFilter && minhas == true)
+        ? await repo.GetAllWithSkillsByCreatorAsync(userId)
+        : await repo.GetAllWithSkillsAsync();
+
+    return Results.Ok(propostas.Select(p => new
     {
         p.Id,
         p.Nome,
@@ -785,16 +769,18 @@ app.MapGet("/propostas", async (IPropostaRepository repo) =>
         ValorEstimadoTotal = p.NumeroTotalHoras * p.PrecoHoraMedio,
         p.CriadoEm,
         p.AtualizadoEm,
+        Estado = p.Estado.ToString(),
+        p.TalentoSelecionadoId,
+        p.CriadorId,
+        TalentoElegivelCount = p.TalentosElegiveis.Count,
         SkillsNecessarias = p.SkillsNecessarias.Select(sn => new
         {
             sn.Id,
             sn.SkillId,
-            sn.NivelMinimoRequerido,
+            AnosExperienciaMinimo = sn.NivelMinimoRequerido,
             Skill = sn.Skill == null ? null : new { sn.Skill.Id, sn.Skill.Nome }
         })
-    }));*/
-
-    return Results.Ok(propostas.Select(p => MapPropostaToResponseDto(p)));
+    }));
 }).RequireAuthorization("UserPolicy");
 
 app.MapGet("/propostas/{id:int}", async (int id, IPropostaRepository repo, ITalentoElegivelRepository talentoRepo) =>
@@ -804,53 +790,46 @@ app.MapGet("/propostas/{id:int}", async (int id, IPropostaRepository repo, ITale
 
     var talentos = await talentoRepo.GetByPropostaIdOrderedByValorAsync(id);
 
-    /* return Results.Ok(new
-     {
-         proposta.Id,
-         proposta.Nome,
-         proposta.AreaId,
-         Area = proposta.Area == null ? null : new { proposta.Area.Id, proposta.Area.Nome },
-         proposta.DescricaoTrabalho,
-         proposta.NumeroTotalHoras,
-         proposta.PrecoHoraMedio,
-         ValorEstimadoTotal = proposta.NumeroTotalHoras * proposta.PrecoHoraMedio,
-         proposta.CriadoEm,
-         proposta.AtualizadoEm,
-         SkillsNecessarias = proposta.SkillsNecessarias.Select(sn => new
-         {
-             sn.Id,
-             sn.SkillId,
-             sn.NivelMinimoRequerido,
-             Skill = sn.Skill == null ? null : new { sn.Skill.Id, sn.Skill.Nome }
-         }),
-         TalentosElegiveis = talentos.Select(te => new
-         {
-             te.Id,
-             te.PerfilId,
-             te.ValorEstimado,
-             Perfil = te.Perfil == null ? null : new { te.Perfil.Id, te.Perfil.OwnerId, te.Perfil.Nome, te.Perfil.Pais, te.Perfil.PrecoPorHora }
-         }).OrderBy(te => te.ValorEstimado)
-     });*/
-
-
-    var dto = MapPropostaToResponseDto(proposta);
-    dto.TalentosElegiveis = talentos
-        .Select(te => new TalentoElegivelResponseDto(
-            te.Id, te.PerfilId, te.ValorEstimado,
-            te.Perfil == null ? null : new PerfilResumoDto(te.Perfil.Id, te.Perfil.OwnerId, te.Perfil.Nome, te.Perfil.Pais, te.Perfil.PrecoPorHora)
-        ))
-        .OrderBy(te => te.ValorEstimado)
-        .ToList();
-    return Results.Ok(dto);
+    return Results.Ok(new
+    {
+        proposta.Id,
+        proposta.Nome,
+        proposta.AreaId,
+        Area = proposta.Area == null ? null : new { proposta.Area.Id, proposta.Area.Nome },
+        proposta.DescricaoTrabalho,
+        proposta.NumeroTotalHoras,
+        proposta.PrecoHoraMedio,
+        ValorEstimadoTotal = proposta.NumeroTotalHoras * proposta.PrecoHoraMedio,
+        proposta.CriadoEm,
+        proposta.AtualizadoEm,
+        SkillsNecessarias = proposta.SkillsNecessarias.Select(sn => new
+        {
+            sn.Id,
+            sn.SkillId,
+            AnosExperienciaMinimo = sn.NivelMinimoRequerido,
+            Skill = sn.Skill == null ? null : new { sn.Skill.Id, sn.Skill.Nome }
+        }),
+        Estado = proposta.Estado.ToString(),
+        proposta.TalentoSelecionadoId,
+        TalentosElegiveis = talentos.Select(te => new
+        {
+            te.Id,
+            te.PerfilId,
+            te.ValorEstimado,
+            Perfil = te.Perfil == null ? null : new { te.Perfil.Id, te.Perfil.OwnerId, te.Perfil.Nome, te.Perfil.Pais, te.Perfil.PrecoPorHora }
+        }).OrderBy(te => te.ValorEstimado)
+    });
 }).RequireAuthorization("UserPolicy");
 
-app.MapPost("/propostas", async (CreatePropostaDto dto, IPropostaRepository repo, PropostaMatchingService matchingService, ITalentoElegivelRepository talentoRepo, AppDbContext context) =>
+app.MapPost("/propostas", async (CreatePropostaDto dto, ClaimsPrincipal user, IPropostaRepository repo, PropostaMatchingService matchingService, ITalentoElegivelRepository talentoRepo, AppDbContext context) =>
 {
     if (string.IsNullOrWhiteSpace(dto.Nome))
         return Results.BadRequest("Nome é obrigatório");
 
     if (await repo.GetByNomeAsync(dto.Nome) != null)
         return Results.Conflict("Já existe uma proposta com esse nome");
+
+    var userId = int.TryParse(user.FindFirstValue("sub"), out var uid) ? uid : (int?)null;
 
     var proposta = new Proposta
     {
@@ -860,7 +839,8 @@ app.MapPost("/propostas", async (CreatePropostaDto dto, IPropostaRepository repo
         NumeroTotalHoras = dto.NumeroTotalHoras,
         PrecoHoraMedio = dto.PrecoHoraMedio,
         CriadoEm = DateTime.UtcNow,
-        AtualizadoEm = DateTime.UtcNow
+        AtualizadoEm = DateTime.UtcNow,
+        CriadorId = userId
     };
 
     await repo.AddAsync(proposta);
@@ -884,8 +864,8 @@ app.MapPost("/propostas", async (CreatePropostaDto dto, IPropostaRepository repo
     {
         await talentoRepo.AddAsync(talento);
     }
-    return Results.Created($"/propostas/{proposta.Id}", new PropostaCreatedResponseDto(proposta.Id, proposta.Nome));
-    //return Results.Created($"/propostas/{proposta.Id}", new { proposta.Id, proposta.Nome });
+
+    return Results.Created($"/propostas/{proposta.Id}", new { proposta.Id, proposta.Nome });
 }).RequireAuthorization("UserManagerPolicy");
 
 app.MapPut("/propostas/{id:int}", async (int id, UpdatePropostaDto dto, IPropostaRepository repo, PropostaMatchingService matchingService, ITalentoElegivelRepository talentoRepo, AppDbContext context) =>
@@ -1179,4 +1159,110 @@ app.MapPost("/admin/utilizadores/criar", async (UserCreateDto request, IUserRepo
     return Results.Created($"/users/{user.Id}", new { user.Id, user.Username, Role = user.Role.ToString() });
 }).RequireAuthorization("AdminPolicy");
 
-app.Run();
+// ======================
+// PARTILHA DE PROPOSTAS (US-17)
+// ======================
+
+/// Gera (ou reutiliza) um token de partilha pública para a proposta.
+app.MapPost("/propostas/{id:int}/partilhar", async (int id, AppDbContext context) =>
+{
+    var proposta = await context.Propostas.FindAsync(id);
+    if (proposta == null) return Results.NotFound();
+
+    // Reutiliza token existente se ainda válido
+    var existente = await context.PartilhaTokens
+        .Where(pt => pt.PropostaId == id && (pt.ExpiraEm == null || pt.ExpiraEm > DateTime.UtcNow))
+        .FirstOrDefaultAsync();
+
+    if (existente != null)
+        return Results.Ok(new { token = existente.Token });
+
+    var novoToken = new PartilhaToken
+    {
+        Token = Guid.NewGuid().ToString("N"),
+        PropostaId = id,
+        CriadoEm = DateTime.UtcNow,
+        ExpiraEm = DateTime.UtcNow.AddDays(30)
+    };
+
+    context.PartilhaTokens.Add(novoToken);
+    await context.SaveChangesAsync();
+
+    return Results.Ok(new { token = novoToken.Token });
+}).RequireAuthorization("UserManagerPolicy");
+
+/// Página pública — sem autenticação. Devolve a proposta e os talentos elegíveis para partilha com cliente.
+app.MapGet("/partilha/{token}", async (string token, AppDbContext context, ITalentoElegivelRepository talentoRepo) =>
+{
+    var partilha = await context.PartilhaTokens
+        .Include(pt => pt.Proposta)
+            .ThenInclude(p => p!.Area)
+        .Include(pt => pt.Proposta)
+            .ThenInclude(p => p!.SkillsNecessarias)
+                .ThenInclude(sn => sn.Skill)
+        .FirstOrDefaultAsync(pt => pt.Token == token);
+
+    if (partilha == null) return Results.NotFound("Link inválido ou expirado.");
+    if (partilha.ExpiraEm.HasValue && partilha.ExpiraEm < DateTime.UtcNow)
+        return Results.NotFound("Este link expirou.");
+
+    var proposta = partilha.Proposta!;
+    var talentos = await talentoRepo.GetByPropostaIdOrderedByValorAsync(proposta.Id);
+
+    return Results.Ok(new
+    {
+        proposta.Id,
+        proposta.Nome,
+        proposta.AreaId,
+        Area = proposta.Area == null ? null : new { proposta.Area.Id, proposta.Area.Nome },
+        proposta.DescricaoTrabalho,
+        proposta.NumeroTotalHoras,
+        proposta.PrecoHoraMedio,
+        ValorEstimadoTotal = proposta.NumeroTotalHoras * proposta.PrecoHoraMedio,
+        Estado = proposta.Estado.ToString(),
+        SkillsNecessarias = proposta.SkillsNecessarias.Select(sn => new
+        {
+            sn.SkillId,
+            Skill = sn.Skill == null ? null : new { sn.Skill.Id, sn.Skill.Nome },
+            sn.NivelMinimoRequerido
+        }),
+        TalentosElegiveis = talentos.Select(te => new
+        {
+            te.PerfilId,
+            te.ValorEstimado,
+            Perfil = te.Perfil == null ? null : new
+            {
+                te.Perfil.Nome,
+                te.Perfil.Pais,
+                te.Perfil.PrecoPorHora,
+                Skills = te.Perfil.PerfilSkills.Select(ps => new { ps.SkillId, SkillNome = ps.Skill == null ? "" : ps.Skill.Nome, ps.AnosExperiencia })
+            }
+        }).OrderBy(te => te.ValorEstimado)
+    });
+});
+
+/// Seleciona um talento para a proposta, marcando-a como Fechada.
+app.MapPatch("/propostas/{id:int}/selecionar-talento", async (int id, SelecionarTalentoDto dto, AppDbContext context) =>
+{
+    var proposta = await context.Propostas.FindAsync(id);
+    if (proposta == null) return Results.NotFound();
+
+    if (proposta.Estado == EstadoProposta.Fechada)
+        return Results.BadRequest("A proposta já está fechada.");
+
+    var talentoExiste = await context.TalentosElegiveis
+        .AnyAsync(te => te.PropostaId == id && te.PerfilId == dto.PerfilId);
+
+    if (!talentoExiste)
+        return Results.BadRequest("Talento não elegível para esta proposta.");
+
+    proposta.TalentoSelecionadoId = dto.PerfilId;
+    proposta.Estado = EstadoProposta.Fechada;
+    proposta.AtualizadoEm = DateTime.UtcNow;
+
+    await context.SaveChangesAsync();
+
+    return Results.Ok(new { mensagem = "Talento selecionado. Proposta fechada." });
+}).RequireAuthorization("UserManagerPolicy");
+
+app.Run();

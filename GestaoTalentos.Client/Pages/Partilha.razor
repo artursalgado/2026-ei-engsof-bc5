@@ -1,0 +1,280 @@
+@page "/partilha/{token}"
+@layout GestaoTalentos.Client.Layout.EmptyLayout
+@using System.Globalization
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<PageTitle>Proposta Partilhada - Gestão de Talentos</PageTitle>
+
+<div class="partilha-page">
+    @if (a_carregar)
+    {
+        <div class="partilha-loading">
+            <i class="bi bi-hourglass-split"></i>
+            <span>A carregar proposta...</span>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(erro))
+    {
+        <div class="partilha-erro">
+            <div class="erro-ico"><i class="bi bi-link-45deg"></i></div>
+            <h2>Link inválido</h2>
+            <p>@erro</p>
+            <a href="/" class="btn-voltar">Voltar ao início</a>
+        </div>
+    }
+    else if (proposta != null)
+    {
+        <div class="partilha-card">
+            <div class="partilha-brand">
+                <span class="brand-mark">GT</span>
+                <span class="brand-name">Gestão de Talentos</span>
+            </div>
+
+            <div class="partilha-head">
+                <h1>@proposta.Nome</h1>
+                @if (!string.IsNullOrEmpty(proposta.AreaNome))
+                {
+                    <span class="area-tag">@proposta.AreaNome</span>
+                }
+                <span class="estado-pill estado-@proposta.Estado.ToLowerInvariant()">
+                    @(proposta.Estado == "Aberta" ? "Aberta" : proposta.Estado == "EmNegociacao" ? "Em Negociação" : "Fechada")
+                </span>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(proposta.DescricaoTrabalho))
+            {
+                <p class="partilha-descricao">@proposta.DescricaoTrabalho</p>
+            }
+
+            <div class="partilha-metricas">
+                <div class="metrica">
+                    <i class="bi bi-clock"></i>
+                    <span><strong>@proposta.NumeroTotalHoras h</strong> de trabalho</span>
+                </div>
+                <div class="metrica">
+                    <i class="bi bi-currency-euro"></i>
+                    <span><strong>@proposta.PrecoHoraMedio.ToString("F2") €/h</strong> estimado</span>
+                </div>
+                <div class="metrica strong">
+                    <i class="bi bi-calculator"></i>
+                    <span><strong>@proposta.ValorEstimadoTotal.ToString("F2") €</strong> total</span>
+                </div>
+            </div>
+
+            @if (proposta.Skills.Any())
+            {
+                <div class="partilha-skills">
+                    <div class="skills-titulo">Skills necessárias</div>
+                    <div class="skills-lista">
+                        @foreach (var s in proposta.Skills)
+                        {
+                            <span class="skill-chip">@s.SkillNome · @s.AnosMinimos ano@(s.AnosMinimos != 1 ? "s" : "")</span>
+                        }
+                    </div>
+                </div>
+            }
+
+            @if (proposta.Talentos.Any())
+            {
+                <div class="talentos-section">
+                    <div class="talentos-titulo">
+                        <i class="bi bi-people-fill"></i>
+                        <span>Talentos Disponíveis</span>
+                        <span class="talentos-count">@proposta.Talentos.Count</span>
+                    </div>
+
+                    <div class="talentos-lista">
+                        @foreach (var t in proposta.Talentos)
+                        {
+                            var iniciais = GetInitials(t.Nome);
+                            var fitPercent = GetFit(proposta, t);
+                            <div class="talento-card">
+                                <div class="talento-avatar">@iniciais</div>
+                                <div class="talento-info">
+                                    <div class="talento-nome">@t.Nome</div>
+                                    <div class="talento-pais"><i class="bi bi-geo-alt"></i> @t.Pais</div>
+                                    @if (t.Skills.Any())
+                                    {
+                                        <div class="talento-skills">
+                                            @foreach (var sk in t.Skills.Take(4))
+                                            {
+                                                <span class="talento-skill-chip">@sk.SkillNome</span>
+                                            }
+                                            @if (t.Skills.Count > 4)
+                                            {
+                                                <span class="talento-skill-chip muted">+@(t.Skills.Count - 4)</span>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                                <div class="talento-preco">
+                                    <div class="fit-row">
+                                        <span class="fit-label">Fit</span>
+                                        <strong class="fit-value">@fitPercent%</strong>
+                                    </div>
+                                    <div class="fit-track">
+                                        <div class="fit-bar" style="width: @fitPercent%;"></div>
+                                    </div>
+                                    <span class="preco-hora">@t.PrecoPorHora.ToString("F2") €/h</span>
+                                    <span class="preco-total">@t.ValorEstimado.ToString("F2") €</span>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="sem-talentos">
+                    <i class="bi bi-people"></i>
+                    <p>Nenhum talento disponível para esta proposta.</p>
+                </div>
+            }
+
+            <div class="partilha-footer">
+                <span>Documento gerado pela plataforma de <strong>Gestão de Talentos</strong></span>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string Token { get; set; } = "";
+
+    private PropostaPartilhadaVm? proposta;
+    private string? erro;
+    private bool a_carregar = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var raw = await Http.GetFromJsonAsync<PropostaPartilhadaRaw>($"partilha/{Token}");
+            if (raw == null)
+            {
+                erro = "Proposta não encontrada.";
+                return;
+            }
+            proposta = MapRaw(raw);
+        }
+        catch (HttpRequestException ex) when ((int?)ex.StatusCode == 404)
+        {
+            erro = "Este link é inválido ou expirou. Contacta quem o partilhou contigo.";
+        }
+        catch
+        {
+            erro = "Não foi possível carregar a proposta. Tenta mais tarde.";
+        }
+        finally
+        {
+            a_carregar = false;
+        }
+    }
+
+    private static PropostaPartilhadaVm MapRaw(PropostaPartilhadaRaw raw) => new()
+    {
+        Id = raw.Id,
+        Nome = raw.Nome,
+        AreaNome = raw.Area?.Nome ?? "",
+        DescricaoTrabalho = raw.DescricaoTrabalho,
+        NumeroTotalHoras = raw.NumeroTotalHoras,
+        PrecoHoraMedio = raw.PrecoHoraMedio,
+        ValorEstimadoTotal = raw.ValorEstimadoTotal,
+        Estado = raw.Estado,
+        Skills = raw.SkillsNecessarias.Select(s => new SkillVm
+        {
+            SkillNome = s.Skill?.Nome ?? $"Skill #{s.SkillId}",
+            AnosMinimos = s.NivelMinimoRequerido
+        }).ToList(),
+        Talentos = raw.TalentosElegiveis.Select(te => new TalentoVm
+        {
+            Nome = te.Perfil?.Nome ?? $"Talento #{te.PerfilId}",
+            Pais = te.Perfil?.Pais ?? "-",
+            PrecoPorHora = te.Perfil?.PrecoPorHora ?? 0,
+            ValorEstimado = te.ValorEstimado,
+            Skills = (te.Perfil?.Skills ?? new()).Select(sk => new TalentoSkillVm { SkillNome = sk.SkillNome }).ToList()
+        }).ToList()
+    };
+
+    private static int GetFit(PropostaPartilhadaVm p, TalentoVm t)
+    {
+        if (t.PrecoPorHora <= 0) return 0;
+        var pct = p.PrecoHoraMedio / t.PrecoPorHora * 100;
+        return (int)Math.Round(Math.Clamp(pct, 0, 100));
+    }
+
+    private static string GetInitials(string? nome)
+    {
+        if (string.IsNullOrWhiteSpace(nome)) return "?";
+        var parts = nome.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0) return "?";
+        if (parts.Length == 1) return parts[0][..Math.Min(2, parts[0].Length)].ToUpper(CultureInfo.CurrentCulture);
+        return $"{parts[0][0]}{parts[^1][0]}".ToUpper(CultureInfo.CurrentCulture);
+    }
+
+    // ---- View Models ----
+
+    private class PropostaPartilhadaVm
+    {
+        public int Id { get; set; }
+        public string Nome { get; set; } = "";
+        public string AreaNome { get; set; } = "";
+        public string DescricaoTrabalho { get; set; } = "";
+        public int NumeroTotalHoras { get; set; }
+        public decimal PrecoHoraMedio { get; set; }
+        public decimal ValorEstimadoTotal { get; set; }
+        public string Estado { get; set; } = "Aberta";
+        public List<SkillVm> Skills { get; set; } = new();
+        public List<TalentoVm> Talentos { get; set; } = new();
+    }
+
+    private class SkillVm { public string SkillNome { get; set; } = ""; public int AnosMinimos { get; set; } }
+    private class TalentoVm { public string Nome { get; set; } = ""; public string Pais { get; set; } = ""; public decimal PrecoPorHora { get; set; } public decimal ValorEstimado { get; set; } public List<TalentoSkillVm> Skills { get; set; } = new(); }
+    private class TalentoSkillVm { public string SkillNome { get; set; } = ""; }
+
+    // ---- Raw deserialization (matches API anonymous shape) ----
+
+    private class PropostaPartilhadaRaw
+    {
+        public int Id { get; set; }
+        public string Nome { get; set; } = "";
+        public AreaRaw? Area { get; set; }
+        public string DescricaoTrabalho { get; set; } = "";
+        public int NumeroTotalHoras { get; set; }
+        public decimal PrecoHoraMedio { get; set; }
+        public decimal ValorEstimadoTotal { get; set; }
+        public string Estado { get; set; } = "Aberta";
+        public List<SkillNecessariaRaw> SkillsNecessarias { get; set; } = new();
+        public List<TalentoElegivelRaw> TalentosElegiveis { get; set; } = new();
+    }
+
+    private class AreaRaw { public int Id { get; set; } public string Nome { get; set; } = ""; }
+
+    private class SkillNecessariaRaw
+    {
+        public int SkillId { get; set; }
+        public SkillRaw? Skill { get; set; }
+        public int NivelMinimoRequerido { get; set; }
+    }
+
+    private class SkillRaw { public int Id { get; set; } public string Nome { get; set; } = ""; }
+
+    private class TalentoElegivelRaw
+    {
+        public int PerfilId { get; set; }
+        public decimal ValorEstimado { get; set; }
+        public PerfilRaw? Perfil { get; set; }
+    }
+
+    private class PerfilRaw
+    {
+        public string Nome { get; set; } = "";
+        public string Pais { get; set; } = "";
+        public decimal PrecoPorHora { get; set; }
+        public List<PerfilSkillRaw> Skills { get; set; } = new();
+    }
+
+    private class PerfilSkillRaw { public int SkillId { get; set; } public string SkillNome { get; set; } = ""; public int AnosExperiencia { get; set; } }
+}

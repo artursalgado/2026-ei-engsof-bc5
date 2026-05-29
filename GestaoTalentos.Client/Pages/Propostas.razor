@@ -7,6 +7,7 @@
 @inject IPropostaService PropostaService
 @inject HttpClient Http
 @inject IJSRuntime JS
+@inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthStateProvider
 @attribute [Authorize]
 
@@ -63,14 +64,23 @@ else if (!propostas.Any())
 }
 else
 {
-    <div class="search-bar">
-        <i class="bi bi-search search-icon"></i>
-        <input class="search-input" type="text" placeholder="Pesquisar proposta ou área..." @bind="searchQuery" @bind:event="oninput" />
-        @if (!string.IsNullOrEmpty(searchQuery))
+    <div class="search-filter-row">
+        <div class="search-bar">
+            <i class="bi bi-search search-icon"></i>
+            <input class="search-input" type="text" placeholder="Pesquisar proposta ou área..." @bind="searchQuery" @bind:event="oninput" />
+            @if (!string.IsNullOrEmpty(searchQuery))
+            {
+                <button class="search-clear" @onclick="() => searchQuery = string.Empty" title="Limpar">
+                    <i class="bi bi-x"></i>
+                </button>
+            }
+        </div>
+        @if (isUserManager)
         {
-            <button class="search-clear" @onclick="() => searchQuery = string.Empty" title="Limpar">
-                <i class="bi bi-x"></i>
-            </button>
+            <label class="toggle-minhas">
+                <input type="checkbox" @bind="mostrarSoMinhas" @bind:after="LoadAll" />
+                <span>Só as minhas</span>
+            </label>
         }
     </div>
 
@@ -164,16 +174,33 @@ else
                             }
                         </div>
 
-                        <button class="talentos-toggle" @onclick="() => ToggleDetail(p.Id)" aria-expanded="@expanded">
-                            <span>Ver @p.TalentosElegiveis.Count talento@(p.TalentosElegiveis.Count != 1 ? "s" : "")</span>
-                            <i class="bi @(expanded ? "bi-chevron-up" : "bi-chevron-down")"></i>
-                        </button>
+                        <div class="toggle-row">
+                            <button class="talentos-toggle" @onclick="() => ToggleDetail(p.Id)" aria-expanded="@expanded">
+                                <span>Ver @p.TalentoElegivelCount talento@(p.TalentoElegivelCount != 1 ? "s" : "")</span>
+                                <i class="bi @(expanded ? "bi-chevron-up" : "bi-chevron-down")"></i>
+                            </button>
+                            <span class="estado-badge estado-@p.Estado.ToLowerInvariant()">
+                                @(p.Estado == "Aberta" ? "Aberta" : p.Estado == "EmNegociacao" ? "Em Negociação" : "Fechada")
+                            </span>
+                        </div>
                     </div>
 
                     @if (expanded)
                     {
                         <div class="talentos-drawer">
-                            <h3>Talentos Elegíveis</h3>
+                            <div class="drawer-header">
+                                <h3>Talentos Elegíveis</h3>
+                                @if (p.Estado != "Fechada")
+                                {
+                                    <button class="btn-partilhar" @onclick="() => GerarLinkPartilha(p.Id)" disabled="@busy" title="Gerar link para partilhar com cliente">
+                                        <i class="bi bi-share"></i> Partilhar
+                                    </button>
+                                }
+                                else
+                                {
+                                    <span class="fechada-badge"><i class="bi bi-check-circle-fill"></i> Concluída</span>
+                                }
+                            </div>
                             @if (!p.TalentosElegiveis.Any())
                             {
                                 <p class="elegivel-empty">Nenhum talento elegível.</p>
@@ -184,10 +211,15 @@ else
                                     @foreach (var t in p.TalentosElegiveis.OrderByDescending(x => GetPrecoFitPercent(p, x)))
                                     {
                                         var fitPercent = GetPrecoFitPercent(p, t);
+                                        var isSelecionado = p.TalentoSelecionadoId.HasValue && p.TalentoSelecionadoId == t.PerfilId;
                                         var isBest = GetBestFitId(p) == t.Id;
-                                        <div class="elegivel-card @(isBest ? "best-fit" : "")">
+                                        <div class="elegivel-card @(isSelecionado ? "is-selecionado" : "") @(isBest ? "best-fit" : "")">
                                             <div class="elegivel-avatar-wrap">
                                                 <div class="elegivel-avatar @accentClass">@GetInitials(t.Perfil?.Nome)</div>
+                                                @if (isSelecionado)
+                                                {
+                                                    <span class="selecionado-crown" title="Talento selecionado"><i class="bi bi-check-circle-fill"></i></span>
+                                                }
                                                 @if (isBest)
                                                 {
                                                     <span class="best-fit-crown" title="Melhor fit de preço">🏆</span>
@@ -210,6 +242,16 @@ else
                                                 <span class="elegivel-preco">@(t.Perfil?.PrecoPorHora.ToString("F2") ?? "-") €/h</span>
                                                 <span class="elegivel-total">@t.ValorEstimado.ToString("F2") € total</span>
                                             </div>
+                                            @if (p.Estado != "Fechada")
+                                            {
+                                                <button class="btn-selecionar" @onclick="() => SelecionarTalento(p.Id, t.PerfilId)" disabled="@busy" title="Selecionar este talento">
+                                                    <i class="bi bi-person-check"></i>
+                                                </button>
+                                            }
+                                            @if (isSelecionado)
+                                            {
+                                                <span class="elegivel-selected-label">Selecionado</span>
+                                            }
                                         </div>
                                     }
                                 </div>
@@ -428,6 +470,10 @@ else
         public string DescricaoTrabalho { get; set; } = "";
         public int NumeroTotalHoras { get; set; }
         public decimal PrecoHoraMedio { get; set; }
+        public string Estado { get; set; } = "Aberta";
+        public int? TalentoSelecionadoId { get; set; }
+        public int? CriadorId { get; set; }
+        public int TalentoElegivelCount { get; set; }
         public List<SkillNecessariaDto> SkillsNecessarias { get; set; } = new();
         public List<TalentoElegivelVm> TalentosElegiveis { get; set; } = new();
     }
@@ -441,6 +487,10 @@ else
     private SortMode sortMode = SortMode.DataDesc;
 
     private enum SortMode { DataDesc, ValorAsc, ValorDesc, HorasDesc, TalentosDesc }
+
+    private bool mostrarSoMinhas = false;
+    private bool isUserManager = false;
+    private int currentUserId = 0;
 
     private bool showCreateModal;
     private bool showEditModal;
@@ -493,13 +543,18 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        isUserManager = authState.User.IsInRole("UserManager") || authState.User.IsInRole("Admin");
+        var sub = authState.User.FindFirst("sub")?.Value;
+        currentUserId = int.TryParse(sub, out var uid) ? uid : 0;
         await LoadAll();
     }
 
     private async Task LoadAll()
     {
         error = null;
-        propostas = await Http.GetFromJsonAsync<List<PropostaReadVm>>("propostas") ?? new();
+        var url = (isUserManager && mostrarSoMinhas) ? "propostas?minhas=true" : "propostas";
+        propostas = await Http.GetFromJsonAsync<List<PropostaReadVm>>(url) ?? new();
         areas = await Http.GetFromJsonAsync<List<AreaDto>>("areas") ?? new();
         skills = await Http.GetFromJsonAsync<List<SkillDto>>("skills") ?? new();
 
@@ -721,6 +776,66 @@ else
         }
     }
 
+    private async Task SelecionarTalento(int propostaId, int perfilId)
+    {
+        var ok = await JS.InvokeAsync<bool>("confirm", "Tens a certeza? A proposta ficará fechada e este talento será marcado como selecionado.");
+        if (!ok) return;
+
+        try
+        {
+            busy = true;
+            var payload = new { PerfilId = perfilId };
+            var resp = await Http.PatchAsJsonAsync($"propostas/{propostaId}/selecionar-talento", payload);
+            if (resp.IsSuccessStatusCode)
+            {
+                await LoadAll();
+                await ShowToast("Talento selecionado. Proposta fechada.");
+                expandedPropostaId = propostaId;
+            }
+            else
+            {
+                var msg = await resp.Content.ReadAsStringAsync();
+                error = msg;
+            }
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private async Task GerarLinkPartilha(int propostaId)
+    {
+        try
+        {
+            busy = true;
+            var resp = await Http.PostAsync($"propostas/{propostaId}/partilhar", null);
+            if (resp.IsSuccessStatusCode)
+            {
+                var data = await resp.Content.ReadFromJsonAsync<PartilhaResponseVm>();
+                if (data != null)
+                {
+                    var baseUrl = Navigation.BaseUri.TrimEnd('/');
+                    var url = $"{baseUrl}/partilha/{data.Token}";
+                    await JS.InvokeVoidAsync("navigator.clipboard.writeText", url);
+                    await ShowToast("Link copiado para o clipboard!");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
     private async Task ShowToast(string msg)
     {
         toastMensagem = msg;
@@ -729,5 +844,10 @@ else
         await Task.Delay(3000);
         toastVisible = false;
         StateHasChanged();
+    }
+
+    private class PartilhaResponseVm
+    {
+        public string Token { get; set; } = "";
     }
 }

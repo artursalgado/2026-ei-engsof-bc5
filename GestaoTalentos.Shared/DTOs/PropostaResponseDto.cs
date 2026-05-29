@@ -7,7 +7,7 @@ public record PropostaSkillInfoDto(int Id, string Nome);
 public record SkillNecessariaResponseDto(
     int Id,
     int SkillId,
-    int NivelMinimoRequerido,
+    int AnosExperienciaMinimo,
     PropostaSkillInfoDto? Skill
 );
 
@@ -32,6 +32,10 @@ public class PropostaResponseDto
     public decimal ValorEstimadoTotal => NumeroTotalHoras * PrecoHoraMedio;
     public DateTime CriadoEm { get; set; }
     public DateTime AtualizadoEm { get; set; }
+    public string Estado { get; set; } = "Aberta";
+    public int? TalentoSelecionadoId { get; set; }
+    public int? CriadorId { get; set; }
+    public int TalentoElegivelCount { get; set; }
     public List<SkillNecessariaResponseDto> SkillsNecessarias { get; set; } = new();
     public List<TalentoElegivelResponseDto>? TalentosElegiveis { get; set; }
 }
