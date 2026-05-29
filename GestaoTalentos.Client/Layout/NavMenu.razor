@@ -67,6 +67,17 @@
                         </div>
                     </Authorized>
                 </AuthorizeView>
+
+                <AuthorizeView Policy="AdminPolicy">
+                    <Authorized Context="adminCtx">
+                        <div class="nav-section-label">Sistema</div>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="admin">
+                                <i class="bi bi-shield-lock nav-ico"></i> Administração
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
             </Authorized>
             <NotAuthorized>
                 <div class="nav-section-label">Conta</div>
