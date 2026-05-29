@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -15,7 +15,7 @@ namespace GestaoTalentos.Infrastructure.Migrations
                 table: "Users",
                 type: "integer",
                 nullable: false,
-                defaultValue: 0);
+                defaultValue: 1); // 1 = Ativo
         }
 
         /// <inheritdoc />

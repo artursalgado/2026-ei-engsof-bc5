@@ -12,7 +12,7 @@
 <div class="page-header">
     <div>
         <h1>Administração</h1>
-        <p class="page-subtitle">Gestão de contas e criação de funcionários</p>
+        <p class="page-subtitle">Gestão de utilizadores e criação de funcionários</p>
     </div>
 </div>
 
@@ -21,48 +21,73 @@
     <div class="toast-sucesso">@toastMensagem</div>
 }
 
-<!-- SECÇÃO: CONTAS PENDENTES -->
+<!-- SECÇÃO: GERIR UTILIZADORES -->
 <section class="admin-section">
     <div class="section-header">
-        <div class="section-icon"><i class="bi bi-hourglass-split"></i></div>
+        <div class="section-icon"><i class="bi bi-people-fill"></i></div>
         <div>
-            <h2>Contas Pendentes</h2>
-            <p class="section-subtitle">Utilizadores aguardando aprovação para aceder à plataforma</p>
+            <h2>Gerir Utilizadores</h2>
+            <p class="section-subtitle">Suspender, reativar e alterar permissões dos utilizadores</p>
         </div>
     </div>
 
-    @if (pendentes == null)
+    @if (utilizadores == null)
     {
         <div class="loading-state"><i class="bi bi-hourglass-split"></i> A carregar...</div>
     }
-    else if (pendentes.Count == 0)
+    else if (utilizadores.Count == 0)
     {
         <div class="empty-state">
-            <div class="empty-ico"><i class="bi bi-check2-circle"></i></div>
-            <h3>Nenhuma conta pendente</h3>
-            <p>Todos os registos foram processados.</p>
+            <div class="empty-ico"><i class="bi bi-people"></i></div>
+            <h3>Nenhum utilizador registado</h3>
+            <p>Ainda não existem utilizadores na plataforma.</p>
         </div>
     }
     else
     {
-        <div class="pendentes-list">
-            @foreach (var u in pendentes)
+        <div class="utilizadores-list">
+            @foreach (var u in utilizadores)
             {
-                <div class="pendente-card">
-                    <div class="pendente-info">
-                        <div class="pendente-avatar"><i class="bi bi-person-fill"></i></div>
+                <div class="utilizador-card">
+                    <div class="utilizador-info">
+                        <div class="utilizador-avatar @(u.EstadoConta == "Rejeitado" ? "suspended" : "")">
+                            <i class="bi bi-person-fill"></i>
+                        </div>
                         <div>
-                            <div class="pendente-username">@u.Username</div>
-                            <div class="pendente-role">@u.Role</div>
+                            <div class="utilizador-username">@u.Username</div>
+                            <div class="utilizador-meta">
+                                <span class="badge-role">@u.Role</span>
+                                <span class="badge-estado @(u.EstadoConta == "Rejeitado" ? "suspended" : "active")">
+                                    @(u.EstadoConta == "Rejeitado" ? "Suspenso" : "Ativo")
+                                </span>
+                            </div>
                         </div>
                     </div>
-                    <div class="pendente-actions">
-                        <button class="btn-aprovar" @onclick="() => Aprovar(u.Id)" disabled="@isBusy" title="Aprovar conta">
-                            <i class="bi bi-check-lg"></i> Aprovar
-                        </button>
-                        <button class="btn-rejeitar" @onclick="() => Rejeitar(u.Id)" disabled="@isBusy" title="Rejeitar conta">
-                            <i class="bi bi-x-lg"></i> Rejeitar
-                        </button>
+                    <div class="utilizador-actions">
+                        @if (u.Role == "User")
+                        {
+                            <button class="btn-role" @onclick='() => AlterarRole(u.Id, "UserManager")' disabled="@isBusy" title="Promover a UserManager">
+                                <i class="bi bi-arrow-up-circle"></i> UserManager
+                            </button>
+                        }
+                        else if (u.Role == "UserManager")
+                        {
+                            <button class="btn-role" @onclick='() => AlterarRole(u.Id, "User")' disabled="@isBusy" title="Rebaixar para User">
+                                <i class="bi bi-arrow-down-circle"></i> User
+                            </button>
+                        }
+                        @if (u.EstadoConta == "Rejeitado")
+                        {
+                            <button class="btn-aprovar" @onclick="() => Reativar(u.Id)" disabled="@isBusy" title="Reativar conta">
+                                <i class="bi bi-check-lg"></i> Reativar
+                            </button>
+                        }
+                        else
+                        {
+                            <button class="btn-rejeitar" @onclick="() => Suspender(u.Id)" disabled="@isBusy" title="Suspender conta">
+                                <i class="bi bi-slash-circle"></i> Suspender
+                            </button>
+                        }
                     </div>
                 </div>
             }
@@ -76,7 +101,7 @@
         <div class="section-icon create"><i class="bi bi-person-plus-fill"></i></div>
         <div>
             <h2>Criar Funcionário</h2>
-            <p class="section-subtitle">Criar conta de funcionário com acesso imediato (sem necessidade de aprovação)</p>
+            <p class="section-subtitle">Criar conta de funcionário com acesso imediato à plataforma</p>
         </div>
     </div>
 
@@ -122,7 +147,7 @@
 </section>
 
 @code {
-    private List<UtilizadorPendenteItem>? pendentes;
+    private List<UtilizadorItem>? utilizadores;
     private bool isBusy = false;
     private string? formError;
     private bool toastVisible = false;
@@ -135,36 +160,39 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await CarregarPendentes();
+        await CarregarUtilizadores();
     }
 
-    private async Task CarregarPendentes()
+    private async Task CarregarUtilizadores()
     {
         try
         {
-            var result = await Http.GetFromJsonAsync<List<UtilizadorPendenteItem>>("/admin/utilizadores/pendentes");
-            pendentes = result ?? new List<UtilizadorPendenteItem>();
+            var result = await Http.GetFromJsonAsync<List<UtilizadorItem>>("/admin/utilizadores");
+            utilizadores = result ?? new List<UtilizadorItem>();
         }
         catch
         {
-            pendentes = new List<UtilizadorPendenteItem>();
+            utilizadores = new List<UtilizadorItem>();
         }
     }
 
-    private async Task Aprovar(int id)
+    private async Task Suspender(int id)
     {
+        var confirmado = await JS.InvokeAsync<bool>("confirm", "Tens a certeza que queres suspender esta conta?");
+        if (!confirmado) return;
+
         isBusy = true;
         try
         {
-            var resp = await Http.PostAsync($"/admin/utilizadores/{id}/aprovar", null);
+            var resp = await Http.PostAsync($"/admin/utilizadores/{id}/suspender", null);
             if (resp.IsSuccessStatusCode)
             {
-                await CarregarPendentes();
-                await MostrarToast("Conta aprovada com sucesso.");
+                await CarregarUtilizadores();
+                await MostrarToast("Conta suspensa.");
             }
             else
             {
-                await JS.InvokeVoidAsync("alert", "Erro ao aprovar a conta.");
+                await JS.InvokeVoidAsync("alert", "Erro ao suspender a conta.");
             }
         }
         finally
@@ -173,23 +201,43 @@
         }
     }
 
-    private async Task Rejeitar(int id)
+    private async Task Reativar(int id)
     {
-        var confirmado = await JS.InvokeAsync<bool>("confirm", "Tens a certeza que queres rejeitar esta conta?");
-        if (!confirmado) return;
-
         isBusy = true;
         try
         {
-            var resp = await Http.PostAsync($"/admin/utilizadores/{id}/rejeitar", null);
+            var resp = await Http.PostAsync($"/admin/utilizadores/{id}/reativar", null);
             if (resp.IsSuccessStatusCode)
             {
-                await CarregarPendentes();
-                await MostrarToast("Conta rejeitada.");
+                await CarregarUtilizadores();
+                await MostrarToast("Conta reativada com sucesso.");
             }
             else
             {
-                await JS.InvokeVoidAsync("alert", "Erro ao rejeitar a conta.");
+                await JS.InvokeVoidAsync("alert", "Erro ao reativar a conta.");
+            }
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private async Task AlterarRole(int id, string novaRoleStr)
+    {
+        isBusy = true;
+        try
+        {
+            var payload = new { UserId = id, Role = novaRoleStr };
+            var resp = await Http.PutAsJsonAsync($"/admin/utilizadores/{id}/role", payload);
+            if (resp.IsSuccessStatusCode)
+            {
+                await CarregarUtilizadores();
+                await MostrarToast($"Role actualizada para {novaRoleStr}.");
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("alert", "Erro ao alterar a role.");
             }
         }
         finally
@@ -224,6 +272,7 @@
                 novoUsername = "";
                 novaPassword = "";
                 novaRole = "User";
+                await CarregarUtilizadores();
                 await MostrarToast($"Funcionário '{payload.Username}' criado com sucesso.");
             }
             else if (resp.StatusCode == System.Net.HttpStatusCode.Conflict)
@@ -251,7 +300,7 @@
         StateHasChanged();
     }
 
-    private class UtilizadorPendenteItem
+    private class UtilizadorItem
     {
         public int Id { get; set; }
         public string Username { get; set; } = string.Empty;
