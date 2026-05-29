@@ -21,8 +21,30 @@
     <div class="toast-sucesso">@toastMensagem</div>
 }
 
+<!-- SUMMARY BAR -->
+@if (utilizadores != null)
+{
+    <div class="summary-grid">
+        <div class="summary-card">
+            <div class="summary-icon"><i class="bi bi-people-fill"></i></div>
+            <div class="summary-value">@utilizadores.Count</div>
+            <div class="summary-label">Utilizadores</div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-icon success"><i class="bi bi-check-circle-fill"></i></div>
+            <div class="summary-value">@utilizadores.Count(u => u.EstadoConta != "Rejeitado")</div>
+            <div class="summary-label">Ativos</div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-icon danger"><i class="bi bi-slash-circle-fill"></i></div>
+            <div class="summary-value">@utilizadores.Count(u => u.EstadoConta == "Rejeitado")</div>
+            <div class="summary-label">Suspensos</div>
+        </div>
+    </div>
+}
+
 <!-- SECÇÃO: GERIR UTILIZADORES -->
-<section class="admin-section">
+<section class="admin-section" @ref="utilizadoresSection">
     <div class="section-header">
         <div class="section-icon"><i class="bi bi-people-fill"></i></div>
         <div>
@@ -48,45 +70,54 @@
         <div class="utilizadores-list">
             @foreach (var u in utilizadores)
             {
-                <div class="utilizador-card">
+                var isSuspended = u.EstadoConta == "Rejeitado";
+                var isAdmin = u.Role == "Admin";
+                <div class="utilizador-card @(isSuspended ? "is-suspended" : "")">
                     <div class="utilizador-info">
-                        <div class="utilizador-avatar @(u.EstadoConta == "Rejeitado" ? "suspended" : "")">
-                            <i class="bi bi-person-fill"></i>
+                        <div class="utilizador-avatar @(isAdmin ? "admin" : isSuspended ? "suspended" : "")">
+                            @GetIniciais(u.Username)
                         </div>
                         <div>
                             <div class="utilizador-username">@u.Username</div>
                             <div class="utilizador-meta">
-                                <span class="badge-role">@u.Role</span>
-                                <span class="badge-estado @(u.EstadoConta == "Rejeitado" ? "suspended" : "active")">
-                                    @(u.EstadoConta == "Rejeitado" ? "Suspenso" : "Ativo")
+                                <span class="badge-role @(isAdmin ? "admin" : "")">@u.Role</span>
+                                <span class="badge-estado @(isSuspended ? "suspended" : "active")">
+                                    @(isSuspended ? "Suspenso" : "Ativo")
                                 </span>
                             </div>
                         </div>
                     </div>
                     <div class="utilizador-actions">
-                        @if (u.Role == "User")
+                        @if (isAdmin)
                         {
-                            <button class="btn-role" @onclick='() => AlterarRole(u.Id, "UserManager")' disabled="@isBusy" title="Promover a UserManager">
-                                <i class="bi bi-arrow-up-circle"></i> UserManager
-                            </button>
-                        }
-                        else if (u.Role == "UserManager")
-                        {
-                            <button class="btn-role" @onclick='() => AlterarRole(u.Id, "User")' disabled="@isBusy" title="Rebaixar para User">
-                                <i class="bi bi-arrow-down-circle"></i> User
-                            </button>
-                        }
-                        @if (u.EstadoConta == "Rejeitado")
-                        {
-                            <button class="btn-aprovar" @onclick="() => Reativar(u.Id)" disabled="@isBusy" title="Reativar conta">
-                                <i class="bi bi-check-lg"></i> Reativar
-                            </button>
+                            <span class="utilizador-admin-badge"><i class="bi bi-shield-fill-check"></i> Administrador</span>
                         }
                         else
                         {
-                            <button class="btn-rejeitar" @onclick="() => Suspender(u.Id)" disabled="@isBusy" title="Suspender conta">
-                                <i class="bi bi-slash-circle"></i> Suspender
-                            </button>
+                            @if (u.Role == "User")
+                            {
+                                <button class="btn-role" @onclick='() => AlterarRole(u.Id, "UserManager")' disabled="@isBusy" title="Promover a UserManager">
+                                    <i class="bi bi-arrow-up-circle"></i> Promover
+                                </button>
+                            }
+                            else if (u.Role == "UserManager")
+                            {
+                                <button class="btn-role" @onclick='() => AlterarRole(u.Id, "User")' disabled="@isBusy" title="Rebaixar para User">
+                                    <i class="bi bi-arrow-down-circle"></i> Rebaixar
+                                </button>
+                            }
+                            @if (isSuspended)
+                            {
+                                <button class="btn-aprovar" @onclick="() => Reativar(u.Id)" disabled="@isBusy" title="Reativar conta">
+                                    <i class="bi bi-check-lg"></i> Reativar
+                                </button>
+                            }
+                            else
+                            {
+                                <button class="btn-rejeitar" @onclick="() => Suspender(u.Id)" disabled="@isBusy" title="Suspender conta">
+                                    <i class="bi bi-slash-circle"></i> Suspender
+                                </button>
+                            }
                         }
                     </div>
                 </div>
@@ -159,6 +190,7 @@
     private string? formError;
     private bool toastVisible = false;
     private string toastMensagem = "";
+    private ElementReference utilizadoresSection;
 
     // Formulário criar funcionário
     private string novoUsername = "";
@@ -181,6 +213,15 @@
         {
             utilizadores = new List<UtilizadorItem>();
         }
+    }
+
+    private static string GetIniciais(string username)
+    {
+        if (string.IsNullOrWhiteSpace(username)) return "?";
+        var clean = username.Trim();
+        return clean.Length >= 2
+            ? clean[..2].ToUpperInvariant()
+            : clean[..1].ToUpperInvariant();
     }
 
     private async Task Suspender(int id)
@@ -281,6 +322,8 @@
                 novaRole = "User";
                 await CarregarUtilizadores();
                 await MostrarToast($"Funcionário '{payload.Username}' criado com sucesso.");
+                // Scroll suave até à secção de utilizadores para ver o novo registo
+                await JS.InvokeVoidAsync("blazorScrollIntoView", utilizadoresSection);
             }
             else if (resp.StatusCode == System.Net.HttpStatusCode.Conflict)
             {
