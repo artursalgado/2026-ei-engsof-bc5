@@ -181,11 +181,18 @@ else
                             else
                             {
                                 <div class="elegivel-grid">
-                                    @foreach (var t in p.TalentosElegiveis.OrderBy(x => x.ValorEstimado))
+                                    @foreach (var t in p.TalentosElegiveis.OrderByDescending(x => GetPrecoFitPercent(p, x)))
                                     {
                                         var fitPercent = GetPrecoFitPercent(p, t);
-                                        <div class="elegivel-card">
-                                            <div class="elegivel-avatar @accentClass">@GetInitials(t.Perfil?.Nome)</div>
+                                        var isBest = GetBestFitId(p) == t.Id;
+                                        <div class="elegivel-card @(isBest ? "best-fit" : "")">
+                                            <div class="elegivel-avatar-wrap">
+                                                <div class="elegivel-avatar @accentClass">@GetInitials(t.Perfil?.Nome)</div>
+                                                @if (isBest)
+                                                {
+                                                    <span class="best-fit-crown" title="Melhor fit de preço">🏆</span>
+                                                }
+                                            </div>
                                             <div class="elegivel-info">
                                                 <div class="elegivel-nome">@(t.Perfil?.Nome ?? $"Perfil #{t.PerfilId}")</div>
                                                 <div class="elegivel-pais">@(t.Perfil?.Pais ?? "-")</div>
@@ -602,6 +609,13 @@ else
         if (parts.Length == 1) return parts[0][..Math.Min(2, parts[0].Length)].ToUpper(CultureInfo.CurrentCulture);
 
         return $"{parts[0][0]}{parts[^1][0]}".ToUpper(CultureInfo.CurrentCulture);
+    }
+
+    private int GetBestFitId(PropostaReadVm proposta)
+    {
+        if (proposta.TalentosElegiveis.Count <= 1) return -1;
+        var best = proposta.TalentosElegiveis.MaxBy(t => GetPrecoFitPercent(proposta, t));
+        return best?.Id ?? -1;
     }
 
     private static int GetPrecoFitPercent(PropostaReadVm proposta, TalentoElegivelVm talento)
