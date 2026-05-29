@@ -140,8 +140,15 @@
                 </button>
             </div>
         </div>
-        <button class="btn btn-primary" @onclick="CriarFuncionario" disabled="@isBusy">
-            @(isBusy ? "A criar..." : "Criar Funcionário")
+        <button class="btn-submit" @onclick="CriarFuncionario" disabled="@isBusy">
+            @if (isBusy)
+            {
+                <i class="bi bi-arrow-repeat spin-icon"></i> <span>A criar...</span>
+            }
+            else
+            {
+                <i class="bi bi-check2-circle"></i> <span>Criar Funcionário</span>
+            }
         </button>
     </div>
 </section>
