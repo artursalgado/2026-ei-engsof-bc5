@@ -27,8 +27,13 @@ public class Proposta
     public DateTime CriadoEm { get; set; } = DateTime.UtcNow;
     public DateTime AtualizadoEm { get; set; } = DateTime.UtcNow;
 
+    // Estado e talento selecionado
+    public EstadoProposta Estado { get; set; } = EstadoProposta.Aberta;
+    public int? TalentoSelecionadoId { get; set; }
+
     // Relacionamentos
     public Area? Area { get; set; }
     public ICollection<SkillNecessaria> SkillsNecessarias { get; set; } = new List<SkillNecessaria>();
     public ICollection<TalentoElegivel> TalentosElegiveis { get; set; } = new List<TalentoElegivel>();
+    public ICollection<PartilhaToken> Partilhas { get; set; } = new List<PartilhaToken>();
 }
