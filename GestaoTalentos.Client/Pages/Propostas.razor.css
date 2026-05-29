@@ -405,20 +405,156 @@
     background: var(--color-primary-soft);
 }
 
+/* Toggle row: botão + badge de estado lado a lado */
+.toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-top: 0.9rem;
+    flex-wrap: wrap;
+}
+
+/* Badge de estado da proposta */
+.estado-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.55rem;
+    padding: 0.15rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+}
+
+.estado-aberta {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    color: #15803d;
+}
+
+.estado-emnegociacao {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    color: #b45309;
+}
+
+.estado-fechada {
+    background: #f1f5f9;
+    border: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+}
+
 .talentos-drawer {
     padding: 1rem 1.15rem 1.15rem 1.35rem;
     border-top: 1px solid var(--color-border);
     background: var(--color-surface-alt);
 }
 
+.drawer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
 .talentos-drawer h3 {
-    margin: 0 0 0.75rem;
+    margin: 0;
     color: var(--color-text-muted);
     font-size: 0.78rem;
     font-weight: 800;
     letter-spacing: 0.06em;
     line-height: 1.2;
     text-transform: uppercase;
+}
+
+/* Botão de partilhar dentro do drawer */
+.btn-partilhar {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    color: var(--color-primary);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-partilhar:hover:not(:disabled) {
+    border-color: var(--color-primary);
+    background: var(--color-primary-soft);
+}
+
+.btn-partilhar:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.fechada-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #15803d;
+}
+
+/* Botão selecionar talento */
+.btn-selecionar {
+    width: 2rem;
+    height: 2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--color-border);
+    border-radius: 50%;
+    background: var(--color-surface);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    flex-shrink: 0;
+}
+
+.btn-selecionar:hover:not(:disabled) {
+    border-color: #15803d;
+    background: #f0fdf4;
+    color: #15803d;
+}
+
+.btn-selecionar:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+/* Card do talento selecionado */
+.elegivel-card.is-selecionado {
+    border-color: #86efac;
+    background: linear-gradient(to right, #f0fdf4, var(--color-surface));
+}
+
+.elegivel-avatar-wrap {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.selecionado-crown {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    font-size: 0.72rem;
+    color: #15803d;
+    line-height: 1;
+    pointer-events: none;
+}
+
+.elegivel-selected-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #15803d;
+    white-space: nowrap;
 }
 
 .elegivel-empty {
