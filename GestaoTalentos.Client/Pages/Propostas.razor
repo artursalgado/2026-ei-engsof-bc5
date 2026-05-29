@@ -75,6 +75,32 @@ else
         }
     </div>
 
+    <div class="toolbar-row">
+        @if (AreasComPropostas.Count > 1)
+        {
+            <div class="filter-chips">
+                <button class="filter-chip @(selectedAreaFilter == null ? "active" : "")" @onclick="() => selectedAreaFilter = null">
+                    Todas
+                </button>
+                @foreach (var a in AreasComPropostas)
+                {
+                    var aId = a.Id;
+                    <button class="filter-chip @GetAccentClass(aId) @(selectedAreaFilter == aId ? "active" : "")" @onclick="() => selectedAreaFilter = aId">
+                        @a.Nome
+                    </button>
+                }
+            </div>
+        }
+        <div class="sort-chips">
+            <i class="bi bi-arrow-down-up sort-icon"></i>
+            <button class="sort-chip @(sortMode == SortMode.DataDesc ? "active" : "")" @onclick="() => sortMode = SortMode.DataDesc">Recentes</button>
+            <button class="sort-chip @(sortMode == SortMode.ValorDesc ? "active" : "")" @onclick="() => sortMode = SortMode.ValorDesc">Valor ↓</button>
+            <button class="sort-chip @(sortMode == SortMode.ValorAsc ? "active" : "")" @onclick="() => sortMode = SortMode.ValorAsc">Valor ↑</button>
+            <button class="sort-chip @(sortMode == SortMode.HorasDesc ? "active" : "")" @onclick="() => sortMode = SortMode.HorasDesc">+ Horas</button>
+            <button class="sort-chip @(sortMode == SortMode.TalentosDesc ? "active" : "")" @onclick="() => sortMode = SortMode.TalentosDesc">+ Talentos</button>
+        </div>
+    </div>
+
     @if (FilteredPropostas.Count == 0)
     {
         <div class="no-results">
@@ -173,16 +199,21 @@ else
                             else
                             {
                                 <div class="elegivel-grid">
-                                    @foreach (var t in p.TalentosElegiveis.OrderBy(x => x.ValorEstimado))
+                                    @foreach (var t in p.TalentosElegiveis.OrderByDescending(x => GetPrecoFitPercent(p, x)))
                                     {
                                         var fitPercent = GetPrecoFitPercent(p, t);
                                         var isSelecionado = p.TalentoSelecionadoId.HasValue && p.TalentoSelecionadoId == t.PerfilId;
-                                        <div class="elegivel-card @(isSelecionado ? "is-selecionado" : "")">
+                                        var isBest = GetBestFitId(p) == t.Id;
+                                        <div class="elegivel-card @(isSelecionado ? "is-selecionado" : "") @(isBest ? "best-fit" : "")">
                                             <div class="elegivel-avatar-wrap">
                                                 <div class="elegivel-avatar @accentClass">@GetInitials(t.Perfil?.Nome)</div>
                                                 @if (isSelecionado)
                                                 {
                                                     <span class="selecionado-crown" title="Talento selecionado"><i class="bi bi-check-circle-fill"></i></span>
+                                                }
+                                                @if (isBest)
+                                                {
+                                                    <span class="best-fit-crown" title="Melhor fit de preço">🏆</span>
                                                 }
                                             </div>
                                             <div class="elegivel-info">
@@ -441,6 +472,10 @@ else
     private List<SkillDto> skills = new();
     private int? expandedPropostaId;
     private string searchQuery = "";
+    private int? selectedAreaFilter;
+    private SortMode sortMode = SortMode.DataDesc;
+
+    private enum SortMode { DataDesc, ValorAsc, ValorDesc, HorasDesc, TalentosDesc }
 
     private bool showCreateModal;
     private bool showEditModal;
@@ -454,11 +489,36 @@ else
     private UpdatePropostaDto? editDto;
     private int editId;
 
-    private List<PropostaReadVm> FilteredPropostas => propostas?
-        .Where(p => string.IsNullOrWhiteSpace(searchQuery)
-            || p.Nome.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)
-            || GetAreaName(p.AreaId).Contains(searchQuery, StringComparison.OrdinalIgnoreCase))
-        .ToList() ?? new List<PropostaReadVm>();
+    private List<PropostaReadVm> FilteredPropostas
+    {
+        get
+        {
+            var query = (propostas ?? new List<PropostaReadVm>()).AsEnumerable();
+
+            if (!string.IsNullOrWhiteSpace(searchQuery))
+                query = query.Where(p => p.Nome.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)
+                    || GetAreaName(p.AreaId).Contains(searchQuery, StringComparison.OrdinalIgnoreCase));
+
+            if (selectedAreaFilter.HasValue)
+                query = query.Where(p => p.AreaId == selectedAreaFilter.Value);
+
+            query = sortMode switch
+            {
+                SortMode.ValorAsc     => query.OrderBy(p => GetValorTotal(p)),
+                SortMode.ValorDesc    => query.OrderByDescending(p => GetValorTotal(p)),
+                SortMode.HorasDesc    => query.OrderByDescending(p => p.NumeroTotalHoras),
+                SortMode.TalentosDesc => query.OrderByDescending(p => p.TalentosElegiveis.Count),
+                _                     => query.OrderByDescending(p => p.Id)
+            };
+
+            return query.ToList();
+        }
+    }
+
+    private List<AreaDto> AreasComPropostas => areas
+        .Where(a => propostas != null && propostas.Any(p => p.AreaId == a.Id))
+        .OrderBy(a => a.Nome)
+        .ToList();
 
     private int TotalHoras => propostas?.Sum(p => p.NumeroTotalHoras) ?? 0;
 
@@ -477,6 +537,22 @@ else
         propostas = await Http.GetFromJsonAsync<List<PropostaReadVm>>("propostas") ?? new();
         areas = await Http.GetFromJsonAsync<List<AreaDto>>("areas") ?? new();
         skills = await Http.GetFromJsonAsync<List<SkillDto>>("skills") ?? new();
+
+        // carrega detalhes em paralelo para ter a contagem de talentos logo no carregamento
+        if (propostas.Any())
+        {
+            var detailTasks = propostas.Select(async p =>
+            {
+                try { return await Http.GetFromJsonAsync<PropostaReadVm>($"propostas/{p.Id}"); }
+                catch { return null; }
+            });
+            var details = await Task.WhenAll(detailTasks);
+            for (int i = 0; i < propostas.Count; i++)
+            {
+                if (details[i]?.TalentosElegiveis != null)
+                    propostas[i].TalentosElegiveis = details[i]!.TalentosElegiveis;
+            }
+        }
     }
 
     private void OpenCreateModal()
@@ -568,6 +644,13 @@ else
         if (parts.Length == 1) return parts[0][..Math.Min(2, parts[0].Length)].ToUpper(CultureInfo.CurrentCulture);
 
         return $"{parts[0][0]}{parts[^1][0]}".ToUpper(CultureInfo.CurrentCulture);
+    }
+
+    private int GetBestFitId(PropostaReadVm proposta)
+    {
+        if (proposta.TalentosElegiveis.Count <= 1) return -1;
+        var best = proposta.TalentosElegiveis.MaxBy(t => GetPrecoFitPercent(proposta, t));
+        return best?.Id ?? -1;
     }
 
     private static int GetPrecoFitPercent(PropostaReadVm proposta, TalentoElegivelVm talento)
