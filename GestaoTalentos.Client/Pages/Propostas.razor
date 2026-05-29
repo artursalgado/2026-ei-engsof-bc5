@@ -440,6 +440,30 @@ else
         propostas = await Http.GetFromJsonAsync<List<PropostaReadVm>>("propostas") ?? new();
         areas = await Http.GetFromJsonAsync<List<AreaDto>>("areas") ?? new();
         skills = await Http.GetFromJsonAsync<List<SkillDto>>("skills") ?? new();
+
+        if (propostas.Any())
+        {
+            var detailTasks = propostas.Select(async p =>
+            {
+                try
+                {
+                    return await Http.GetFromJsonAsync<PropostaReadVm>($"propostas/{p.Id}");
+                }
+                catch
+                {
+                    return null;
+                }
+            });
+
+            var details = await Task.WhenAll(detailTasks);
+            for (int i = 0; i < propostas.Count; i++)
+            {
+                if (details[i] != null && details[i]!.TalentosElegiveis != null)
+                {
+                    propostas[i].TalentosElegiveis = details[i]!.TalentosElegiveis;
+                }
+            }
+        }
     }
 
     private void OpenCreateModal()
