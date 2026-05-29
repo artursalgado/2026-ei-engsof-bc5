@@ -52,4 +52,10 @@ public class UserRepository : IUserRepository
 
     public async Task<IEnumerable<User>> GetByRoleIdAsync(int roleId)
         => await _context.Users.Where(u => (int)u.Role == roleId).ToListAsync();
+
+    public async Task<List<User>> GetPendentesAsync() /// Obtém todos os utilizadores com conta pendente de aprovação.
+        => await _context.Users
+            .AsNoTracking()
+            .Where(u => u.EstadoConta == EstadoConta.Pendente)
+            .ToListAsync();
 }
