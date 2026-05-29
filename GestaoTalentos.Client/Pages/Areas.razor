@@ -18,19 +18,19 @@
     @if (podeGerir)
     {
         <button class="btn btn-primary" @onclick="OpenCreateModal" disabled="@isBusy">
-            + Nova Área
+            <i class="bi bi-plus-lg"></i> Nova Área
         </button>
     }
 </div>
 
 @if (areas == null)
 {
-    <div class="loading-state">A carregar...</div>
+    <div class="loading-state"><i class="bi bi-hourglass-split"></i> A carregar...</div>
 }
 else if (areas.Count == 0)
 {
     <div class="empty-state">
-        <div class="empty-ico">🗂️</div>
+        <div class="empty-ico"><i class="bi bi-folder2-open"></i></div>
         <h3>Ainda não há áreas</h3>
         @if (podeGerir)
         {
@@ -45,35 +45,32 @@ else if (areas.Count == 0)
 }
 else
 {
-    <div class="card table-card">
-        <table class="table mb-0">
-            <thead>
-                <tr>
-                    <th>Nome</th>
-                    <th>Criado em</th>
-                    @if (podeGerir)
-                    {
-                        <th class="text-end">Ações</th>
-                    }
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var area in areas)
+    <div class="areas-grid">
+        @foreach (var area in areas)
+        {
+            <article class="area-tile">
+                <span class="area-date">@area.CriadoEm.ToString("dd/MM/yyyy")</span>
+
+                <div class="area-content">
+                    <div class="area-icon">
+                        <i class="bi @GetAreaIcon(area.Nome)"></i>
+                    </div>
+                    <h2>@area.Nome</h2>
+                </div>
+
+                @if (podeGerir)
                 {
-                    <tr>
-                        <td class="cell-name">@area.Nome</td>
-                        <td class="cell-muted">@area.CriadoEm.ToString("dd/MM/yyyy")</td>
-                        @if (podeGerir)
-                        {
-                            <td class="text-end">
-                                <button class="btn btn-sm btn-secondary" @onclick="() => OpenEditModal(area)" disabled="@isBusy">Editar</button>
-                                <button class="btn btn-sm btn-danger" @onclick="() => ConfirmDelete(area)" disabled="@isBusy">Apagar</button>
-                            </td>
-                        }
-                    </tr>
+                    <div class="area-actions" aria-label="Ações da área @area.Nome">
+                        <button class="area-action-btn edit" @onclick="() => OpenEditModal(area)" disabled="@isBusy" title="Editar área" aria-label="Editar área @area.Nome">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="area-action-btn delete" @onclick="() => ConfirmDelete(area)" disabled="@isBusy" title="Apagar área" aria-label="Apagar área @area.Nome">
+                            <i class="bi bi-trash3"></i>
+                        </button>
+                    </div>
                 }
-            </tbody>
-        </table>
+            </article>
+        }
     </div>
 }
 
@@ -83,7 +80,7 @@ else
     <div class="modal-custom" @onclick:stopPropagation>
         <div class="modal-head">
             <h3>@(isEditMode ? "Editar Área" : "Nova Área")</h3>
-            <button class="modal-close" @onclick="CloseModal" disabled="@isBusy">×</button>
+            <button class="modal-close" @onclick="CloseModal" disabled="@isBusy">&times;</button>
         </div>
 
         <div class="modal-body-custom">
@@ -141,6 +138,23 @@ else
     private async Task LoadAreas()
     {
         areas = await AreaService.GetAllAreasAsync();
+    }
+
+    private static string GetAreaIcon(string? nome)
+    {
+        var normalizedName = nome?.Trim().ToLowerInvariant() ?? string.Empty;
+
+        if (normalizedName.Contains("developer"))
+        {
+            return "bi-code-slash";
+        }
+
+        if (normalizedName.Contains("designer"))
+        {
+            return "bi-brush";
+        }
+
+        return "bi-folder2-open";
     }
 
     private void OpenCreateModal()
