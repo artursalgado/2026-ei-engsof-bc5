@@ -63,14 +63,23 @@ else if (!propostas.Any())
 }
 else
 {
-    <div class="search-bar">
-        <i class="bi bi-search search-icon"></i>
-        <input class="search-input" type="text" placeholder="Pesquisar proposta ou área..." @bind="searchQuery" @bind:event="oninput" />
-        @if (!string.IsNullOrEmpty(searchQuery))
+    <div class="search-filter-row">
+        <div class="search-bar">
+            <i class="bi bi-search search-icon"></i>
+            <input class="search-input" type="text" placeholder="Pesquisar proposta ou área..." @bind="searchQuery" @bind:event="oninput" />
+            @if (!string.IsNullOrEmpty(searchQuery))
+            {
+                <button class="search-clear" @onclick="() => searchQuery = string.Empty" title="Limpar">
+                    <i class="bi bi-x"></i>
+                </button>
+            }
+        </div>
+        @if (isUserManager)
         {
-            <button class="search-clear" @onclick="() => searchQuery = string.Empty" title="Limpar">
-                <i class="bi bi-x"></i>
-            </button>
+            <label class="toggle-minhas">
+                <input type="checkbox" @bind="mostrarSoMinhas" @bind:after="LoadAll" />
+                <span>Só as minhas</span>
+            </label>
         }
     </div>
 
@@ -139,7 +148,7 @@ else
                         </div>
 
                         <button class="talentos-toggle" @onclick="() => ToggleDetail(p.Id)" aria-expanded="@expanded">
-                            <span>Ver @p.TalentosElegiveis.Count talento@(p.TalentosElegiveis.Count != 1 ? "s" : "")</span>
+                            <span>Ver @p.TalentoElegivelCount talento@(p.TalentoElegivelCount != 1 ? "s" : "")</span>
                             <i class="bi @(expanded ? "bi-chevron-up" : "bi-chevron-down")"></i>
                         </button>
                     </div>
@@ -395,6 +404,10 @@ else
         public string DescricaoTrabalho { get; set; } = "";
         public int NumeroTotalHoras { get; set; }
         public decimal PrecoHoraMedio { get; set; }
+        public string Estado { get; set; } = "Aberta";
+        public int? TalentoSelecionadoId { get; set; }
+        public int? CriadorId { get; set; }
+        public int TalentoElegivelCount { get; set; }
         public List<SkillNecessariaDto> SkillsNecessarias { get; set; } = new();
         public List<TalentoElegivelVm> TalentosElegiveis { get; set; } = new();
     }
@@ -404,6 +417,10 @@ else
     private List<SkillDto> skills = new();
     private int? expandedPropostaId;
     private string searchQuery = "";
+
+    private bool mostrarSoMinhas = false;
+    private bool isUserManager = false;
+    private int currentUserId = 0;
 
     private bool showCreateModal;
     private bool showEditModal;
@@ -431,13 +448,18 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        isUserManager = authState.User.IsInRole("UserManager") || authState.User.IsInRole("Admin");
+        var sub = authState.User.FindFirst("sub")?.Value;
+        currentUserId = int.TryParse(sub, out var uid) ? uid : 0;
         await LoadAll();
     }
 
     private async Task LoadAll()
     {
         error = null;
-        propostas = await Http.GetFromJsonAsync<List<PropostaReadVm>>("propostas") ?? new();
+        var url = (isUserManager && mostrarSoMinhas) ? "propostas?minhas=true" : "propostas";
+        propostas = await Http.GetFromJsonAsync<List<PropostaReadVm>>(url) ?? new();
         areas = await Http.GetFromJsonAsync<List<AreaDto>>("areas") ?? new();
         skills = await Http.GetFromJsonAsync<List<SkillDto>>("skills") ?? new();
 

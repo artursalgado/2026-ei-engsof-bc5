@@ -738,9 +738,17 @@ app.MapDelete("/clientes/{id}", async (int id, ClaimsPrincipal user, IClienteRep
 // PROPOSTAS DE TRABALHO
 // ======================
 
-app.MapGet("/propostas", async (IPropostaRepository repo) =>
+app.MapGet("/propostas", async (ClaimsPrincipal user, IUserRepository userRepo, IPropostaRepository repo, bool? minhas) =>
 {
-    var propostas = await repo.GetAllWithSkillsAsync();
+    var userId = int.TryParse(user.FindFirstValue("sub"), out var id) ? id : 0;
+    var current = await userRepo.GetByIdAsync(userId);
+    if (current == null) return Results.Unauthorized();
+
+    var canFilter = current.Role == UserRole.UserManager || current.Role == UserRole.Admin;
+    var propostas = (canFilter && minhas == true)
+        ? await repo.GetAllWithSkillsByCreatorAsync(userId)
+        : await repo.GetAllWithSkillsAsync();
+
     return Results.Ok(propostas.Select(p => new
     {
         p.Id,
@@ -753,11 +761,13 @@ app.MapGet("/propostas", async (IPropostaRepository repo) =>
         ValorEstimadoTotal = p.NumeroTotalHoras * p.PrecoHoraMedio,
         p.CriadoEm,
         p.AtualizadoEm,
+        p.CriadorId,
+        TalentoElegivelCount = p.TalentosElegiveis.Count,
         SkillsNecessarias = p.SkillsNecessarias.Select(sn => new
         {
             sn.Id,
             sn.SkillId,
-            sn.NivelMinimoRequerido,
+            AnosExperienciaMinimo = sn.NivelMinimoRequerido,
             Skill = sn.Skill == null ? null : new { sn.Skill.Id, sn.Skill.Nome }
         })
     }));
@@ -786,7 +796,7 @@ app.MapGet("/propostas/{id:int}", async (int id, IPropostaRepository repo, ITale
         {
             sn.Id,
             sn.SkillId,
-            sn.NivelMinimoRequerido,
+            AnosExperienciaMinimo = sn.NivelMinimoRequerido,
             Skill = sn.Skill == null ? null : new { sn.Skill.Id, sn.Skill.Nome }
         }),
         TalentosElegiveis = talentos.Select(te => new
@@ -799,13 +809,15 @@ app.MapGet("/propostas/{id:int}", async (int id, IPropostaRepository repo, ITale
     });
 }).RequireAuthorization("UserPolicy");
 
-app.MapPost("/propostas", async (CreatePropostaDto dto, IPropostaRepository repo, PropostaMatchingService matchingService, ITalentoElegivelRepository talentoRepo, AppDbContext context) =>
+app.MapPost("/propostas", async (CreatePropostaDto dto, ClaimsPrincipal user, IPropostaRepository repo, PropostaMatchingService matchingService, ITalentoElegivelRepository talentoRepo, AppDbContext context) =>
 {
     if (string.IsNullOrWhiteSpace(dto.Nome))
         return Results.BadRequest("Nome é obrigatório");
 
     if (await repo.GetByNomeAsync(dto.Nome) != null)
         return Results.Conflict("Já existe uma proposta com esse nome");
+
+    var userId = int.TryParse(user.FindFirstValue("sub"), out var uid) ? uid : (int?)null;
 
     var proposta = new Proposta
     {
@@ -815,7 +827,8 @@ app.MapPost("/propostas", async (CreatePropostaDto dto, IPropostaRepository repo
         NumeroTotalHoras = dto.NumeroTotalHoras,
         PrecoHoraMedio = dto.PrecoHoraMedio,
         CriadoEm = DateTime.UtcNow,
-        AtualizadoEm = DateTime.UtcNow
+        AtualizadoEm = DateTime.UtcNow,
+        CriadorId = userId
     };
 
     await repo.AddAsync(proposta);

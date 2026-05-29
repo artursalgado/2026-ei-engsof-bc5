@@ -92,12 +92,21 @@
     margin-top: 0.25rem;
 }
 
+.search-filter-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1.1rem;
+}
+
 .search-bar {
     position: relative;
     display: flex;
     align-items: center;
+    flex: 1;
+    min-width: 200px;
     max-width: 420px;
-    margin-bottom: 1.1rem;
 }
 
 .search-icon {
@@ -143,6 +152,43 @@
 
 .search-clear:hover {
     color: var(--color-text);
+}
+
+.toggle-minhas {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.4rem 0.85rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    color: var(--color-text-muted);
+    font-size: 0.84rem;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+    transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+    white-space: nowrap;
+}
+
+.toggle-minhas:hover {
+    border-color: var(--color-primary);
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+}
+
+.toggle-minhas input[type="checkbox"] {
+    accent-color: var(--color-primary);
+    width: 0.95rem;
+    height: 0.95rem;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.toggle-minhas:has(input:checked) {
+    border-color: var(--color-primary);
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
 }
 
 .counter-row {

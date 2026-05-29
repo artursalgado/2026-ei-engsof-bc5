@@ -27,6 +27,10 @@ public class Proposta
     public DateTime CriadoEm { get; set; } = DateTime.UtcNow;
     public DateTime AtualizadoEm { get; set; } = DateTime.UtcNow;
 
+    // Criador (recrutador que registou a proposta)
+    public int? CriadorId { get; set; }
+    public User? Criador { get; set; }
+
     // Relacionamentos
     public Area? Area { get; set; }
     public ICollection<SkillNecessaria> SkillsNecessarias { get; set; } = new List<SkillNecessaria>();

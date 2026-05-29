@@ -8,6 +8,7 @@ public interface IPropostaRepository
 {
     Task<IEnumerable<Proposta>> GetAllAsync();
     Task<IEnumerable<Proposta>> GetAllWithSkillsAsync();
+    Task<IEnumerable<Proposta>> GetAllWithSkillsByCreatorAsync(int creatorId);
     Task<Proposta?> GetByIdAsync(int id);
     Task<Proposta?> GetByIdWithSkillsAsync(int id);
     Task<Proposta?> GetByNomeAsync(string nome);
