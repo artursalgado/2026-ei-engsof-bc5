@@ -10,6 +10,7 @@ public interface IUserRepository
     Task<User?> GetByIdAsync(int id);
     
     Task<List<User>> GetAllAsync();
+    Task<List<User>> GetPendentesAsync();
     Task<IEnumerable<User>> GetByRoleIdAsync(int roleId);
     
     Task AddAsync(User user);
