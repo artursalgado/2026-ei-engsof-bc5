@@ -28,6 +28,17 @@ public class PropostaRepository : Repository<Proposta>, IPropostaRepository
             .ToListAsync();
     }
 
+    public async Task<IEnumerable<Proposta>> GetAllWithSkillsByCreatorAsync(int creatorId)
+    {
+        return await _context.Propostas
+            .Include(p => p.Area)
+            .Include(p => p.SkillsNecessarias)
+            .ThenInclude(sn => sn.Skill)
+            .Where(p => p.CriadorId == creatorId)
+            .OrderBy(p => p.Nome)
+            .ToListAsync();
+    }
+
     public async Task<Proposta?> GetByNomeAsync(string nome)
     {
         var n = (nome ?? string.Empty).Trim();

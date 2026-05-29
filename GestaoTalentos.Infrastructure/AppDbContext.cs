@@ -55,6 +55,13 @@ public class AppDbContext : DbContext
             .HasForeignKey(p => p.AreaId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        // PROPOSTA → USER (criador)
+        modelBuilder.Entity<Proposta>()
+            .HasOne(p => p.Criador)
+            .WithMany()
+            .HasForeignKey(p => p.CriadorId)
+            .OnDelete(DeleteBehavior.SetNull);
+
         // SKILL NECESSARIA → SKILL + PROPOSTA
         modelBuilder.Entity<SkillNecessaria>()
             .HasOne(sn => sn.Skill)
