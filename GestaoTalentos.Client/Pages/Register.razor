@@ -10,10 +10,10 @@
     @if (registoSucesso)
     {
         <div class="success-state">
-            <div class="success-ico"><i class="bi bi-check-lg"></i></div>
-            <h3>Conta criada!</h3>
-            <p>A tua conta foi criada com sucesso.<br />Já podes entrar na plataforma.</p>
-            <a href="/login" class="btn btn-primary w-100">Ir para o login</a>
+            <div class="success-ico"><i class="bi bi-check-circle"></i></div>
+            <h3>Conta criada com sucesso!</h3>
+            <p>Já podes aceder à plataforma.<br />Usa as tuas credenciais para entrar.</p>
+            <a href="/login" class="btn btn-primary w-100">Fazer login agora</a>
         </div>
     }
     else
@@ -22,7 +22,7 @@
             <div class="brand-mark">GT</div>
             <p class="brand-name">Gestão de Talentos</p>
             <h2>Criar nova conta</h2>
-            <p class="auth-subtitle">Junta-te à plataforma em poucos segundos</p>
+            <p class="auth-subtitle">Regista-te como talento profissional</p>
         </div>
 
         @if (!string.IsNullOrEmpty(errorMessage))
@@ -42,22 +42,12 @@
             <input @bind="confirmPassword" type="password" class="form-control" placeholder="repete a password" />
         </div>
 
-        <label class="form-label">Tipo de Conta</label>
-        <div class="type-grid mb-4">
-            <button type="button"
-                    class="type-card @(tipoUtilizador == "Talento" ? "active" : "")"
-                    @onclick='() => tipoUtilizador = "Talento"'>
-                <div class="type-ico"><i class="bi bi-person-workspace"></i></div>
-                <div class="type-title">Talento</div>
-                <div class="type-desc">Sou um profissional</div>
-            </button>
-            <button type="button"
-                    class="type-card @(tipoUtilizador == "Cliente" ? "active" : "")"
-                    @onclick='() => tipoUtilizador = "Cliente"'>
-                <div class="type-ico"><i class="bi bi-buildings"></i></div>
-                <div class="type-title">Cliente</div>
-                <div class="type-desc">Quero contratar</div>
-            </button>
+        <div class="talento-info mb-4">
+            <div class="talento-icon"><i class="bi bi-person-workspace"></i></div>
+            <div>
+                <div class="talento-title">Talento Profissional</div>
+                <div class="talento-desc">Regista-te para seres considerado em propostas de trabalho</div>
+            </div>
         </div>
 
         <button class="btn btn-primary w-100" @onclick="HandleRegister">Criar Conta</button>
@@ -67,11 +57,11 @@
     }
 </div>
 
+
 @code {
     private string username = "";
     private string password = "";
     private string confirmPassword = "";
-    private string tipoUtilizador = "Talento";
     private string errorMessage = "";
     private bool registoSucesso = false;
 
@@ -97,7 +87,7 @@
 
         try
         {
-            var payload = new { Username = username, Password = password, TipoUtilizador = tipoUtilizador };
+            var payload = new { Username = username, Password = password };
             var response = await Http.PostAsJsonAsync("/register", payload);
 
             if (response.IsSuccessStatusCode)

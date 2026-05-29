@@ -31,7 +31,15 @@
         <a href="" class="reload">Reload</a>
         <a class="dismiss">&times;</a>
     </div>
+    <script>
+        window.blazorScrollIntoView = function (element) {
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        };
+    </script>
     <script src="_framework/blazor.webassembly.js"></script>
+
 </body>
 
 </html>
