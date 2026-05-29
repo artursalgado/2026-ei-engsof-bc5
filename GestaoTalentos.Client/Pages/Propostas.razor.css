@@ -145,6 +145,96 @@
     color: var(--color-text);
 }
 
+.toolbar-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.65rem;
+    margin-bottom: 1rem;
+}
+
+.filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.filter-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.85rem;
+    padding: 0.28rem 0.72rem;
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    background: var(--color-surface);
+    color: var(--color-text-muted);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.12s ease;
+}
+
+.filter-chip:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    transform: translateY(-1px);
+}
+
+.filter-chip.active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: #fff;
+}
+
+/* chips com cor de acento quando filtro ativo */
+.filter-chip.accent-0.active { background: linear-gradient(135deg, #6366f1, #818cf8); border-color: #6366f1; }
+.filter-chip.accent-1.active { background: linear-gradient(135deg, #0ea5e9, #38bdf8); border-color: #0ea5e9; }
+.filter-chip.accent-2.active { background: linear-gradient(135deg, #10b981, #34d399); border-color: #10b981; }
+.filter-chip.accent-3.active { background: linear-gradient(135deg, #f59e0b, #fbbf24); border-color: #f59e0b; }
+.filter-chip.accent-4.active { background: linear-gradient(135deg, #ec4899, #f472b6); border-color: #ec4899; }
+.filter-chip.accent-5.active { background: linear-gradient(135deg, #8b5cf6, #a78bfa); border-color: #8b5cf6; }
+
+.sort-chips {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    flex-shrink: 0;
+}
+
+.sort-icon {
+    color: var(--color-text-muted);
+    font-size: 0.8rem;
+    margin-right: 0.15rem;
+}
+
+.sort-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.85rem;
+    padding: 0.28rem 0.62rem;
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    background: var(--color-surface);
+    color: var(--color-text-muted);
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.sort-chip:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.sort-chip.active {
+    background: var(--color-surface-alt);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
 .counter-row {
     margin-bottom: 0.85rem;
 }
@@ -708,6 +798,15 @@
 
     .search-bar {
         max-width: none;
+    }
+
+    .toolbar-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .sort-chips {
+        flex-wrap: wrap;
     }
 
     .proposta-body,

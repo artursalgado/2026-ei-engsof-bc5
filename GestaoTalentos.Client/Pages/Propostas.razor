@@ -74,6 +74,32 @@ else
         }
     </div>
 
+    <div class="toolbar-row">
+        @if (AreasComPropostas.Count > 1)
+        {
+            <div class="filter-chips">
+                <button class="filter-chip @(selectedAreaFilter == null ? "active" : "")" @onclick="() => selectedAreaFilter = null">
+                    Todas
+                </button>
+                @foreach (var a in AreasComPropostas)
+                {
+                    var aId = a.Id;
+                    <button class="filter-chip @GetAccentClass(aId) @(selectedAreaFilter == aId ? "active" : "")" @onclick="() => selectedAreaFilter = aId">
+                        @a.Nome
+                    </button>
+                }
+            </div>
+        }
+        <div class="sort-chips">
+            <i class="bi bi-arrow-down-up sort-icon"></i>
+            <button class="sort-chip @(sortMode == SortMode.DataDesc ? "active" : "")" @onclick="() => sortMode = SortMode.DataDesc">Recentes</button>
+            <button class="sort-chip @(sortMode == SortMode.ValorDesc ? "active" : "")" @onclick="() => sortMode = SortMode.ValorDesc">Valor ↓</button>
+            <button class="sort-chip @(sortMode == SortMode.ValorAsc ? "active" : "")" @onclick="() => sortMode = SortMode.ValorAsc">Valor ↑</button>
+            <button class="sort-chip @(sortMode == SortMode.HorasDesc ? "active" : "")" @onclick="() => sortMode = SortMode.HorasDesc">+ Horas</button>
+            <button class="sort-chip @(sortMode == SortMode.TalentosDesc ? "active" : "")" @onclick="() => sortMode = SortMode.TalentosDesc">+ Talentos</button>
+        </div>
+    </div>
+
     @if (FilteredPropostas.Count == 0)
     {
         <div class="no-results">
@@ -404,6 +430,10 @@ else
     private List<SkillDto> skills = new();
     private int? expandedPropostaId;
     private string searchQuery = "";
+    private int? selectedAreaFilter;
+    private SortMode sortMode = SortMode.DataDesc;
+
+    private enum SortMode { DataDesc, ValorAsc, ValorDesc, HorasDesc, TalentosDesc }
 
     private bool showCreateModal;
     private bool showEditModal;
@@ -417,11 +447,36 @@ else
     private UpdatePropostaDto? editDto;
     private int editId;
 
-    private List<PropostaReadVm> FilteredPropostas => propostas?
-        .Where(p => string.IsNullOrWhiteSpace(searchQuery)
-            || p.Nome.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)
-            || GetAreaName(p.AreaId).Contains(searchQuery, StringComparison.OrdinalIgnoreCase))
-        .ToList() ?? new List<PropostaReadVm>();
+    private List<PropostaReadVm> FilteredPropostas
+    {
+        get
+        {
+            var query = (propostas ?? new List<PropostaReadVm>()).AsEnumerable();
+
+            if (!string.IsNullOrWhiteSpace(searchQuery))
+                query = query.Where(p => p.Nome.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)
+                    || GetAreaName(p.AreaId).Contains(searchQuery, StringComparison.OrdinalIgnoreCase));
+
+            if (selectedAreaFilter.HasValue)
+                query = query.Where(p => p.AreaId == selectedAreaFilter.Value);
+
+            query = sortMode switch
+            {
+                SortMode.ValorAsc     => query.OrderBy(p => GetValorTotal(p)),
+                SortMode.ValorDesc    => query.OrderByDescending(p => GetValorTotal(p)),
+                SortMode.HorasDesc    => query.OrderByDescending(p => p.NumeroTotalHoras),
+                SortMode.TalentosDesc => query.OrderByDescending(p => p.TalentosElegiveis.Count),
+                _                     => query.OrderByDescending(p => p.Id)
+            };
+
+            return query.ToList();
+        }
+    }
+
+    private List<AreaDto> AreasComPropostas => areas
+        .Where(a => propostas != null && propostas.Any(p => p.AreaId == a.Id))
+        .OrderBy(a => a.Nome)
+        .ToList();
 
     private int TotalHoras => propostas?.Sum(p => p.NumeroTotalHoras) ?? 0;
 
@@ -440,6 +495,22 @@ else
         propostas = await Http.GetFromJsonAsync<List<PropostaReadVm>>("propostas") ?? new();
         areas = await Http.GetFromJsonAsync<List<AreaDto>>("areas") ?? new();
         skills = await Http.GetFromJsonAsync<List<SkillDto>>("skills") ?? new();
+
+        // carrega detalhes em paralelo para ter a contagem de talentos logo no carregamento
+        if (propostas.Any())
+        {
+            var detailTasks = propostas.Select(async p =>
+            {
+                try { return await Http.GetFromJsonAsync<PropostaReadVm>($"propostas/{p.Id}"); }
+                catch { return null; }
+            });
+            var details = await Task.WhenAll(detailTasks);
+            for (int i = 0; i < propostas.Count; i++)
+            {
+                if (details[i]?.TalentosElegiveis != null)
+                    propostas[i].TalentosElegiveis = details[i]!.TalentosElegiveis;
+            }
+        }
     }
 
     private void OpenCreateModal()
