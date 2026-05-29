@@ -24,6 +24,19 @@ public class PropostaRepository : Repository<Proposta>, IPropostaRepository
             .Include(p => p.Area)
             .Include(p => p.SkillsNecessarias)
             .ThenInclude(sn => sn.Skill)
+            .Include(p => p.TalentosElegiveis)
+            .OrderBy(p => p.Nome)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<Proposta>> GetAllWithSkillsByCreatorAsync(int creatorId)
+    {
+        return await _context.Propostas
+            .Include(p => p.Area)
+            .Include(p => p.SkillsNecessarias)
+            .ThenInclude(sn => sn.Skill)
+            .Include(p => p.TalentosElegiveis)
+            .Where(p => p.CriadorId == creatorId)
             .OrderBy(p => p.Nome)
             .ToListAsync();
     }

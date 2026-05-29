@@ -31,6 +31,10 @@ public class Proposta
     public EstadoProposta Estado { get; set; } = EstadoProposta.Aberta;
     public int? TalentoSelecionadoId { get; set; }
 
+    // Criador (recrutador que registou a proposta)
+    public int? CriadorId { get; set; }
+    public User? Criador { get; set; }
+
     // Relacionamentos
     public Area? Area { get; set; }
     public ICollection<SkillNecessaria> SkillsNecessarias { get; set; } = new List<SkillNecessaria>();
