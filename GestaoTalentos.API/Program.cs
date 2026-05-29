@@ -167,6 +167,12 @@ app.MapPost("/login", async (UserLoginDto request, IUserRepository repo) =>
     if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.Password))
         return Results.Unauthorized();
 
+    if (user.EstadoConta == EstadoConta.Pendente)
+        return Results.Json("A tua conta está a aguardar aprovação.", statusCode: 403);
+
+    if (user.EstadoConta == EstadoConta.Rejeitado)
+        return Results.Json("A tua conta foi rejeitada.", statusCode: 403);
+
     var token = JwtTokenHelper.GenerateToken(user, jwtKey, jwtIssuer);
     return Results.Ok(new { token });
 });
