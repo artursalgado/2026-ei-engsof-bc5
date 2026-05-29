@@ -1,0 +1,261 @@
+@page "/admin"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Net.Http.Json
+@attribute [Authorize(Policy = "AdminPolicy")]
+@inject HttpClient Http
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IJSRuntime JS
+
+<PageTitle>Administração - Gestão de Talentos</PageTitle>
+
+<div class="page-header">
+    <div>
+        <h1>Administração</h1>
+        <p class="page-subtitle">Gestão de contas e criação de funcionários</p>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(toastMensagem) && toastVisible)
+{
+    <div class="toast-sucesso">@toastMensagem</div>
+}
+
+<!-- SECÇÃO: CONTAS PENDENTES -->
+<section class="admin-section">
+    <div class="section-header">
+        <div class="section-icon"><i class="bi bi-hourglass-split"></i></div>
+        <div>
+            <h2>Contas Pendentes</h2>
+            <p class="section-subtitle">Utilizadores aguardando aprovação para aceder à plataforma</p>
+        </div>
+    </div>
+
+    @if (pendentes == null)
+    {
+        <div class="loading-state"><i class="bi bi-hourglass-split"></i> A carregar...</div>
+    }
+    else if (pendentes.Count == 0)
+    {
+        <div class="empty-state">
+            <div class="empty-ico"><i class="bi bi-check2-circle"></i></div>
+            <h3>Nenhuma conta pendente</h3>
+            <p>Todos os registos foram processados.</p>
+        </div>
+    }
+    else
+    {
+        <div class="pendentes-list">
+            @foreach (var u in pendentes)
+            {
+                <div class="pendente-card">
+                    <div class="pendente-info">
+                        <div class="pendente-avatar"><i class="bi bi-person-fill"></i></div>
+                        <div>
+                            <div class="pendente-username">@u.Username</div>
+                            <div class="pendente-role">@u.Role</div>
+                        </div>
+                    </div>
+                    <div class="pendente-actions">
+                        <button class="btn-aprovar" @onclick="() => Aprovar(u.Id)" disabled="@isBusy" title="Aprovar conta">
+                            <i class="bi bi-check-lg"></i> Aprovar
+                        </button>
+                        <button class="btn-rejeitar" @onclick="() => Rejeitar(u.Id)" disabled="@isBusy" title="Rejeitar conta">
+                            <i class="bi bi-x-lg"></i> Rejeitar
+                        </button>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</section>
+
+<!-- SECÇÃO: CRIAR FUNCIONÁRIO -->
+<section class="admin-section">
+    <div class="section-header">
+        <div class="section-icon create"><i class="bi bi-person-plus-fill"></i></div>
+        <div>
+            <h2>Criar Funcionário</h2>
+            <p class="section-subtitle">Criar conta de funcionário com acesso imediato (sem necessidade de aprovação)</p>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(formError))
+    {
+        <div class="alert alert-danger">@formError</div>
+    }
+
+    <div class="criar-form">
+        <div class="form-row">
+            <div class="mb-3">
+                <label class="form-label">Username</label>
+                <input @bind="novoUsername" class="form-control" placeholder="nome de utilizador" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Password</label>
+                <input @bind="novaPassword" type="password" class="form-control" placeholder="password" />
+            </div>
+        </div>
+        <div class="mb-4">
+            <label class="form-label">Role</label>
+            <div class="role-grid">
+                <button type="button"
+                        class="role-card @(novaRole == "User" ? "active" : "")"
+                        @onclick='() => novaRole = "User"'>
+                    <i class="bi bi-person nav-ico"></i>
+                    <span class="role-title">User</span>
+                    <span class="role-desc">Funcionário base</span>
+                </button>
+                <button type="button"
+                        class="role-card @(novaRole == "UserManager" ? "active" : "")"
+                        @onclick='() => novaRole = "UserManager"'>
+                    <i class="bi bi-people-fill nav-ico"></i>
+                    <span class="role-title">UserManager</span>
+                    <span class="role-desc">Gere utilizadores e skills</span>
+                </button>
+            </div>
+        </div>
+        <button class="btn btn-primary" @onclick="CriarFuncionario" disabled="@isBusy">
+            @(isBusy ? "A criar..." : "Criar Funcionário")
+        </button>
+    </div>
+</section>
+
+@code {
+    private List<UtilizadorPendenteItem>? pendentes;
+    private bool isBusy = false;
+    private string? formError;
+    private bool toastVisible = false;
+    private string toastMensagem = "";
+
+    // Formulário criar funcionário
+    private string novoUsername = "";
+    private string novaPassword = "";
+    private string novaRole = "User";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CarregarPendentes();
+    }
+
+    private async Task CarregarPendentes()
+    {
+        try
+        {
+            var result = await Http.GetFromJsonAsync<List<UtilizadorPendenteItem>>("/admin/utilizadores/pendentes");
+            pendentes = result ?? new List<UtilizadorPendenteItem>();
+        }
+        catch
+        {
+            pendentes = new List<UtilizadorPendenteItem>();
+        }
+    }
+
+    private async Task Aprovar(int id)
+    {
+        isBusy = true;
+        try
+        {
+            var resp = await Http.PostAsync($"/admin/utilizadores/{id}/aprovar", null);
+            if (resp.IsSuccessStatusCode)
+            {
+                await CarregarPendentes();
+                await MostrarToast("Conta aprovada com sucesso.");
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("alert", "Erro ao aprovar a conta.");
+            }
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private async Task Rejeitar(int id)
+    {
+        var confirmado = await JS.InvokeAsync<bool>("confirm", "Tens a certeza que queres rejeitar esta conta?");
+        if (!confirmado) return;
+
+        isBusy = true;
+        try
+        {
+            var resp = await Http.PostAsync($"/admin/utilizadores/{id}/rejeitar", null);
+            if (resp.IsSuccessStatusCode)
+            {
+                await CarregarPendentes();
+                await MostrarToast("Conta rejeitada.");
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("alert", "Erro ao rejeitar a conta.");
+            }
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private async Task CriarFuncionario()
+    {
+        formError = null;
+
+        if (string.IsNullOrWhiteSpace(novoUsername))
+        {
+            formError = "O username é obrigatório.";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(novaPassword) || novaPassword.Length < 4)
+        {
+            formError = "A password deve ter pelo menos 4 caracteres.";
+            return;
+        }
+
+        isBusy = true;
+        try
+        {
+            var payload = new { Username = novoUsername.Trim(), Password = novaPassword, Role = novaRole };
+            var resp = await Http.PostAsJsonAsync("/admin/utilizadores/criar", payload);
+
+            if (resp.IsSuccessStatusCode)
+            {
+                novoUsername = "";
+                novaPassword = "";
+                novaRole = "User";
+                await MostrarToast($"Funcionário '{payload.Username}' criado com sucesso.");
+            }
+            else if (resp.StatusCode == System.Net.HttpStatusCode.Conflict)
+            {
+                formError = "Esse username já existe. Escolhe outro.";
+            }
+            else
+            {
+                formError = "Erro ao criar o funcionário. Tenta novamente.";
+            }
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
+
+    private async Task MostrarToast(string mensagem)
+    {
+        toastMensagem = mensagem;
+        toastVisible = true;
+        StateHasChanged();
+        await Task.Delay(3000);
+        toastVisible = false;
+        StateHasChanged();
+    }
+
+    private class UtilizadorPendenteItem
+    {
+        public int Id { get; set; }
+        public string Username { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
+        public string EstadoConta { get; set; } = string.Empty;
+    }
+}
