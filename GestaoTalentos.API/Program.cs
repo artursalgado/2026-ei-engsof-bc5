@@ -133,6 +133,7 @@ await using (var scope = app.Services.CreateAsyncScope())
             Username = "admin",
             Password = BCrypt.Net.BCrypt.HashPassword("admin123"),
             Role = UserRole.Admin,
+            EstadoConta = EstadoConta.Ativo,
         };
         await userRepository.AddAsync(admin);
     }
@@ -153,7 +154,8 @@ app.MapPost("/register", async (UserRegisterDto request, IUserRepository repo) =
     {
         Username = request.Username.Trim(),
         Password = BCrypt.Net.BCrypt.HashPassword(request.Password),
-        Role = UserRole.User
+        Role = UserRole.User,
+        EstadoConta = EstadoConta.Pendente,
     };
 
     await repo.AddAsync(user);
@@ -1025,5 +1027,68 @@ app.MapGet("/relatorios/preco-medio-skill", async (AppDbContext context) =>
 
     return Results.Ok(resultado);
 }).RequireAuthorization("UserManagerPolicy");
+
+// ======================
+// ADMINISTRAÇÃO DE CONTAS (US-18)
+// ======================
+
+/// Lista todos os utilizadores com conta pendente de aprovação.
+app.MapGet("/admin/utilizadores/pendentes", async (IUserRepository repo) =>
+{
+    var pendentes = await repo.GetPendentesAsync();
+    return Results.Ok(pendentes.Select(u => new
+    {
+        u.Id,
+        u.Username,
+        Role = u.Role.ToString(),
+        EstadoConta = u.EstadoConta.ToString()
+    }));
+}).RequireAuthorization("AdminPolicy");
+
+/// Aprova uma conta pendente, permitindo que o utilizador faça login.
+app.MapPost("/admin/utilizadores/{id}/aprovar", async (int id, IUserRepository repo) =>
+{
+    var user = await repo.GetByIdAsync(id);
+    if (user is null) return Results.NotFound();
+
+    user.EstadoConta = EstadoConta.Ativo;
+    await repo.UpdateAsync(user);
+    return Results.Ok(new { mensagem = "Conta aprovada com sucesso." });
+}).RequireAuthorization("AdminPolicy");
+
+/// Rejeita uma conta, impedindo o utilizador de fazer login.
+app.MapPost("/admin/utilizadores/{id}/rejeitar", async (int id, IUserRepository repo) =>
+{
+    var user = await repo.GetByIdAsync(id);
+    if (user is null) return Results.NotFound();
+
+    user.EstadoConta = EstadoConta.Rejeitado;
+    await repo.UpdateAsync(user);
+    return Results.Ok(new { mensagem = "Conta rejeitada." });
+}).RequireAuthorization("AdminPolicy");
+
+/// Cria um novo funcionário com conta Ativa imediatamente (não requer aprovação).
+app.MapPost("/admin/utilizadores/criar", async (UserCreateDto request, IUserRepository repo) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
+        return Results.BadRequest("Username e password são obrigatórios.");
+
+    if (!Enum.TryParse<UserRole>(request.Role, true, out var role))
+        return Results.BadRequest("Role inválida (User, UserManager).");
+
+    if (await repo.GetByUsernameAsync(request.Username) != null)
+        return Results.Conflict("Username já existe.");
+
+    var user = new User
+    {
+        Username = request.Username.Trim(),
+        Password = BCrypt.Net.BCrypt.HashPassword(request.Password),
+        Role = role,
+        EstadoConta = EstadoConta.Ativo,
+    };
+
+    await repo.AddAsync(user);
+    return Results.Created($"/users/{user.Id}", new { user.Id, user.Username, Role = user.Role.ToString() });
+}).RequireAuthorization("AdminPolicy");
 
 app.Run();
