@@ -744,7 +744,8 @@ app.MapGet("/propostas", async (ClaimsPrincipal user, IUserRepository userRepo, 
     var current = await userRepo.GetByIdAsync(userId);
     if (current == null) return Results.Unauthorized();
 
-    var propostas = (current.Role == UserRole.UserManager && minhas == true)
+    var canFilter = current.Role == UserRole.UserManager || current.Role == UserRole.Admin;
+    var propostas = (canFilter && minhas == true)
         ? await repo.GetAllWithSkillsByCreatorAsync(userId)
         : await repo.GetAllWithSkillsAsync();
 
@@ -761,11 +762,12 @@ app.MapGet("/propostas", async (ClaimsPrincipal user, IUserRepository userRepo, 
         p.CriadoEm,
         p.AtualizadoEm,
         p.CriadorId,
+        TalentoElegivelCount = p.TalentosElegiveis.Count,
         SkillsNecessarias = p.SkillsNecessarias.Select(sn => new
         {
             sn.Id,
             sn.SkillId,
-            sn.NivelMinimoRequerido,
+            AnosExperienciaMinimo = sn.NivelMinimoRequerido,
             Skill = sn.Skill == null ? null : new { sn.Skill.Id, sn.Skill.Nome }
         })
     }));
@@ -794,7 +796,7 @@ app.MapGet("/propostas/{id:int}", async (int id, IPropostaRepository repo, ITale
         {
             sn.Id,
             sn.SkillId,
-            sn.NivelMinimoRequerido,
+            AnosExperienciaMinimo = sn.NivelMinimoRequerido,
             Skill = sn.Skill == null ? null : new { sn.Skill.Id, sn.Skill.Nome }
         }),
         TalentosElegiveis = talentos.Select(te => new
