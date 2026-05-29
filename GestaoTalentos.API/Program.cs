@@ -155,7 +155,7 @@ app.MapPost("/register", async (UserRegisterDto request, IUserRepository repo) =
         Username = request.Username.Trim(),
         Password = BCrypt.Net.BCrypt.HashPassword(request.Password),
         Role = UserRole.User,
-        EstadoConta = EstadoConta.Pendente,
+        EstadoConta = EstadoConta.Ativo,
     };
 
     await repo.AddAsync(user);
@@ -170,10 +170,10 @@ app.MapPost("/login", async (UserLoginDto request, IUserRepository repo) =>
         return Results.Unauthorized();
 
     if (user.EstadoConta == EstadoConta.Pendente)
-        return Results.Json("A tua conta está a aguardar aprovação.", statusCode: 403);
+        return Results.Json("A tua conta está a aguardar aprovação. Contacta o administrador.", statusCode: 403);
 
     if (user.EstadoConta == EstadoConta.Rejeitado)
-        return Results.Json("A tua conta foi rejeitada.", statusCode: 403);
+        return Results.Json("A tua conta foi suspensa. Contacta o administrador.", statusCode: 403);
 
     var token = JwtTokenHelper.GenerateToken(user, jwtKey, jwtIssuer);
     return Results.Ok(new { token });
@@ -1045,6 +1045,21 @@ app.MapGet("/admin/utilizadores/pendentes", async (IUserRepository repo) =>
     }));
 }).RequireAuthorization("AdminPolicy");
 
+/// Lista todos os utilizadores da plataforma (para gestão pelo Admin).
+app.MapGet("/admin/utilizadores", async (IUserRepository repo) =>
+{
+    var todos = await repo.GetAllAsync();
+    return Results.Ok(todos
+        .Where(u => u.Role != UserRole.Admin)
+        .Select(u => new
+        {
+            u.Id,
+            u.Username,
+            Role = u.Role.ToString(),
+            EstadoConta = u.EstadoConta.ToString()
+        }));
+}).RequireAuthorization("AdminPolicy");
+
 /// Aprova uma conta pendente, permitindo que o utilizador faça login.
 app.MapPost("/admin/utilizadores/{id}/aprovar", async (int id, IUserRepository repo) =>
 {
@@ -1056,6 +1071,17 @@ app.MapPost("/admin/utilizadores/{id}/aprovar", async (int id, IUserRepository r
     return Results.Ok(new { mensagem = "Conta aprovada com sucesso." });
 }).RequireAuthorization("AdminPolicy");
 
+/// Suspende uma conta, impedindo o utilizador de fazer login.
+app.MapPost("/admin/utilizadores/{id}/suspender", async (int id, IUserRepository repo) =>
+{
+    var user = await repo.GetByIdAsync(id);
+    if (user is null) return Results.NotFound();
+
+    user.EstadoConta = EstadoConta.Rejeitado;
+    await repo.UpdateAsync(user);
+    return Results.Ok(new { mensagem = "Conta suspensa." });
+}).RequireAuthorization("AdminPolicy");
+
 /// Rejeita uma conta, impedindo o utilizador de fazer login.
 app.MapPost("/admin/utilizadores/{id}/rejeitar", async (int id, IUserRepository repo) =>
 {
@@ -1065,6 +1091,31 @@ app.MapPost("/admin/utilizadores/{id}/rejeitar", async (int id, IUserRepository 
     user.EstadoConta = EstadoConta.Rejeitado;
     await repo.UpdateAsync(user);
     return Results.Ok(new { mensagem = "Conta rejeitada." });
+}).RequireAuthorization("AdminPolicy");
+
+/// Reativa uma conta suspensa, permitindo que o utilizador volte a fazer login.
+app.MapPost("/admin/utilizadores/{id}/reativar", async (int id, IUserRepository repo) =>
+{
+    var user = await repo.GetByIdAsync(id);
+    if (user is null) return Results.NotFound();
+
+    user.EstadoConta = EstadoConta.Ativo;
+    await repo.UpdateAsync(user);
+    return Results.Ok(new { mensagem = "Conta reativada com sucesso." });
+}).RequireAuthorization("AdminPolicy");
+
+/// Altera a role de um utilizador (User ↔ UserManager).
+app.MapPut("/admin/utilizadores/{id}/role", async (int id, UserRoleUpdateDto request, IUserRepository repo) =>
+{
+    if (!Enum.TryParse<UserRole>(request.Role, true, out var role) || role == UserRole.Admin)
+        return Results.BadRequest("Role inválida (User, UserManager).");
+
+    var user = await repo.GetByIdAsync(id);
+    if (user is null) return Results.NotFound();
+
+    user.Role = role;
+    await repo.UpdateAsync(user);
+    return Results.Ok(new { mensagem = "Role atualizada com sucesso." });
 }).RequireAuthorization("AdminPolicy");
 
 /// Cria um novo funcionário com conta Ativa imediatamente (não requer aprovação).
@@ -1091,4 +1142,4 @@ app.MapPost("/admin/utilizadores/criar", async (UserCreateDto request, IUserRepo
     return Results.Created($"/users/{user.Id}", new { user.Id, user.Username, Role = user.Role.ToString() });
 }).RequireAuthorization("AdminPolicy");
 
-app.Run();
+app.Run();
