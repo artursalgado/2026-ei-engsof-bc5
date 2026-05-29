@@ -443,6 +443,7 @@ else
 
         if (propostas.Any())
         {
+            // Dispara pedidos em paralelo para ir buscar os detalhes (incluindo TalentosElegiveis) de cada proposta
             var detailTasks = propostas.Select(async p =>
             {
                 try
@@ -451,11 +452,14 @@ else
                 }
                 catch
                 {
+                    // Ignora falhas individuais para não partir a listagem das outras propostas
                     return null;
                 }
             });
 
             var details = await Task.WhenAll(detailTasks);
+            
+            // Associa os talentos elegíveis carregados de volta às propostas da lista principal
             for (int i = 0; i < propostas.Count; i++)
             {
                 if (details[i] != null && details[i]!.TalentosElegiveis != null)
