@@ -816,7 +816,27 @@ app.MapGet("/propostas/{id:int}", async (int id, IPropostaRepository repo, ITale
             te.Id,
             te.PerfilId,
             te.ValorEstimado,
-            Perfil = te.Perfil == null ? null : new { te.Perfil.Id, te.Perfil.OwnerId, te.Perfil.Nome, te.Perfil.Pais, te.Perfil.PrecoPorHora }
+            // Perfil = te.Perfil == null ? null : new { te.Perfil.Id, te.Perfil.OwnerId, te.Perfil.Nome, te.Perfil.Pais, te.Perfil.PrecoPorHora }
+            Perfil = te.Perfil == null ? null : new
+            {
+                te.Perfil.Id,
+                te.Perfil.OwnerId,
+                te.Perfil.Nome,
+                te.Perfil.Pais,
+                te.Perfil.PrecoPorHora,
+                PerfilSkills = te.Perfil.PerfilSkills.Select(ps => new
+                {
+                    ps.SkillId,
+                    SkillNome = ps.Skill != null ? ps.Skill.Nome : "",
+                    ps.AnosExperiencia
+                }),
+                Experiencias = te.Perfil.Experiencias.Select(e => new
+                {
+                    e.Titulo,
+                    e.Empresa,
+                    Anos = (e.AnoFim ?? DateTime.UtcNow.Year) - e.AnoInicio
+                })
+            }
         }).OrderBy(te => te.ValorEstimado)
     });
 }).RequireAuthorization("UserPolicy");
@@ -1265,4 +1285,4 @@ app.MapPatch("/propostas/{id:int}/selecionar-talento", async (int id, Selecionar
     return Results.Ok(new { mensagem = "Talento selecionado. Proposta fechada." });
 }).RequireAuthorization("UserManagerPolicy");
 
-app.Run();
+app.Run();
