@@ -1,7 +1,11 @@
 @page "/dashboard"
+@using System.Net.Http.Json
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
 @using GestaoTalentos.Client.Services
 @inject IDashboardService DashboardService
+@inject HttpClient Http
+@inject IJSRuntime JS
 @attribute [Authorize(Policy = "UserManagerPolicy")]
 
 <PageTitle>Dashboard - Gestão de Talentos</PageTitle>
@@ -66,6 +70,25 @@ else
         </div>
     </div>
 
+    <div class="charts-grid">
+        <div class="chart-card">
+            <h4 class="chart-title"><i class="bi bi-bar-chart"></i> Perfis por Área Profissional</h4>
+            <div id="chart-perfis-area"></div>
+        </div>
+        <div class="chart-card">
+            <h4 class="chart-title"><i class="bi bi-globe2"></i> Distribuição por País</h4>
+            <div id="chart-paises"></div>
+        </div>
+        <div class="chart-card">
+            <h4 class="chart-title"><i class="bi bi-graph-up"></i> Propostas Criadas por Mês</h4>
+            <div id="chart-propostas-mes"></div>
+        </div>
+        <div class="chart-card">
+            <h4 class="chart-title"><i class="bi bi-lightning-charge"></i> Top 5 Skills Mais Usadas</h4>
+            <div id="chart-top-skills"></div>
+        </div>
+    </div>
+
     @if (dados.PropostasDetalhadas.Any())
     {
         <div class="card table-card">
@@ -112,10 +135,155 @@ else
 @code {
     private DashboardDto? dados;
     private bool loading = true;
+    private bool graficosRenderizados = false;
+
+    // Dados agregados para os gráficos
+    private string[] areasLabels = Array.Empty<string>();
+    private int[] areasValores = Array.Empty<int>();
+    private string[] paisesLabels = Array.Empty<string>();
+    private int[] paisesValores = Array.Empty<int>();
+    private string[] mesesLabels = Array.Empty<string>();
+    private int[] mesesValores = Array.Empty<int>();
+    private string[] skillsLabels = Array.Empty<string>();
+    private int[] skillsValores = Array.Empty<int>();
 
     protected override async Task OnInitializedAsync()
     {
         dados = await DashboardService.GetDashboardAsync();
+
+        try
+        {
+            // Buscar dados extra para alimentar os gráficos
+            var perfis = await Http.GetFromJsonAsync<List<PerfilVm>>("/perfis") ?? new();
+            var propostas = await Http.GetFromJsonAsync<List<PropostaVm>>("/propostas") ?? new();
+            var skills = await Http.GetFromJsonAsync<List<SkillCatalogoVm>>("/skills") ?? new();
+
+            // SkillId → AreaNome (para enriquecer as skills dos perfis)
+            var skillToArea = skills
+                .Where(s => !string.IsNullOrEmpty(s.AreaNome))
+                .ToDictionary(s => s.Id, s => s.AreaNome!);
+
+            foreach (var p in perfis)
+                foreach (var ps in p.Skills)
+                    if (skillToArea.TryGetValue(ps.SkillId, out var area))
+                        ps.AreaNome = area;
+
+            CalcularPerfisPorArea(perfis);
+            CalcularPerfisPorPais(perfis);
+            CalcularPropostasPorMes(propostas);
+            CalcularTopSkills(perfis);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erro a carregar dados dos gráficos: {ex.Message}");
+        }
+
         loading = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (loading || dados == null || graficosRenderizados) return;
+
+        try
+        {
+            await JS.InvokeVoidAsync("renderPerfisPorArea", "chart-perfis-area", areasLabels, areasValores);
+            await JS.InvokeVoidAsync("renderPaisesDonut", "chart-paises", paisesLabels, paisesValores);
+            await JS.InvokeVoidAsync("renderPropostasPorMes", "chart-propostas-mes", mesesLabels, mesesValores);
+            await JS.InvokeVoidAsync("renderTopSkills", "chart-top-skills", skillsLabels, skillsValores);
+            graficosRenderizados = true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erro a renderizar gráficos: {ex.Message}");
+        }
+    }
+
+    private void CalcularPerfisPorArea(List<PerfilVm> perfis)
+    {
+        // Conta perfis distintos que têm pelo menos uma skill em cada área
+        var agrupado = perfis
+            .SelectMany(p => p.Skills.Select(s => new { p.Id, s.AreaNome }))
+            .Where(x => !string.IsNullOrEmpty(x.AreaNome))
+            .GroupBy(x => x.AreaNome!)
+            .Select(g => new { Area = g.Key, Total = g.Select(x => x.Id).Distinct().Count() })
+            .OrderByDescending(x => x.Total)
+            .ToList();
+
+        areasLabels = agrupado.Select(x => x.Area).ToArray();
+        areasValores = agrupado.Select(x => x.Total).ToArray();
+    }
+
+    private void CalcularPerfisPorPais(List<PerfilVm> perfis)
+    {
+        var agrupado = perfis
+            .Where(p => !string.IsNullOrWhiteSpace(p.Pais))
+            .GroupBy(p => p.Pais)
+            .Select(g => new { Pais = g.Key, Total = g.Count() })
+            .OrderByDescending(x => x.Total)
+            .Take(8)
+            .ToList();
+
+        paisesLabels = agrupado.Select(x => x.Pais).ToArray();
+        paisesValores = agrupado.Select(x => x.Total).ToArray();
+    }
+
+    private void CalcularPropostasPorMes(List<PropostaVm> propostas)
+    {
+        // Últimos 12 meses
+        var hoje = DateTime.UtcNow;
+        var meses = Enumerable.Range(0, 12)
+            .Select(i => new DateTime(hoje.Year, hoje.Month, 1).AddMonths(-11 + i))
+            .ToList();
+
+        var contagem = propostas
+            .GroupBy(p => new DateTime(p.CriadoEm.Year, p.CriadoEm.Month, 1))
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        mesesLabels = meses.Select(m => m.ToString("MMM yy", new System.Globalization.CultureInfo("pt-PT"))).ToArray();
+        mesesValores = meses.Select(m => contagem.TryGetValue(m, out var n) ? n : 0).ToArray();
+    }
+
+    private void CalcularTopSkills(List<PerfilVm> perfis)
+    {
+        var top = perfis
+            .SelectMany(p => p.Skills)
+            .Where(s => !string.IsNullOrEmpty(s.SkillNome))
+            .GroupBy(s => s.SkillNome!)
+            .Select(g => new { Skill = g.Key, Total = g.Count() })
+            .OrderByDescending(x => x.Total)
+            .Take(5)
+            .ToList();
+
+        skillsLabels = top.Select(x => x.Skill).ToArray();
+        skillsValores = top.Select(x => x.Total).ToArray();
+    }
+
+    // ViewModels mínimos para deserialização dos endpoints
+    private class PerfilVm
+    {
+        public int Id { get; set; }
+        public string Pais { get; set; } = "";
+        public List<PerfilSkillVm> Skills { get; set; } = new();
+    }
+
+    private class PerfilSkillVm
+    {
+        public int SkillId { get; set; }
+        public string? SkillNome { get; set; }
+        public string? AreaNome { get; set; }
+    }
+
+    private class PropostaVm
+    {
+        public int Id { get; set; }
+        public DateTime CriadoEm { get; set; }
+    }
+
+    private class SkillCatalogoVm
+    {
+        public int Id { get; set; }
+        public string Nome { get; set; } = "";
+        public string? AreaNome { get; set; }
     }
 }
