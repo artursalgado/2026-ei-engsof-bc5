@@ -116,6 +116,7 @@ if (app.Environment.IsDevelopment())
 }
 app.UseCors("AllowAll");
 // app.UseHttpsRedirection(); // Comentado para nao perder token em redirecionamentos locais
+app.UseStaticFiles(); // Serve ficheiros estáticos de wwwroot/ (ex: /cvs/*.pdf)
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -441,6 +442,103 @@ app.MapDelete("/perfis/{id}", async (int id, ClaimsPrincipal user, GestaoTalento
 }).RequireAuthorization("UserPolicy");
 
 // ======================
+// UPLOAD DE CV (US-19)
+// ======================
+
+app.MapPost("/perfis/{id:int}/cv", async (
+    int id,
+    IFormFile cv,
+    ClaimsPrincipal user,
+    GestaoTalentos.Infrastructure.IPerfilRepository repo,
+    IUserRepository userRepo,
+    IWebHostEnvironment env) =>
+{
+    // Validação inicial do ficheiro
+    if (cv == null || cv.Length == 0)
+        return Results.BadRequest("Ficheiro não enviado.");
+
+    const long maxBytes = 5 * 1024 * 1024; // 5 MB
+    if (cv.Length > maxBytes)
+        return Results.BadRequest("O ficheiro excede o limite de 5 MB.");
+
+    var extensao = Path.GetExtension(cv.FileName).ToLowerInvariant();
+    if (extensao != ".pdf" || cv.ContentType != "application/pdf")
+        return Results.BadRequest("Apenas ficheiros PDF são permitidos.");
+
+    // Verificar perfil + autorização
+    var perfil = await repo.GetByIdAsync(id);
+    if (perfil == null) return Results.NotFound();
+
+    var userId = int.TryParse(user.FindFirstValue("sub"), out var uid) ? uid : 0;
+    var current = await userRepo.GetByIdAsync(userId);
+    if (current == null) return Results.Unauthorized();
+
+    if (current.Role != UserRole.Admin && current.Role != UserRole.UserManager && perfil.OwnerId != userId)
+        return Results.Forbid();
+
+    // Garantir que a pasta wwwroot/cvs/ existe
+    var pastaCvs = Path.Combine(env.WebRootPath ?? Path.Combine(env.ContentRootPath, "wwwroot"), "cvs");
+    Directory.CreateDirectory(pastaCvs);
+
+    // Apagar CV anterior se existia
+    if (!string.IsNullOrEmpty(perfil.CvFileName))
+    {
+        var caminhoAntigo = Path.Combine(pastaCvs, perfil.CvFileName);
+        if (File.Exists(caminhoAntigo))
+            File.Delete(caminhoAntigo);
+    }
+
+    // Gerar nome único: cv_{perfilId}_{ticks}.pdf
+    var nomeFicheiro = $"cv_{id}_{DateTime.UtcNow.Ticks}.pdf";
+    var caminhoFinal = Path.Combine(pastaCvs, nomeFicheiro);
+
+    // Guardar ficheiro
+    using (var stream = File.Create(caminhoFinal))
+    {
+        await cv.CopyToAsync(stream);
+    }
+
+    // Atualizar BD
+    perfil.CvFileName = nomeFicheiro;
+    await repo.SaveChangesAsync();
+
+    return Results.Ok(new { cvUrl = $"/cvs/{nomeFicheiro}", cvFileName = nomeFicheiro });
+})
+.RequireAuthorization("UserPolicy")
+.DisableAntiforgery();
+
+app.MapDelete("/perfis/{id:int}/cv", async (
+    int id,
+    ClaimsPrincipal user,
+    GestaoTalentos.Infrastructure.IPerfilRepository repo,
+    IUserRepository userRepo,
+    IWebHostEnvironment env) =>
+{
+    var perfil = await repo.GetByIdAsync(id);
+    if (perfil == null) return Results.NotFound();
+
+    var userId = int.TryParse(user.FindFirstValue("sub"), out var uid) ? uid : 0;
+    var current = await userRepo.GetByIdAsync(userId);
+    if (current == null) return Results.Unauthorized();
+
+    if (current.Role != UserRole.Admin && current.Role != UserRole.UserManager && perfil.OwnerId != userId)
+        return Results.Forbid();
+
+    if (!string.IsNullOrEmpty(perfil.CvFileName))
+    {
+        var pastaCvs = Path.Combine(env.WebRootPath ?? Path.Combine(env.ContentRootPath, "wwwroot"), "cvs");
+        var caminho = Path.Combine(pastaCvs, perfil.CvFileName);
+        if (File.Exists(caminho))
+            File.Delete(caminho);
+
+        perfil.CvFileName = null;
+        await repo.SaveChangesAsync();
+    }
+
+    return Results.NoContent();
+}).RequireAuthorization("UserPolicy");
+
+// ======================
 // SKILLS
 // ======================
 
@@ -618,6 +716,8 @@ static object MapPerfilToDto(Perfil p) => new
     p.PrecoPorHora,
     p.IsShared,
     p.CreatedAt,
+    p.CvFileName,
+    CvUrl = p.CvFileName != null ? $"/cvs/{p.CvFileName}" : null,
     Experiencias = p.Experiencias.Select(e => new
     {
         e.Id,
