@@ -2,6 +2,7 @@
 @page "/perfis/form/{Id:int}"
 @using System.Net.Http.Json
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Forms
 @attribute [Authorize]
 @inject HttpClient Http
 @inject NavigationManager Navigation
@@ -60,6 +61,27 @@ else
                             <span class="toggle-track"></span>
                         </label>
                     </div>
+                </div>
+
+                <!-- Upload de CV -->
+                <div class="col-12">
+                    <label class="form-label">Curriculum Vitae (PDF, máx. 5MB)</label>
+
+                    @if (!string.IsNullOrEmpty(cvAtualFileName))
+                    {
+                        <div class="cv-atual">
+                            <i class="bi bi-file-earmark-pdf"></i>
+                            <a href="@CvDownloadUrl" target="_blank" rel="noopener">@cvAtualFileName</a>
+                            <button type="button" class="btn btn-sm btn-danger ms-2" @onclick="RemoverCv" disabled="@isBusy">Remover CV</button>
+                        </div>
+                    }
+
+                    <InputFile OnChange="OnCvSelecionado" accept="application/pdf" class="form-control" />
+
+                    @if (cvSelecionado != null)
+                    {
+                        <small class="text-muted">Selecionado: @cvSelecionado.Name (@(cvSelecionado.Size / 1024) KB)</small>
+                    }
                 </div>
             </div>
         </div>
@@ -179,6 +201,12 @@ else
     private bool isBusy = false;
     private string? erro;
 
+    // Upload de CV
+    private IBrowserFile? cvSelecionado;
+    private string? cvAtualFileName;
+    private const long MaxCvBytes = 5 * 1024 * 1024; // 5 MB
+    private string CvDownloadUrl => $"{Http.BaseAddress?.ToString().TrimEnd('/')}/cvs/{cvAtualFileName}";
+
     protected override async Task OnInitializedAsync()
     {
         try
@@ -217,6 +245,8 @@ else
                         SkillId = s.SkillId,
                         AnosExperiencia = s.AnosExperiencia
                     }).ToList();
+
+                    cvAtualFileName = perfil.CvFileName;
                 }
             }
             catch (Exception ex)
@@ -234,6 +264,51 @@ else
     private void RemoverExperiencia(ExperienciaFormVm exp) => experiencias.Remove(exp);
     private void AdicionarSkill() => skillsAdicionadas.Add(new SkillFormVm());
     private void RemoverSkill(SkillFormVm s) => skillsAdicionadas.Remove(s);
+
+    private void OnCvSelecionado(InputFileChangeEventArgs e)
+    {
+        erro = null;
+        var ficheiro = e.File;
+
+        if (ficheiro.Size > MaxCvBytes)
+        {
+            erro = "O ficheiro excede o limite de 5 MB.";
+            cvSelecionado = null;
+            return;
+        }
+
+        if (ficheiro.ContentType != "application/pdf" || !ficheiro.Name.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+        {
+            erro = "Apenas ficheiros PDF são permitidos.";
+            cvSelecionado = null;
+            return;
+        }
+
+        cvSelecionado = ficheiro;
+    }
+
+    private async Task RemoverCv()
+    {
+        if (!Id.HasValue || string.IsNullOrEmpty(cvAtualFileName)) return;
+
+        try
+        {
+            isBusy = true;
+            var resp = await Http.DeleteAsync($"/perfis/{Id}/cv");
+            if (resp.IsSuccessStatusCode)
+            {
+                cvAtualFileName = null;
+            }
+            else
+            {
+                erro = $"Erro ao remover CV: {await resp.Content.ReadAsStringAsync()}";
+            }
+        }
+        finally
+        {
+            isBusy = false;
+        }
+    }
 
     private async Task Guardar()
     {
@@ -303,15 +378,56 @@ else
             ? await Http.PutAsJsonAsync($"/perfis/{Id}", payload)
             : await Http.PostAsJsonAsync("/perfis", payload);
 
-        isBusy = false;
-
-        if (resposta.IsSuccessStatusCode)
-            Navigation.NavigateTo("/perfis");
-        else
+        if (!resposta.IsSuccessStatusCode)
         {
+            isBusy = false;
             var detalhe = await resposta.Content.ReadAsStringAsync();
             erro = $"Erro ao guardar: {detalhe}";
+            return;
         }
+
+        // Se foi um POST de criação, descobrir o Id do novo perfil para o upload do CV
+        int perfilId = Id ?? 0;
+        if (!Id.HasValue)
+        {
+            try
+            {
+                var criado = await resposta.Content.ReadFromJsonAsync<PerfilDetalheVm>();
+                if (criado != null) perfilId = criado.Id;
+            }
+            catch { /* ignora — sem id não conseguimos fazer upload */ }
+        }
+
+        // Upload do CV (se houver ficheiro selecionado)
+        if (cvSelecionado != null && perfilId > 0)
+        {
+            try
+            {
+                using var content = new MultipartFormDataContent();
+                var stream = cvSelecionado.OpenReadStream(MaxCvBytes);
+                var fileContent = new StreamContent(stream);
+                fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/pdf");
+                content.Add(fileContent, "cv", cvSelecionado.Name);
+
+                var uploadResp = await Http.PostAsync($"/perfis/{perfilId}/cv", content);
+                if (!uploadResp.IsSuccessStatusCode)
+                {
+                    isBusy = false;
+                    var detalhe = await uploadResp.Content.ReadAsStringAsync();
+                    erro = $"Perfil guardado mas falhou o upload do CV: {detalhe}";
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                isBusy = false;
+                erro = $"Perfil guardado mas erro no upload do CV: {ex.Message}";
+                return;
+            }
+        }
+
+        isBusy = false;
+        Navigation.NavigateTo("/perfis");
     }
 
     private void Cancelar() => Navigation.NavigateTo("/perfis");
@@ -345,6 +461,7 @@ else
         public string Pais { get; set; } = "";
         public decimal PrecoPorHora { get; set; }
         public bool IsShared { get; set; }
+        public string? CvFileName { get; set; }
         public List<ExperienciaDetalheVm> Experiencias { get; set; } = new();
         public List<SkillDetalheVm> Skills { get; set; } = new();
     }
