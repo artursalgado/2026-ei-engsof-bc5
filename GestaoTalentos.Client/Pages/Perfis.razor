@@ -192,6 +192,15 @@ else
                         @(perfilDetalhe.IsShared ? "Público" : "Privado")
                     </span>
                 </div>
+                @if (!string.IsNullOrEmpty(perfilDetalhe.CvFileName))
+                {
+                    <div class="detalhe-row">
+                        <span class="detalhe-label">Curriculum Vitae</span>
+                        <a class="btn btn-sm btn-outline" href="@($"{Http.BaseAddress?.ToString().TrimEnd('/')}/cvs/{perfilDetalhe.CvFileName}")" target="_blank" rel="noopener" download>
+                            <i class="bi bi-file-earmark-pdf"></i> Descarregar CV
+                        </a>
+                    </div>
+                }
             </div>
 
             @if (perfilDetalhe.Skills != null && perfilDetalhe.Skills.Any())
@@ -372,6 +381,7 @@ else
         public string Pais { get; set; } = "";
         public decimal PrecoPorHora { get; set; }
         public bool IsShared { get; set; }
+        public string? CvFileName { get; set; }
         public List<SkillVm> Skills { get; set; } = new();
         public List<ExperienciaVm> Experiencias { get; set; } = new();
     }
