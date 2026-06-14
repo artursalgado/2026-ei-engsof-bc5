@@ -22,6 +22,10 @@ public class TalentoElegivelRepository : Repository<TalentoElegivel>, ITalentoEl
     {
         return await _context.TalentosElegiveis
             .Include(te => te.Perfil)
+                .ThenInclude(p => p.PerfilSkills)
+                    .ThenInclude(ps => ps.Skill)
+            .Include(te => te.Perfil)
+                .ThenInclude(p => p.Experiencias)
             .Where(te => te.PropostaId == propostaId)
             .OrderBy(te => te.ValorEstimado)
             .ToListAsync();

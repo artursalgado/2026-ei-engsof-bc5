@@ -1,0 +1,425 @@
+/* ============================================================
+   Página pública de partilha de proposta (US-17)
+   ============================================================ */
+
+.partilha-page {
+    min-height: 100vh;
+    background: var(--color-bg, #f8fafc);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 2.5rem 1rem 4rem;
+}
+
+.partilha-loading,
+.partilha-erro {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 4rem 2rem;
+    color: var(--color-text-muted, #64748b);
+    text-align: center;
+}
+
+.partilha-loading i {
+    font-size: 2rem;
+}
+
+.erro-ico {
+    font-size: 3rem;
+    color: var(--color-text-muted, #94a3b8);
+    margin-bottom: 0.25rem;
+}
+
+.partilha-erro h2 {
+    font-size: 1.25rem;
+    margin: 0;
+}
+
+.partilha-erro p {
+    color: var(--color-text-muted, #64748b);
+    max-width: 320px;
+}
+
+.btn-voltar {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem 1.25rem;
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: 6px;
+    background: var(--color-surface, #fff);
+    color: var(--color-primary, #6366f1);
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration: none;
+    margin-top: 0.5rem;
+    transition: background 0.15s ease;
+}
+
+.btn-voltar:hover {
+    background: var(--color-primary-soft, #eef2ff);
+}
+
+/* ---- Card principal ---- */
+
+.partilha-card {
+    width: 100%;
+    max-width: 760px;
+    background: var(--color-surface, #fff);
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: 12px;
+    box-shadow: 0 4px 24px rgba(15, 23, 42, 0.07);
+    padding: 2rem 2.25rem 2.5rem;
+}
+
+/* Branding topo */
+.partilha-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 1.75rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--color-border, #e2e8f0);
+}
+
+.brand-mark {
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, #6366f1, #818cf8);
+    border-radius: 8px;
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.brand-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-text-muted, #64748b);
+}
+
+/* Cabeçalho da proposta */
+.partilha-head {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    margin-bottom: 1.1rem;
+}
+
+.partilha-head h1 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--color-text, #0f172a);
+}
+
+.area-tag {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.5rem;
+    padding: 0.15rem 0.6rem;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #6366f1, #818cf8);
+    color: #fff;
+    font-size: 0.74rem;
+    font-weight: 700;
+}
+
+.estado-pill {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.5rem;
+    padding: 0.15rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.74rem;
+    font-weight: 700;
+}
+
+.estado-aberta    { background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; }
+.estado-emnegociacao { background: #fffbeb; border: 1px solid #fde68a; color: #b45309; }
+.estado-fechada   { background: #f1f5f9; border: 1px solid #cbd5e1; color: #64748b; }
+
+/* Descrição */
+.partilha-descricao {
+    color: var(--color-text-muted, #475569);
+    font-size: 0.92rem;
+    line-height: 1.6;
+    margin: 0 0 1.35rem;
+}
+
+/* Métricas */
+.partilha-metricas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-bottom: 1.35rem;
+}
+
+.metrica {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.8rem;
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: 999px;
+    background: var(--color-surface-alt, #f8fafc);
+    color: var(--color-text-muted, #64748b);
+    font-size: 0.83rem;
+}
+
+.metrica i {
+    color: #6366f1;
+}
+
+.metrica.strong strong {
+    color: var(--color-text, #0f172a);
+}
+
+/* Skills necessárias */
+.partilha-skills {
+    margin-bottom: 1.75rem;
+}
+
+.skills-titulo {
+    font-size: 0.74rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-text-muted, #64748b);
+    margin-bottom: 0.55rem;
+}
+
+.skills-lista {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.skill-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.5rem;
+    padding: 0.15rem 0.55rem;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    border-radius: 999px;
+    background: rgba(248, 250, 252, 0.9);
+    color: var(--color-text, #0f172a);
+    font-size: 0.76rem;
+    font-weight: 600;
+}
+
+/* Secção de talentos */
+.talentos-section {
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--color-border, #e2e8f0);
+}
+
+.talentos-titulo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.9rem;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-text-muted, #64748b);
+}
+
+.talentos-titulo i {
+    font-size: 0.95rem;
+}
+
+.talentos-count {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.4rem;
+    padding: 0.1rem 0.5rem;
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: 999px;
+    background: var(--color-surface-alt, #f8fafc);
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--color-text-muted, #64748b);
+}
+
+.talentos-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.talento-card {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: 8px;
+    background: var(--color-surface, #fff);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.talento-card:hover {
+    border-color: rgba(99, 102, 241, 0.25);
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.07);
+}
+
+.talento-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6366f1, #4f46e5);
+    color: #fff;
+    font-size: 0.88rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.talento-info {
+    min-width: 0;
+}
+
+.talento-nome {
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 0.1rem;
+}
+
+.talento-pais {
+    font-size: 0.78rem;
+    color: var(--color-text-muted, #64748b);
+    margin-bottom: 0.3rem;
+}
+
+.talento-skills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+}
+
+.talento-skill-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.3rem;
+    padding: 0.1rem 0.45rem;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    border-radius: 999px;
+    background: rgba(248, 250, 252, 0.9);
+    color: var(--color-text, #0f172a);
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+.talento-skill-chip.muted {
+    color: var(--color-text-muted, #64748b);
+}
+
+/* Preço e fit */
+.talento-preco {
+    text-align: right;
+    min-width: 110px;
+}
+
+.fit-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--color-text-muted, #64748b);
+    margin-bottom: 0.25rem;
+}
+
+.fit-value {
+    color: var(--color-text, #0f172a);
+}
+
+.fit-track {
+    height: 0.4rem;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--color-border, #e2e8f0);
+    margin-bottom: 0.45rem;
+}
+
+.fit-bar {
+    height: 100%;
+    min-width: 0.2rem;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #6366f1, #818cf8);
+}
+
+.preco-hora {
+    display: block;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #6366f1;
+}
+
+.preco-total {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--color-text-muted, #64748b);
+}
+
+.sem-talentos {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 2.5rem;
+    color: var(--color-text-muted, #94a3b8);
+    text-align: center;
+    font-size: 0.9rem;
+}
+
+.sem-talentos i {
+    font-size: 2rem;
+}
+
+/* Footer */
+.partilha-footer {
+    margin-top: 2.25rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--color-border, #e2e8f0);
+    text-align: center;
+    font-size: 0.78rem;
+    color: var(--color-text-muted, #94a3b8);
+}
+
+/* Responsive */
+@media (max-width: 575.98px) {
+    .partilha-card {
+        padding: 1.25rem 1rem 2rem;
+    }
+
+    .talento-card {
+        grid-template-columns: auto 1fr;
+    }
+
+    .talento-preco {
+        grid-column: 1 / -1;
+        text-align: left;
+        display: flex;
+        gap: 1.5rem;
+        align-items: center;
+        min-width: 0;
+    }
+
+    .fit-row,
+    .fit-track {
+        display: none;
+    }
+}

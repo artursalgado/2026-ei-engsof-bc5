@@ -8,18 +8,16 @@
 @inject IJSRuntime JS
 @inject AuthenticationStateProvider AuthStateProvider
 
-<PageTitle>@(isCliente ? "Pesquisa de Talentos" : "Perfis de Talento") - Gestão de Talentos</PageTitle>
+<PageTitle>@(isAdmin ? "Pesquisa de Talentos" : "Perfis de Talento") - Gestão de Talentos</PageTitle>
 
 <div class="page-header">
     <div>
-        <h1>@(isCliente ? "Pesquisa de Talentos" : "Os Meus Perfis")</h1>
-        <p class="page-subtitle">@(isCliente ? "Encontra profissionais disponíveis na plataforma" : "Gere os teus currículos e competências")</p>
+        <h1>@(isAdmin ? "Pesquisa de Talentos" : "Os Meus Perfis")</h1>
+        <p class="page-subtitle">@(isAdmin ? "Encontra profissionais disponíveis na plataforma" : "Gere os teus currículos e competências")</p>
     </div>
-    @if (!isCliente)
+    @if (isAdmin)
     {
-       <button class="btn btn-sm btn-outline" @onclick="PesquisarPorSkills" disabled="@(skillsFiltro.Count == 0 && !filtroAtivo)">
-    @(filtroAtivo ? "Limpar filtro" : "Pesquisar")
-</button>
+        <button class="btn btn-primary" @onclick="CriarNovo"> Novo Perfil</button>
     }
 </div>
 
@@ -28,7 +26,7 @@
     <div class="alert alert-success mb-4">@mensagemSucesso</div>
 }
 
-@if (isCliente)
+@if (isAdmin)
 {
     <div class="skill-search-bar">
         <div class="skill-search-label">Filtrar por Skills</div>
@@ -93,7 +91,7 @@ else if (!perfis.Any())
 {
     <div class="empty-state">
         <div class="empty-ico"><i class="bi bi-person-vcard"></i></div>
-        @if (isCliente)
+        @if (isAdmin)
         {
             <h3>Nenhum talento disponível</h3>
             <p>Ainda não há profissionais com perfil público na plataforma.</p>
@@ -111,7 +109,7 @@ else
     <div class="perfis-grid">
         @foreach (var p in perfis)
         {
-            <div class="perfil-card @(isCliente ? "perfil-card-clickable" : "")" @onclick="() => { if (isCliente) AbrirDetalhe(p); }">
+            <div class="perfil-card @(isAdmin ? "perfil-card-clickable" : "")" @onclick="() => { if (isAdmin) AbrirDetalhe(p); }">
                 <div class="perfil-card-head">
                     <div class="perfil-avatar">@(p.Nome.Length > 0 ? p.Nome[0].ToString().ToUpper() : "?")</div>
                     <div class="perfil-info">
@@ -150,7 +148,7 @@ else
 
                 <div class="perfil-card-foot" @onclick:stopPropagation>
                     <button class="btn btn-sm btn-outline" @onclick="() => AbrirDetalhe(p)">Ver Detalhe</button>
-                    @if (!isCliente)
+                    @if (isAdmin)
                     {
                         <button class="btn btn-sm btn-secondary" @onclick="() => Editar(p.Id)">Editar</button>
                         <button class="btn btn-sm btn-danger" @onclick="() => ConfirmarApagar(p)">Apagar</button>
@@ -192,6 +190,15 @@ else
                         @(perfilDetalhe.IsShared ? "Público" : "Privado")
                     </span>
                 </div>
+                @if (!string.IsNullOrEmpty(perfilDetalhe.CvFileName))
+                {
+                    <div class="detalhe-row">
+                        <span class="detalhe-label">Curriculum Vitae</span>
+                        <a class="btn btn-sm btn-outline" href="@($"{Http.BaseAddress?.ToString().TrimEnd('/')}/cvs/{perfilDetalhe.CvFileName}")" target="_blank" rel="noopener" download>
+                            <i class="bi bi-file-earmark-pdf"></i> Descarregar CV
+                        </a>
+                    </div>
+                }
             </div>
 
             @if (perfilDetalhe.Skills != null && perfilDetalhe.Skills.Any())
@@ -243,7 +250,7 @@ else
     private bool carregando = true;
     private string? erro;
     private string? mensagemSucesso;
-    private bool isCliente = false;
+    private bool isAdmin = false;
     private PerfilVm? perfilDetalhe = null;
 
     // Multi-skill search state
@@ -257,9 +264,9 @@ else
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         var role = authState.User.FindFirst("role")?.Value;
-        isCliente = role == "UserManager" || role == "Admin";
+        isAdmin = role == "UserManager" || role == "Admin";
 
-        if (isCliente)
+        if (isAdmin)
             await CarregarSkills();
 
         await CarregarPerfis();
@@ -372,6 +379,7 @@ else
         public string Pais { get; set; } = "";
         public decimal PrecoPorHora { get; set; }
         public bool IsShared { get; set; }
+        public string? CvFileName { get; set; }
         public List<SkillVm> Skills { get; set; } = new();
         public List<ExperienciaVm> Experiencias { get; set; } = new();
     }

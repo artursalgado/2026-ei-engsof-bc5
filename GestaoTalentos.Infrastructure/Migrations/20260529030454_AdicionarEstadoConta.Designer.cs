@@ -3,6 +3,7 @@ using System;
 using GestaoTalentos.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace GestaoTalentos.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260529030454_AdicionarEstadoConta")]
+    partial class AdicionarEstadoConta
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -150,37 +153,6 @@ namespace GestaoTalentos.Infrastructure.Migrations
                     b.ToTable("Logs");
                 });
 
-            modelBuilder.Entity("GestaoTalentos.Domain.PartilhaToken", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CriadoEm")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("ExpiraEm")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("PropostaId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Token")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PropostaId");
-
-                    b.HasIndex("Token")
-                        .IsUnique();
-
-                    b.ToTable("PartilhaTokens");
-                });
-
             modelBuilder.Entity("GestaoTalentos.Domain.Perfil", b =>
                 {
                     b.Property<int>("Id")
@@ -191,9 +163,6 @@ namespace GestaoTalentos.Infrastructure.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("CvFileName")
-                        .HasColumnType("text");
 
                     b.Property<string>("Email")
                         .IsRequired()
@@ -258,16 +227,10 @@ namespace GestaoTalentos.Infrastructure.Migrations
                     b.Property<DateTime>("CriadoEm")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int?>("CriadorId")
-                        .HasColumnType("integer");
-
                     b.Property<string>("DescricaoTrabalho")
                         .IsRequired()
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)");
-
-                    b.Property<int>("Estado")
-                        .HasColumnType("integer");
 
                     b.Property<string>("Nome")
                         .IsRequired()
@@ -280,14 +243,9 @@ namespace GestaoTalentos.Infrastructure.Migrations
                     b.Property<decimal>("PrecoHoraMedio")
                         .HasColumnType("numeric");
 
-                    b.Property<int?>("TalentoSelecionadoId")
-                        .HasColumnType("integer");
-
                     b.HasKey("Id");
 
                     b.HasIndex("AreaId");
-
-                    b.HasIndex("CriadorId");
 
                     b.HasIndex("Nome")
                         .IsUnique();
@@ -434,17 +392,6 @@ namespace GestaoTalentos.Infrastructure.Migrations
                     b.Navigation("Perfil");
                 });
 
-            modelBuilder.Entity("GestaoTalentos.Domain.PartilhaToken", b =>
-                {
-                    b.HasOne("GestaoTalentos.Domain.Proposta", "Proposta")
-                        .WithMany("Partilhas")
-                        .HasForeignKey("PropostaId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Proposta");
-                });
-
             modelBuilder.Entity("GestaoTalentos.Domain.Perfil", b =>
                 {
                     b.HasOne("GestaoTalentos.Domain.User", "Owner")
@@ -483,14 +430,7 @@ namespace GestaoTalentos.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("GestaoTalentos.Domain.User", "Criador")
-                        .WithMany()
-                        .HasForeignKey("CriadorId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.Navigation("Area");
-
-                    b.Navigation("Criador");
                 });
 
             modelBuilder.Entity("GestaoTalentos.Domain.Skill", b =>
@@ -554,8 +494,6 @@ namespace GestaoTalentos.Infrastructure.Migrations
 
             modelBuilder.Entity("GestaoTalentos.Domain.Proposta", b =>
                 {
-                    b.Navigation("Partilhas");
-
                     b.Navigation("SkillsNecessarias");
 
                     b.Navigation("TalentosElegiveis");

@@ -7,6 +7,7 @@
 @inject IPropostaService PropostaService
 @inject HttpClient Http
 @inject IJSRuntime JS
+@inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthStateProvider
 @attribute [Authorize]
 
@@ -83,6 +84,32 @@ else
         }
     </div>
 
+    <div class="toolbar-row">
+        @if (AreasComPropostas.Count > 1)
+        {
+            <div class="filter-chips">
+                <button class="filter-chip @(selectedAreaFilter == null ? "active" : "")" @onclick="() => selectedAreaFilter = null">
+                    Todas
+                </button>
+                @foreach (var a in AreasComPropostas)
+                {
+                    var aId = a.Id;
+                    <button class="filter-chip @GetAccentClass(aId) @(selectedAreaFilter == aId ? "active" : "")" @onclick="() => selectedAreaFilter = aId">
+                        @a.Nome
+                    </button>
+                }
+            </div>
+        }
+        <div class="sort-chips">
+            <i class="bi bi-arrow-down-up sort-icon"></i>
+            <button class="sort-chip @(sortMode == SortMode.DataDesc ? "active" : "")" @onclick="() => sortMode = SortMode.DataDesc">Recentes</button>
+            <button class="sort-chip @(sortMode == SortMode.ValorDesc ? "active" : "")" @onclick="() => sortMode = SortMode.ValorDesc">Valor ↓</button>
+            <button class="sort-chip @(sortMode == SortMode.ValorAsc ? "active" : "")" @onclick="() => sortMode = SortMode.ValorAsc">Valor ↑</button>
+            <button class="sort-chip @(sortMode == SortMode.HorasDesc ? "active" : "")" @onclick="() => sortMode = SortMode.HorasDesc">+ Horas</button>
+            <button class="sort-chip @(sortMode == SortMode.TalentosDesc ? "active" : "")" @onclick="() => sortMode = SortMode.TalentosDesc">+ Talentos</button>
+        </div>
+    </div>
+
     @if (FilteredPropostas.Count == 0)
     {
         <div class="no-results">
@@ -147,16 +174,41 @@ else
                             }
                         </div>
 
-                        <button class="talentos-toggle" @onclick="() => ToggleDetail(p.Id)" aria-expanded="@expanded">
-                            <span>Ver @p.TalentoElegivelCount talento@(p.TalentoElegivelCount != 1 ? "s" : "")</span>
-                            <i class="bi @(expanded ? "bi-chevron-up" : "bi-chevron-down")"></i>
-                        </button>
+                        <div class="toggle-row">
+                            <button class="talentos-toggle" @onclick="() => ToggleDetail(p.Id)" aria-expanded="@expanded">
+                                <span>Ver @p.TalentoElegivelCount talento@(p.TalentoElegivelCount != 1 ? "s" : "")</span>
+                                <i class="bi @(expanded ? "bi-chevron-up" : "bi-chevron-down")"></i>
+                            </button>
+                            <span class="estado-badge estado-@p.Estado.ToLowerInvariant()">
+                                @(p.Estado == "Aberta" ? "Aberta" : p.Estado == "EmNegociacao" ? "Em Negociação" : "Fechada")
+                            </span>
+                        </div>
                     </div>
 
                     @if (expanded)
                     {
                         <div class="talentos-drawer">
-                            <h3>Talentos Elegíveis</h3>
+                            <div class="drawer-header">
+                                <h3>Talentos Elegíveis</h3>
+                                <div class="drawer-header-actions">
+                                    @if (propostaComparacaoId == p.Id && talentosSelecionadosParaComparar.Count >= 2)
+                                    {
+                                        <button class="btn-comparar" @onclick="() => OpenComparadorModal(p.Id)">
+                                            <i class="bi bi-layout-split"></i> Comparar selecionados (@talentosSelecionadosParaComparar.Count)
+                                        </button>
+                                    }
+                                    @if (p.Estado != "Fechada")
+                                    {
+                                        <button class="btn-partilhar" @onclick="() => GerarLinkPartilha(p.Id)" disabled="@busy" title="Gerar link para partilhar com cliente">
+                                            <i class="bi bi-share"></i> Partilhar
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <span class="fechada-badge"><i class="bi bi-check-circle-fill"></i> Concluída</span>
+                                    }
+                                </div>
+                            </div>
                             @if (!p.TalentosElegiveis.Any())
                             {
                                 <p class="elegivel-empty">Nenhum talento elegível.</p>
@@ -164,11 +216,30 @@ else
                             else
                             {
                                 <div class="elegivel-grid">
-                                    @foreach (var t in p.TalentosElegiveis.OrderBy(x => x.ValorEstimado))
+                                    @foreach (var t in p.TalentosElegiveis.OrderByDescending(x => GetPrecoFitPercent(p, x)))
                                     {
                                         var fitPercent = GetPrecoFitPercent(p, t);
-                                        <div class="elegivel-card">
-                                            <div class="elegivel-avatar @accentClass">@GetInitials(t.Perfil?.Nome)</div>
+                                        var isSelecionado = p.TalentoSelecionadoId.HasValue && p.TalentoSelecionadoId == t.PerfilId;
+                                        var isBest = GetBestFitId(p) == t.Id;
+                                        <div class="elegivel-card @(isSelecionado ? "is-selecionado" : "") @(isBest ? "best-fit" : "")">
+                                            <div class="elegivel-compare-check">
+                                                <input type="checkbox"
+                                                       class="compare-checkbox"
+                                                       checked="@(propostaComparacaoId == p.Id && talentosSelecionadosParaComparar.Contains(t.Id))"
+                                                       @onchange="() => ToggleTalentoComparacao(p.Id, t.Id)"
+                                                       title="Selecionar para comparar" />
+                                            </div>
+                                            <div class="elegivel-avatar-wrap">
+                                                <div class="elegivel-avatar @accentClass">@GetInitials(t.Perfil?.Nome)</div>
+                                                @if (isSelecionado)
+                                                {
+                                                    <span class="selecionado-crown" title="Talento selecionado"><i class="bi bi-check-circle-fill"></i></span>
+                                                }
+                                                @if (isBest)
+                                                {
+                                                    <span class="best-fit-crown" title="Melhor fit de preço">🏆</span>
+                                                }
+                                            </div>
                                             <div class="elegivel-info">
                                                 <div class="elegivel-nome">@(t.Perfil?.Nome ?? $"Perfil #{t.PerfilId}")</div>
                                                 <div class="elegivel-pais">@(t.Perfil?.Pais ?? "-")</div>
@@ -186,6 +257,16 @@ else
                                                 <span class="elegivel-preco">@(t.Perfil?.PrecoPorHora.ToString("F2") ?? "-") €/h</span>
                                                 <span class="elegivel-total">@t.ValorEstimado.ToString("F2") € total</span>
                                             </div>
+                                            @if (p.Estado != "Fechada")
+                                            {
+                                                <button class="btn-selecionar" @onclick="() => SelecionarTalento(p.Id, t.PerfilId)" disabled="@busy" title="Selecionar este talento">
+                                                    <i class="bi bi-person-check"></i>
+                                                </button>
+                                            }
+                                            @if (isSelecionado)
+                                            {
+                                                <span class="elegivel-selected-label">Selecionado</span>
+                                            }
                                         </div>
                                     }
                                 </div>
@@ -374,6 +455,120 @@ else
     </div>
 }
 
+@* Modal Comparação Lado-a-Lado *@
+@if (showComparadorModal && propostaComparacaoId.HasValue)
+{
+    var proposta = propostas?.FirstOrDefault(p => p.Id == propostaComparacaoId.Value);
+    if (proposta != null)
+    {
+        var talentos = GetTalentosParaComparar(proposta);
+        <div class="modal-backdrop-custom" @onclick="CloseComparadorModal"></div>
+        <div class="modal-custom modal-comparador" @onclick:stopPropagation>
+            <div class="modal-head">
+                <h3><i class="bi bi-layout-split"></i> Comparação de Talentos — @proposta.Nome</h3>
+                <button class="modal-close" @onclick="CloseComparadorModal">&times;</button>
+            </div>
+            <div class="modal-body-custom">
+                <div class="comparador-scroll">
+                    <table class="comparador-table">
+                        <thead>
+                            <tr>
+                                <th class="comparador-label-col">Campo</th>
+                                @foreach (var t in talentos)
+                                {
+                                    var isSel = proposta.TalentoSelecionadoId == t.PerfilId;
+                                    <th class="comparador-talento-col @(isSel ? "is-selecionado" : "")">
+                                        <div class="comparador-avatar @GetAccentClass(proposta.AreaId)">@GetInitials(t.Perfil?.Nome)</div>
+                                        <div class="comparador-nome">@(t.Perfil?.Nome ?? $"Perfil #{t.PerfilId}")</div>
+                                        @if (isSel) { <span class="selecionado-label-badge"><i class="bi bi-check-circle-fill"></i> Selecionado</span> }
+                                    </th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="comparador-row-label"><i class="bi bi-globe2"></i> País</td>
+                                @foreach (var t in talentos)
+                                {
+                                    <td>@(t.Perfil?.Pais ?? "—")</td>
+                                }
+                            </tr>
+                            <tr>
+                                <td class="comparador-row-label"><i class="bi bi-currency-euro"></i> Preço/hora</td>
+                                @foreach (var t in talentos)
+                                {
+                                    <td class="comparador-highlight">@(t.Perfil?.PrecoPorHora.ToString("F2") ?? "—") €</td>
+                                }
+                            </tr>
+                            <tr>
+                                <td class="comparador-row-label"><i class="bi bi-calculator"></i> Valor total estimado</td>
+                                @foreach (var t in talentos)
+                                {
+                                    <td class="comparador-highlight strong">@t.ValorEstimado.ToString("F2") €</td>
+                                }
+                            </tr>
+                            <tr>
+                                <td class="comparador-row-label"><i class="bi bi-tools"></i> Skills</td>
+                                @foreach (var t in talentos)
+                                {
+                                    <td class="comparador-skills-cell">
+                                        @{
+                                            var skillIds = t.Perfil?.PerfilSkills;
+                                        }
+                                        @if (skillIds == null || !skillIds.Any())
+                                        {
+                                            <span class="muted-text">—</span>
+                                        }
+                                        else
+                                        {
+                                            <div class="skills-wrapper">
+                                                @foreach (var ps in skillIds)
+                                                {
+                                                    <span class="skill-pill small">
+                                                        @(string.IsNullOrEmpty(ps.SkillNome) ? GetSkillName(ps.SkillId) : ps.SkillNome)
+                                                        @if (ps.AnosExperiencia > 0)
+                                                        {
+                                                            <span class="skill-anos"> · @ps.AnosExperiencia a</span>
+                                                        }
+                                                    </span>
+                                                }
+                                            </div>
+                                        }
+                                    </td>
+                                }
+                            </tr>
+                            <tr>
+                                <td class="comparador-row-label"><i class="bi bi-briefcase"></i> Anos experiência</td>
+                                @foreach (var t in talentos)
+                                {
+                                    var anos = GetAnosExperiencia(t);
+                                    <td class="comparador-highlight">@(anos > 0 ? $"{anos} ano{(anos != 1 ? "s" : "")}" : "—")</td>
+                                }
+                            </tr>
+                            <tr>
+                                <td class="comparador-row-label"><i class="bi bi-bar-chart"></i> Fit de preço</td>
+                                @foreach (var t in talentos)
+                                {
+                                    var fit = GetPrecoFitPercent(proposta, t);
+                                    <td>
+                                        <div class="fit-label"><strong>@fit%</strong></div>
+                                        <div class="fit-track">
+                                            <div class="fit-bar @GetAccentClass(proposta.AreaId)" style="width: @fit%;"></div>
+                                        </div>
+                                    </td>
+                                }
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="modal-foot">
+                    <button class="btn btn-secondary" @onclick="CloseComparadorModal">Fechar</button>
+                </div>
+            </div>
+        </div>
+    }
+}
+
 @if (toastVisible)
 {
     <div class="toast-sucesso">@toastMensagem</div>
@@ -394,6 +589,22 @@ else
         public string Nome { get; set; } = "";
         public string Pais { get; set; } = "";
         public decimal PrecoPorHora { get; set; }
+        public List<PerfilSkillVm> PerfilSkills { get; set; } = new();
+        public List<ExperienciaVm> Experiencias { get; set; } = new();
+    }
+
+    public class PerfilSkillVm
+    {
+        public int SkillId { get; set; }
+        public string SkillNome { get; set; } = "";
+        public int AnosExperiencia { get; set; }
+    }
+
+    public class ExperienciaVm
+    {
+        public string Cargo { get; set; } = "";
+        public string Empresa { get; set; } = "";
+        public int Anos { get; set; }
     }
 
     public class PropostaReadVm
@@ -417,6 +628,10 @@ else
     private List<SkillDto> skills = new();
     private int? expandedPropostaId;
     private string searchQuery = "";
+    private int? selectedAreaFilter;
+    private SortMode sortMode = SortMode.DataDesc;
+
+    private enum SortMode { DataDesc, ValorAsc, ValorDesc, HorasDesc, TalentosDesc }
 
     private bool mostrarSoMinhas = false;
     private bool isUserManager = false;
@@ -430,15 +645,45 @@ else
     private bool toastVisible = false;
     private string toastMensagem = "";
 
+    // Comparação lado-a-lado
+    private bool showComparadorModal = false;
+    private HashSet<int> talentosSelecionadosParaComparar = new();
+    private int? propostaComparacaoId = null;
+
     private CreatePropostaDto createDto = new();
     private UpdatePropostaDto? editDto;
     private int editId;
 
-    private List<PropostaReadVm> FilteredPropostas => propostas?
-        .Where(p => string.IsNullOrWhiteSpace(searchQuery)
-            || p.Nome.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)
-            || GetAreaName(p.AreaId).Contains(searchQuery, StringComparison.OrdinalIgnoreCase))
-        .ToList() ?? new List<PropostaReadVm>();
+    private List<PropostaReadVm> FilteredPropostas
+    {
+        get
+        {
+            var query = (propostas ?? new List<PropostaReadVm>()).AsEnumerable();
+
+            if (!string.IsNullOrWhiteSpace(searchQuery))
+                query = query.Where(p => p.Nome.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)
+                    || GetAreaName(p.AreaId).Contains(searchQuery, StringComparison.OrdinalIgnoreCase));
+
+            if (selectedAreaFilter.HasValue)
+                query = query.Where(p => p.AreaId == selectedAreaFilter.Value);
+
+            query = sortMode switch
+            {
+                SortMode.ValorAsc     => query.OrderBy(p => GetValorTotal(p)),
+                SortMode.ValorDesc    => query.OrderByDescending(p => GetValorTotal(p)),
+                SortMode.HorasDesc    => query.OrderByDescending(p => p.NumeroTotalHoras),
+                SortMode.TalentosDesc => query.OrderByDescending(p => p.TalentosElegiveis.Count),
+                _                     => query.OrderByDescending(p => p.Id)
+            };
+
+            return query.ToList();
+        }
+    }
+
+    private List<AreaDto> AreasComPropostas => areas
+        .Where(a => propostas != null && propostas.Any(p => p.AreaId == a.Id))
+        .OrderBy(a => a.Nome)
+        .ToList();
 
     private int TotalHoras => propostas?.Sum(p => p.NumeroTotalHoras) ?? 0;
 
@@ -463,31 +708,19 @@ else
         areas = await Http.GetFromJsonAsync<List<AreaDto>>("areas") ?? new();
         skills = await Http.GetFromJsonAsync<List<SkillDto>>("skills") ?? new();
 
+        // Dispara pedidos em paralelo para ir buscar os detalhes (incluindo TalentosElegiveis) de cada proposta
         if (propostas.Any())
         {
-            // Dispara pedidos em paralelo para ir buscar os detalhes (incluindo TalentosElegiveis) de cada proposta
             var detailTasks = propostas.Select(async p =>
             {
-                try
-                {
-                    return await Http.GetFromJsonAsync<PropostaReadVm>($"propostas/{p.Id}");
-                }
-                catch
-                {
-                    // Ignora falhas individuais para não partir a listagem das outras propostas
-                    return null;
-                }
+                try { return await Http.GetFromJsonAsync<PropostaReadVm>($"propostas/{p.Id}"); }
+                catch { return null; } // ignora falhas individuais para não partir a listagem
             });
-
             var details = await Task.WhenAll(detailTasks);
-            
-            // Associa os talentos elegíveis carregados de volta às propostas da lista principal
             for (int i = 0; i < propostas.Count; i++)
             {
-                if (details[i] != null && details[i]!.TalentosElegiveis != null)
-                {
+                if (details[i]?.TalentosElegiveis != null)
                     propostas[i].TalentosElegiveis = details[i]!.TalentosElegiveis;
-                }
             }
         }
     }
@@ -581,6 +814,13 @@ else
         if (parts.Length == 1) return parts[0][..Math.Min(2, parts[0].Length)].ToUpper(CultureInfo.CurrentCulture);
 
         return $"{parts[0][0]}{parts[^1][0]}".ToUpper(CultureInfo.CurrentCulture);
+    }
+
+    private int GetBestFitId(PropostaReadVm proposta)
+    {
+        if (proposta.TalentosElegiveis.Count <= 1) return -1;
+        var best = proposta.TalentosElegiveis.MaxBy(t => GetPrecoFitPercent(proposta, t));
+        return best?.Id ?? -1;
     }
 
     private static int GetPrecoFitPercent(PropostaReadVm proposta, TalentoElegivelVm talento)
@@ -686,6 +926,115 @@ else
         }
     }
 
+    private async Task SelecionarTalento(int propostaId, int perfilId)
+    {
+        var ok = await JS.InvokeAsync<bool>("confirm", "Tens a certeza? A proposta ficará fechada e este talento será marcado como selecionado.");
+        if (!ok) return;
+
+        try
+        {
+            busy = true;
+            var payload = new { PerfilId = perfilId };
+            var resp = await Http.PatchAsJsonAsync($"propostas/{propostaId}/selecionar-talento", payload);
+            if (resp.IsSuccessStatusCode)
+            {
+                await LoadAll();
+                await ShowToast("Talento selecionado. Proposta fechada.");
+                expandedPropostaId = propostaId;
+            }
+            else
+            {
+                var msg = await resp.Content.ReadAsStringAsync();
+                error = msg;
+            }
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private async Task GerarLinkPartilha(int propostaId)
+    {
+        try
+        {
+            busy = true;
+            var resp = await Http.PostAsync($"propostas/{propostaId}/partilhar", null);
+            if (resp.IsSuccessStatusCode)
+            {
+                var data = await resp.Content.ReadFromJsonAsync<PartilhaResponseVm>();
+                if (data != null)
+                {
+                    var baseUrl = Navigation.BaseUri.TrimEnd('/');
+                    var url = $"{baseUrl}/partilha/{data.Token}";
+                    await JS.InvokeVoidAsync("navigator.clipboard.writeText", url);
+                    await ShowToast("Link copiado para o clipboard!");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private void ToggleTalentoComparacao(int propostaId, int talentoId)
+    {
+        // Reset se mudar de proposta
+        if (propostaComparacaoId != propostaId)
+        {
+            talentosSelecionadosParaComparar.Clear();
+            propostaComparacaoId = propostaId;
+        }
+        if (talentosSelecionadosParaComparar.Contains(talentoId))
+            talentosSelecionadosParaComparar.Remove(talentoId);
+        else
+            talentosSelecionadosParaComparar.Add(talentoId);
+    }
+
+    private void OpenComparadorModal(int propostaId)
+    {
+        propostaComparacaoId = propostaId;
+        showComparadorModal = true;
+    }
+
+    private void CloseComparadorModal()
+    {
+        showComparadorModal = false;
+    }
+
+    private List<TalentoElegivelVm> GetTalentosParaComparar(PropostaReadVm proposta)
+    {
+        return proposta.TalentosElegiveis
+            .Where(t => talentosSelecionadosParaComparar.Contains(t.Id))
+            .ToList();
+    }
+
+    private string GetSkillsLabel(TalentoElegivelVm t)
+    {
+        var perfilSkills = t.Perfil?.PerfilSkills;
+        if (perfilSkills == null || !perfilSkills.Any()) return "—";
+        return string.Join(", ", perfilSkills.Select(ps =>
+            string.IsNullOrEmpty(ps.SkillNome)
+                ? GetSkillName(ps.SkillId)
+                : ps.SkillNome));
+    }
+
+    private int GetAnosExperiencia(TalentoElegivelVm t)
+    {
+        var exps = t.Perfil?.Experiencias;
+        if (exps == null || !exps.Any()) return 0;
+        return exps.Sum(e => e.Anos);
+    }
+
     private async Task ShowToast(string msg)
     {
         toastMensagem = msg;
@@ -694,5 +1043,10 @@ else
         await Task.Delay(3000);
         toastVisible = false;
         StateHasChanged();
+    }
+
+    private class PartilhaResponseVm
+    {
+        public string Token { get; set; } = "";
     }
 }

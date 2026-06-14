@@ -17,6 +17,7 @@ public class AppDbContext : DbContext
     public DbSet<PerfilSkill> PerfilSkills { get; set; } = null!;
     public DbSet<Proposta> Propostas { get; set; } = null!;
     public DbSet<TalentoElegivel> TalentosElegiveis { get; set; } = null!;
+    public DbSet<PartilhaToken> PartilhaTokens { get; set; } = null!;
     public DbSet<Log> Logs { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -111,9 +112,17 @@ public class AppDbContext : DbContext
             .HasForeignKey(te => te.PerfilId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        // PARTILHA TOKEN → PROPOSTA
+        modelBuilder.Entity<PartilhaToken>()
+            .HasOne(pt => pt.Proposta)
+            .WithMany(p => p.Partilhas)
+            .HasForeignKey(pt => pt.PropostaId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         // ÍNDICES ÚNICOS
         modelBuilder.Entity<Skill>().HasIndex(s => s.Nome).IsUnique();
         modelBuilder.Entity<Area>().HasIndex(a => a.Nome).IsUnique();
         modelBuilder.Entity<Proposta>().HasIndex(p => p.Nome).IsUnique();
+        modelBuilder.Entity<PartilhaToken>().HasIndex(pt => pt.Token).IsUnique();
     }
 }

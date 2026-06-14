@@ -1,0 +1,5 @@
+# Ignorar todos os ficheiros nesta pasta (CVs carregados em runtime)
+*
+# ...excepto este ficheiro e o .gitkeep que mantem a pasta no git
+!.gitignore
+!.gitkeep

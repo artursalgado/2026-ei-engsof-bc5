@@ -57,6 +57,36 @@ Conforme o enunciado, o sistema possui três níveis de acesso:
 * .NET SDK (v8.0+)
 * PostgreSQL
 
+### Setup manual da Base de Dados
+
+A base de dados pode ser criada de duas formas:
+
+**Opção 1 — Migrations EF Core (recomendado para desenvolvimento):**
+
+```bash
+dotnet ef database update --project GestaoTalentos.Infrastructure --startup-project GestaoTalentos.API
+```
+
+**Opção 2 — Scripts SQL standalone:**
+
+Os scripts SQL estão disponíveis na pasta `database/` para quem prefere criar a BD sem depender do Entity Framework.
+
+```bash
+# Criar a base de dados (uma vez)
+createdb TalentosDB
+
+# Aplicar o schema (tabelas + índices + chaves estrangeiras)
+psql -d TalentosDB -f database/schema.sql
+
+# Inserir dados iniciais (4 Áreas + utilizador Admin)
+psql -d TalentosDB -f database/seed.sql
+```
+
+Após executar os scripts existirá:
+- **Utilizador Admin** — username `admin`, password `admin123`
+- **4 Áreas profissionais** — Developer, Designer, Product Manager, Project Manager
+
+Ambos os scripts são idempotentes — podem ser corridos várias vezes sem erro nem duplicação de registos.
 
 ---
 

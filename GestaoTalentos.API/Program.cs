@@ -116,6 +116,7 @@ if (app.Environment.IsDevelopment())
 }
 app.UseCors("AllowAll");
 // app.UseHttpsRedirection(); // Comentado para nao perder token em redirecionamentos locais
+app.UseStaticFiles(); // Serve ficheiros estáticos de wwwroot/ (ex: /cvs/*.pdf)
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -133,6 +134,7 @@ await using (var scope = app.Services.CreateAsyncScope())
             Username = "admin",
             Password = BCrypt.Net.BCrypt.HashPassword("admin123"),
             Role = UserRole.Admin,
+            EstadoConta = EstadoConta.Ativo,
         };
         await userRepository.AddAsync(admin);
     }
@@ -153,7 +155,8 @@ app.MapPost("/register", async (UserRegisterDto request, IUserRepository repo) =
     {
         Username = request.Username.Trim(),
         Password = BCrypt.Net.BCrypt.HashPassword(request.Password),
-        Role = UserRole.User
+        Role = UserRole.User,
+        EstadoConta = EstadoConta.Ativo,
     };
 
     await repo.AddAsync(user);
@@ -166,6 +169,12 @@ app.MapPost("/login", async (UserLoginDto request, IUserRepository repo) =>
     var user = await repo.GetByUsernameAsync(request.Username);
     if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.Password))
         return Results.Unauthorized();
+
+    if (user.EstadoConta == EstadoConta.Pendente)
+        return Results.Json("A tua conta está a aguardar aprovação. Contacta o administrador.", statusCode: 403);
+
+    if (user.EstadoConta == EstadoConta.Rejeitado)
+        return Results.Json("A tua conta foi suspensa. Contacta o administrador.", statusCode: 403);
 
     var token = JwtTokenHelper.GenerateToken(user, jwtKey, jwtIssuer);
     return Results.Ok(new { token });
@@ -433,6 +442,103 @@ app.MapDelete("/perfis/{id}", async (int id, ClaimsPrincipal user, GestaoTalento
 }).RequireAuthorization("UserPolicy");
 
 // ======================
+// UPLOAD DE CV (US-19)
+// ======================
+
+app.MapPost("/perfis/{id:int}/cv", async (
+    int id,
+    IFormFile cv,
+    ClaimsPrincipal user,
+    GestaoTalentos.Infrastructure.IPerfilRepository repo,
+    IUserRepository userRepo,
+    IWebHostEnvironment env) =>
+{
+    // Validação inicial do ficheiro
+    if (cv == null || cv.Length == 0)
+        return Results.BadRequest("Ficheiro não enviado.");
+
+    const long maxBytes = 5 * 1024 * 1024; // 5 MB
+    if (cv.Length > maxBytes)
+        return Results.BadRequest("O ficheiro excede o limite de 5 MB.");
+
+    var extensao = Path.GetExtension(cv.FileName).ToLowerInvariant();
+    if (extensao != ".pdf" || cv.ContentType != "application/pdf")
+        return Results.BadRequest("Apenas ficheiros PDF são permitidos.");
+
+    // Verificar perfil + autorização
+    var perfil = await repo.GetByIdAsync(id);
+    if (perfil == null) return Results.NotFound();
+
+    var userId = int.TryParse(user.FindFirstValue("sub"), out var uid) ? uid : 0;
+    var current = await userRepo.GetByIdAsync(userId);
+    if (current == null) return Results.Unauthorized();
+
+    if (current.Role != UserRole.Admin && current.Role != UserRole.UserManager && perfil.OwnerId != userId)
+        return Results.Forbid();
+
+    // Garantir que a pasta wwwroot/cvs/ existe
+    var pastaCvs = Path.Combine(env.WebRootPath ?? Path.Combine(env.ContentRootPath, "wwwroot"), "cvs");
+    Directory.CreateDirectory(pastaCvs);
+
+    // Apagar CV anterior se existia
+    if (!string.IsNullOrEmpty(perfil.CvFileName))
+    {
+        var caminhoAntigo = Path.Combine(pastaCvs, perfil.CvFileName);
+        if (File.Exists(caminhoAntigo))
+            File.Delete(caminhoAntigo);
+    }
+
+    // Gerar nome único: cv_{perfilId}_{ticks}.pdf
+    var nomeFicheiro = $"cv_{id}_{DateTime.UtcNow.Ticks}.pdf";
+    var caminhoFinal = Path.Combine(pastaCvs, nomeFicheiro);
+
+    // Guardar ficheiro
+    using (var stream = File.Create(caminhoFinal))
+    {
+        await cv.CopyToAsync(stream);
+    }
+
+    // Atualizar BD
+    perfil.CvFileName = nomeFicheiro;
+    await repo.SaveChangesAsync();
+
+    return Results.Ok(new { cvUrl = $"/cvs/{nomeFicheiro}", cvFileName = nomeFicheiro });
+})
+.RequireAuthorization("UserPolicy")
+.DisableAntiforgery();
+
+app.MapDelete("/perfis/{id:int}/cv", async (
+    int id,
+    ClaimsPrincipal user,
+    GestaoTalentos.Infrastructure.IPerfilRepository repo,
+    IUserRepository userRepo,
+    IWebHostEnvironment env) =>
+{
+    var perfil = await repo.GetByIdAsync(id);
+    if (perfil == null) return Results.NotFound();
+
+    var userId = int.TryParse(user.FindFirstValue("sub"), out var uid) ? uid : 0;
+    var current = await userRepo.GetByIdAsync(userId);
+    if (current == null) return Results.Unauthorized();
+
+    if (current.Role != UserRole.Admin && current.Role != UserRole.UserManager && perfil.OwnerId != userId)
+        return Results.Forbid();
+
+    if (!string.IsNullOrEmpty(perfil.CvFileName))
+    {
+        var pastaCvs = Path.Combine(env.WebRootPath ?? Path.Combine(env.ContentRootPath, "wwwroot"), "cvs");
+        var caminho = Path.Combine(pastaCvs, perfil.CvFileName);
+        if (File.Exists(caminho))
+            File.Delete(caminho);
+
+        perfil.CvFileName = null;
+        await repo.SaveChangesAsync();
+    }
+
+    return Results.NoContent();
+}).RequireAuthorization("UserPolicy");
+
+// ======================
 // SKILLS
 // ======================
 
@@ -610,6 +716,8 @@ static object MapPerfilToDto(Perfil p) => new
     p.PrecoPorHora,
     p.IsShared,
     p.CreatedAt,
+    p.CvFileName,
+    CvUrl = p.CvFileName != null ? $"/cvs/{p.CvFileName}" : null,
     Experiencias = p.Experiencias.Select(e => new
     {
         e.Id,
@@ -761,6 +869,8 @@ app.MapGet("/propostas", async (ClaimsPrincipal user, IUserRepository userRepo, 
         ValorEstimadoTotal = p.NumeroTotalHoras * p.PrecoHoraMedio,
         p.CriadoEm,
         p.AtualizadoEm,
+        Estado = p.Estado.ToString(),
+        p.TalentoSelecionadoId,
         p.CriadorId,
         TalentoElegivelCount = p.TalentosElegiveis.Count,
         SkillsNecessarias = p.SkillsNecessarias.Select(sn => new
@@ -799,12 +909,34 @@ app.MapGet("/propostas/{id:int}", async (int id, IPropostaRepository repo, ITale
             AnosExperienciaMinimo = sn.NivelMinimoRequerido,
             Skill = sn.Skill == null ? null : new { sn.Skill.Id, sn.Skill.Nome }
         }),
+        Estado = proposta.Estado.ToString(),
+        proposta.TalentoSelecionadoId,
         TalentosElegiveis = talentos.Select(te => new
         {
             te.Id,
             te.PerfilId,
             te.ValorEstimado,
-            Perfil = te.Perfil == null ? null : new { te.Perfil.Id, te.Perfil.OwnerId, te.Perfil.Nome, te.Perfil.Pais, te.Perfil.PrecoPorHora }
+            // Perfil = te.Perfil == null ? null : new { te.Perfil.Id, te.Perfil.OwnerId, te.Perfil.Nome, te.Perfil.Pais, te.Perfil.PrecoPorHora }
+            Perfil = te.Perfil == null ? null : new
+            {
+                te.Perfil.Id,
+                te.Perfil.OwnerId,
+                te.Perfil.Nome,
+                te.Perfil.Pais,
+                te.Perfil.PrecoPorHora,
+                PerfilSkills = te.Perfil.PerfilSkills.Select(ps => new
+                {
+                    ps.SkillId,
+                    SkillNome = ps.Skill != null ? ps.Skill.Nome : "",
+                    ps.AnosExperiencia
+                }),
+                Experiencias = te.Perfil.Experiencias.Select(e => new
+                {
+                    e.Titulo,
+                    e.Empresa,
+                    Anos = (e.AnoFim ?? DateTime.UtcNow.Year) - e.AnoInicio
+                })
+            }
         }).OrderBy(te => te.ValorEstimado)
     });
 }).RequireAuthorization("UserPolicy");
@@ -1031,6 +1163,226 @@ app.MapGet("/relatorios/preco-medio-skill", async (AppDbContext context) =>
         .ToList();
 
     return Results.Ok(resultado);
+}).RequireAuthorization("UserManagerPolicy");
+
+// ======================
+// ADMINISTRAÇÃO DE CONTAS (US-18)
+// ======================
+
+/// Lista todos os utilizadores com conta pendente de aprovação.
+app.MapGet("/admin/utilizadores/pendentes", async (IUserRepository repo) =>
+{
+    var pendentes = await repo.GetPendentesAsync();
+    return Results.Ok(pendentes.Select(u => new
+    {
+        u.Id,
+        u.Username,
+        Role = u.Role.ToString(),
+        EstadoConta = u.EstadoConta.ToString()
+    }));
+}).RequireAuthorization("AdminPolicy");
+
+/// Lista todos os utilizadores da plataforma (para gestão pelo Admin).
+app.MapGet("/admin/utilizadores", async (IUserRepository repo) =>
+{
+    var todos = await repo.GetAllAsync();
+    return Results.Ok(todos
+        .Where(u => u.Role != UserRole.Admin)
+        .Select(u => new
+        {
+            u.Id,
+            u.Username,
+            Role = u.Role.ToString(),
+            EstadoConta = u.EstadoConta.ToString()
+        }));
+}).RequireAuthorization("AdminPolicy");
+
+/// Aprova uma conta pendente, permitindo que o utilizador faça login.
+app.MapPost("/admin/utilizadores/{id}/aprovar", async (int id, IUserRepository repo) =>
+{
+    var user = await repo.GetByIdAsync(id);
+    if (user is null) return Results.NotFound();
+
+    user.EstadoConta = EstadoConta.Ativo;
+    await repo.UpdateAsync(user);
+    return Results.Ok(new { mensagem = "Conta aprovada com sucesso." });
+}).RequireAuthorization("AdminPolicy");
+
+/// Suspende uma conta, impedindo o utilizador de fazer login.
+app.MapPost("/admin/utilizadores/{id}/suspender", async (int id, IUserRepository repo) =>
+{
+    var user = await repo.GetByIdAsync(id);
+    if (user is null) return Results.NotFound();
+
+    user.EstadoConta = EstadoConta.Rejeitado;
+    await repo.UpdateAsync(user);
+    return Results.Ok(new { mensagem = "Conta suspensa." });
+}).RequireAuthorization("AdminPolicy");
+
+/// Rejeita uma conta, impedindo o utilizador de fazer login.
+app.MapPost("/admin/utilizadores/{id}/rejeitar", async (int id, IUserRepository repo) =>
+{
+    var user = await repo.GetByIdAsync(id);
+    if (user is null) return Results.NotFound();
+
+    user.EstadoConta = EstadoConta.Rejeitado;
+    await repo.UpdateAsync(user);
+    return Results.Ok(new { mensagem = "Conta rejeitada." });
+}).RequireAuthorization("AdminPolicy");
+
+/// Reativa uma conta suspensa, permitindo que o utilizador volte a fazer login.
+app.MapPost("/admin/utilizadores/{id}/reativar", async (int id, IUserRepository repo) =>
+{
+    var user = await repo.GetByIdAsync(id);
+    if (user is null) return Results.NotFound();
+
+    user.EstadoConta = EstadoConta.Ativo;
+    await repo.UpdateAsync(user);
+    return Results.Ok(new { mensagem = "Conta reativada com sucesso." });
+}).RequireAuthorization("AdminPolicy");
+
+/// Altera a role de um utilizador (User ↔ UserManager).
+app.MapPut("/admin/utilizadores/{id}/role", async (int id, UserRoleUpdateDto request, IUserRepository repo) =>
+{
+    if (!Enum.TryParse<UserRole>(request.Role, true, out var role) || role == UserRole.Admin)
+        return Results.BadRequest("Role inválida (User, UserManager).");
+
+    var user = await repo.GetByIdAsync(id);
+    if (user is null) return Results.NotFound();
+
+    user.Role = role;
+    await repo.UpdateAsync(user);
+    return Results.Ok(new { mensagem = "Role atualizada com sucesso." });
+}).RequireAuthorization("AdminPolicy");
+
+/// Cria um novo funcionário com conta Ativa imediatamente (não requer aprovação).
+app.MapPost("/admin/utilizadores/criar", async (UserCreateDto request, IUserRepository repo) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
+        return Results.BadRequest("Username e password são obrigatórios.");
+
+    if (!Enum.TryParse<UserRole>(request.Role, true, out var role))
+        return Results.BadRequest("Role inválida (User, UserManager).");
+
+    if (await repo.GetByUsernameAsync(request.Username) != null)
+        return Results.Conflict("Username já existe.");
+
+    var user = new User
+    {
+        Username = request.Username.Trim(),
+        Password = BCrypt.Net.BCrypt.HashPassword(request.Password),
+        Role = role,
+        EstadoConta = EstadoConta.Ativo,
+    };
+
+    await repo.AddAsync(user);
+    return Results.Created($"/users/{user.Id}", new { user.Id, user.Username, Role = user.Role.ToString() });
+}).RequireAuthorization("AdminPolicy");
+
+// ======================
+// PARTILHA DE PROPOSTAS (US-17)
+// ======================
+
+/// Gera (ou reutiliza) um token de partilha pública para a proposta.
+app.MapPost("/propostas/{id:int}/partilhar", async (int id, AppDbContext context) =>
+{
+    var proposta = await context.Propostas.FindAsync(id);
+    if (proposta == null) return Results.NotFound();
+
+    // Reutiliza token existente se ainda válido
+    var existente = await context.PartilhaTokens
+        .Where(pt => pt.PropostaId == id && (pt.ExpiraEm == null || pt.ExpiraEm > DateTime.UtcNow))
+        .FirstOrDefaultAsync();
+
+    if (existente != null)
+        return Results.Ok(new { token = existente.Token });
+
+    var novoToken = new PartilhaToken
+    {
+        Token = Guid.NewGuid().ToString("N"),
+        PropostaId = id,
+        CriadoEm = DateTime.UtcNow,
+        ExpiraEm = DateTime.UtcNow.AddDays(30)
+    };
+
+    context.PartilhaTokens.Add(novoToken);
+    await context.SaveChangesAsync();
+
+    return Results.Ok(new { token = novoToken.Token });
+}).RequireAuthorization("UserManagerPolicy");
+
+/// Página pública — sem autenticação. Devolve a proposta e os talentos elegíveis para partilha com cliente.
+app.MapGet("/partilha/{token}", async (string token, AppDbContext context, ITalentoElegivelRepository talentoRepo) =>
+{
+    var partilha = await context.PartilhaTokens
+        .Include(pt => pt.Proposta)
+            .ThenInclude(p => p!.Area)
+        .Include(pt => pt.Proposta)
+            .ThenInclude(p => p!.SkillsNecessarias)
+                .ThenInclude(sn => sn.Skill)
+        .FirstOrDefaultAsync(pt => pt.Token == token);
+
+    if (partilha == null) return Results.NotFound("Link inválido ou expirado.");
+    if (partilha.ExpiraEm.HasValue && partilha.ExpiraEm < DateTime.UtcNow)
+        return Results.NotFound("Este link expirou.");
+
+    var proposta = partilha.Proposta!;
+    var talentos = await talentoRepo.GetByPropostaIdOrderedByValorAsync(proposta.Id);
+
+    return Results.Ok(new
+    {
+        proposta.Id,
+        proposta.Nome,
+        proposta.AreaId,
+        Area = proposta.Area == null ? null : new { proposta.Area.Id, proposta.Area.Nome },
+        proposta.DescricaoTrabalho,
+        proposta.NumeroTotalHoras,
+        proposta.PrecoHoraMedio,
+        ValorEstimadoTotal = proposta.NumeroTotalHoras * proposta.PrecoHoraMedio,
+        Estado = proposta.Estado.ToString(),
+        SkillsNecessarias = proposta.SkillsNecessarias.Select(sn => new
+        {
+            sn.SkillId,
+            Skill = sn.Skill == null ? null : new { sn.Skill.Id, sn.Skill.Nome },
+            sn.NivelMinimoRequerido
+        }),
+        TalentosElegiveis = talentos.Select(te => new
+        {
+            te.PerfilId,
+            te.ValorEstimado,
+            Perfil = te.Perfil == null ? null : new
+            {
+                te.Perfil.Nome,
+                te.Perfil.Pais,
+                te.Perfil.PrecoPorHora,
+                Skills = te.Perfil.PerfilSkills.Select(ps => new { ps.SkillId, SkillNome = ps.Skill == null ? "" : ps.Skill.Nome, ps.AnosExperiencia })
+            }
+        }).OrderBy(te => te.ValorEstimado)
+    });
+});
+
+/// Seleciona um talento para a proposta, marcando-a como Fechada.
+app.MapPatch("/propostas/{id:int}/selecionar-talento", async (int id, SelecionarTalentoDto dto, AppDbContext context) =>
+{
+    var proposta = await context.Propostas.FindAsync(id);
+    if (proposta == null) return Results.NotFound();
+
+    if (proposta.Estado == EstadoProposta.Fechada)
+        return Results.BadRequest("A proposta já está fechada.");
+
+    var talentoExiste = await context.TalentosElegiveis
+        .AnyAsync(te => te.PropostaId == id && te.PerfilId == dto.PerfilId);
+
+    if (!talentoExiste)
+        return Results.BadRequest("Talento não elegível para esta proposta.");
+
+    proposta.TalentoSelecionadoId = dto.PerfilId;
+    proposta.Estado = EstadoProposta.Fechada;
+    proposta.AtualizadoEm = DateTime.UtcNow;
+
+    await context.SaveChangesAsync();
+
+    return Results.Ok(new { mensagem = "Talento selecionado. Proposta fechada." });
 }).RequireAuthorization("UserManagerPolicy");
 
 app.Run();

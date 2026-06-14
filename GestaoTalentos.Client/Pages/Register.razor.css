@@ -129,3 +129,37 @@
     line-height: 1.6;
     margin-bottom: 1.5rem;
 }
+
+.success-ico.pending {
+    background: #fffbeb;
+    border-color: #fde68a;
+    color: #d97706;
+}
+
+.talento-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    background: var(--color-primary-soft, #eff6ff);
+    border: 1.5px solid var(--color-primary);
+    border-radius: var(--radius-md);
+}
+
+.talento-icon {
+    font-size: 1.75rem;
+    color: var(--color-primary);
+    flex-shrink: 0;
+}
+
+.talento-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--color-text);
+    margin-bottom: 0.15rem;
+}
+
+.talento-desc {
+    font-size: 0.78rem;
+    color: var(--color-text-muted);
+}

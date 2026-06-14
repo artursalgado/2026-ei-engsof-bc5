@@ -31,7 +31,17 @@
         <a href="" class="reload">Reload</a>
         <a class="dismiss">&times;</a>
     </div>
+    <script>
+        window.blazorScrollIntoView = function (element) {
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <script src="js/charts.js"></script>
     <script src="_framework/blazor.webassembly.js"></script>
+
 </body>
 
 </html>
